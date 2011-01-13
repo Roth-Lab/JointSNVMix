@@ -58,7 +58,11 @@ class EMModelTrainer( object ):
 
             posterior_value = self.lower_bound.get_lower_bound( self.parameters )
             
-            posterior_change = posterior_value - old_posterior_value
+            if iters > 0:
+                posterior_change = ( posterior_value - old_posterior_value ) / abs( old_posterior_value )
+            else:
+                posterior_change = float( 'inf' )
+            
             self._print_diagnostic_message( iters, posterior_value, old_posterior_value, posterior_change )
             old_posterior_value = posterior_value
             
