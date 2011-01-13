@@ -7,13 +7,12 @@ import ConfigParser
 
 import numpy as np
 
-from jcnt import JointCountsReader
-from jsm import JointSnvMixWriter
 from joint_snv_mix import constants
-
-from jsm_models.em.independent_models.beta_binomial import IndependenBetaBinomialModel
-from jsm_models.utils.subsample import subsample
-from jsm_models.data import IndependentData
+from joint_snv_mix.classification.data import IndependentData
+from joint_snv_mix.classification.em.independent_models.beta_binomial import IndependenBetaBinomialModel
+from joint_snv_mix.classification.utils import subsample
+from joint_snv_mix.file_formats.jcnt import JointCountsReader
+from joint_snv_mix.file_formats.jsm import JointSnvMixWriter
 
 def main( args ):
     model = IndependenBetaBinomialModel()

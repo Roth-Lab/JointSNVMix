@@ -7,7 +7,7 @@ import csv
 
 from collections import Counter
 
-from joint_snv_mix.utils.pileup_parser import parse_call_string
+from joint_snv_mix.file_formats.pileup import parse_call_string
 
 from joint_snv_mix.file_formats.jcnt import JointCountsFile
 

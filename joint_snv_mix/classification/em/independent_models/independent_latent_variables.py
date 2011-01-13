@@ -7,7 +7,8 @@ import numpy as np
 
 from scipy.cluster.vq import kmeans2
 
-from jsm_models.em.em_latent_variables import EMLatentVariables
+from joint_snv_mix.classification.em.em_latent_variables import EMLatentVariables
+
 
 class IndependentLatenVariables( EMLatentVariables ):        
     def _init_responsibilities( self, data ):

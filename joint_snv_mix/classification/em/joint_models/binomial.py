@@ -5,13 +5,12 @@ Created on 2010-12-09
 '''
 import numpy as np
 
-from jsm_models.em.em_lower_bound import EMLowerBound
-from jsm_models.em.em_model import EMModel, EMModelTrainer
-from jsm_models.em.em_posterior import EMPosterior
-from jsm_models.em.joint_models.joint_latent_variables import \
-    JointLatentVariables
-from jsm_models.utils.log_pdf import log_beta_pdf, log_binomial_likelihood
-from jsm_models.utils.marginal_responsibilities import get_marginals
+from joint_snv_mix.classification.em.em_lower_bound import EMLowerBound
+from joint_snv_mix.classification.em.em_model import EMModel, EMModelTrainer
+from joint_snv_mix.classification.em.em_posterior import EMPosterior
+from joint_snv_mix.classification.em.joint_models.joint_latent_variables import JointLatentVariables
+from joint_snv_mix.classification.utils.log_pdf import log_beta_pdf, log_binomial_likelihood
+from joint_snv_mix.classification.utils.marginal_responsibilities import get_marginals
 
 class JointBinomialModel( EMModel ):
     def __init__( self ):

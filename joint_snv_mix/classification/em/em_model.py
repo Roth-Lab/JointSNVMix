@@ -6,7 +6,7 @@ Created on 2010-11-22
 import numpy as np
 np.seterr( invalid='raise' )
 
-from jsm_models.utils.normalise import log_space_normalise_rows
+from joint_snv_mix.classification.utils.normalise import log_space_normalise_rows
 
 class EMModel( object ):
     def __init__( self ):

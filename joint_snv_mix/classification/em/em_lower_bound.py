@@ -5,7 +5,7 @@ Created on 2010-09-15
 '''
 import numpy as np
 
-from jsm_models.utils.log_pdf import log_dirichlet_pdf
+from joint_snv_mix.classification.utils.log_pdf import log_dirichlet_pdf
  
 class EMLowerBound( object ):
     def __init__( self, data, priors ):                

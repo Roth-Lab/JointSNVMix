@@ -3,16 +3,18 @@ Created on 2010-12-09
 
 @author: Andrew Roth
 '''
-from jsm_models.em.em_lower_bound import EMLowerBound
-from jsm_models.em.em_model import EMModel, EMModelTrainer
-from jsm_models.em.em_posterior import EMPosterior
-from jsm_models.em.independent_models.independent_latent_variables import \
-    IndependentLatenVariables
-from jsm_models.utils.beta_binomial_map_estimators import get_mle_p
-from jsm_models.utils.log_pdf import log_beta_pdf, log_gamma_pdf, \
-    log_beta_binomial_likelihood
 import multiprocessing
+
 import numpy as np
+
+from joint_snv_mix.classification.em.em_lower_bound import EMLowerBound
+from joint_snv_mix.classification.em.em_model import EMModel, EMModelTrainer
+from joint_snv_mix.classification.em.em_posterior import EMPosterior
+from joint_snv_mix.classification.em.independent_models.independent_latent_variables import IndependentLatenVariables
+from joint_snv_mix.classification.utils.beta_binomial_map_estimators import get_mle_p
+from joint_snv_mix.classification.utils.log_pdf import log_gamma_pdf, log_beta_pdf, log_beta_binomial_likelihood
+
+
 
 class IndependenBetaBinomialModel( EMModel ):
     def __init__( self ):

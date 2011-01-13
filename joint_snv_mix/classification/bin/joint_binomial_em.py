@@ -7,13 +7,13 @@ import ConfigParser
 
 import numpy as np
 
+from joint_snv_mix import constants
+from joint_snv_mix.classification.data import JointData
+from joint_snv_mix.classification.em.joint_models.binomial import JointBinomialModel
+from joint_snv_mix.classification.utils.subsample import subsample
 from joint_snv_mix.file_formats.jcnt import JointCountsReader
 from joint_snv_mix.file_formats.jsm import JointSnvMixWriter
-from joint_snv_mix import constants
 
-from jsm_models.em.joint_models.binomial import JointBinomialModel
-from jsm_models.utils.subsample import subsample
-from jsm_models.data import JointData
 
 def main( args ):
     model = JointBinomialModel()
@@ -30,7 +30,7 @@ def main( args ):
         
         data = JointData( counts )
         
-        priors = parse_priors_file( args.priors_file_name, data.nrows )
+        priors = parse_priors_file( args.priors_file, data.nrows )
         parameters = model.train( data, priors, args.max_iters, args.convergence_threshold )   
     else:
         parameters = parse_parameters_file( args.params_file_name )

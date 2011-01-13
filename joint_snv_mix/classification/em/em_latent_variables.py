@@ -3,7 +3,7 @@ Created on 2010-09-15
 
 @author: Andrew Roth
 '''
-from jsm_models.utils.normalise import log_space_normalise_rows
+from joint_snv_mix.classification.utils.normalise import log_space_normalise_rows
 
 class EMLatentVariables( object ):
     def __init__( self, data ):       

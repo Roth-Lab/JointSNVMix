@@ -5,11 +5,11 @@ Created on 2010-12-09
 '''
 import numpy as np
 
-from jsm_models.em.em_lower_bound import EMLowerBound
-from jsm_models.em.em_model import EMModel, EMModelTrainer
-from jsm_models.em.em_posterior import EMPosterior
-from jsm_models.em.extended_multinomial.extended_multinomial_latent_variables import ExtendedMultinomialLatentVariables
-from jsm_models.utils.log_pdf import log_dirichlet_pdf, log_multinomial_likelihood
+from joint_snv_mix.classification.em.em_lower_bound import EMLowerBound
+from joint_snv_mix.classification.em.em_model import EMModel, EMModelTrainer
+from joint_snv_mix.classification.em.em_posterior import EMPosterior
+from joint_snv_mix.classification.em.extended_multinomial.extended_multinomial_latent_variables import ExtendedMultinomialLatentVariables
+from joint_snv_mix.classification.utils.log_pdf import log_dirichlet_pdf, log_multinomial_likelihood
 
 nclass = 15
 
