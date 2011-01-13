@@ -72,13 +72,16 @@ class IndependentBetaBinomialPosterior( EMPosterior ):
         
         self._update_mix_weights()
         
-        s = self.priors['precision'][:, 0] * self.priors['precision'][ :, 1] 
-        
-        mu = self.priors['location'][:, 0] / \
-            ( self.priors['location'][:, 0] + self.priors['location'][ :, 1] ) 
-        
-        self.parameters['alpha'] = s * mu
-        self.parameters['beta'] = s * ( 1 - mu )
+#        s = self.priors['precision'][:, 0] * self.priors['precision'][ :, 1] 
+#        
+#        mu = self.priors['location'][:, 0] / \
+#            ( self.priors['location'][:, 0] + self.priors['location'][ :, 1] ) 
+#        
+#        self.parameters['alpha'] = s * mu
+#        self.parameters['beta'] = s * ( 1 - mu )
+
+        self.parameters['alpha'] = np.array( [99, 5, 1], dtype=np.float64 )
+        self.parameters['beta'] = np.array( [1, 5, 99], dtype=np.float64 )
         
         print "Initial parameter values : ", self.parameters
     
