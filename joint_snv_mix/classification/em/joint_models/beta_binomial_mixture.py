@@ -3,19 +3,16 @@ Created on 2010-12-09
 
 @author: Andrew Roth
 '''
+from joint_snv_mix.classification.em.em_lower_bound import EMLowerBound
+from joint_snv_mix.classification.em.em_model import EMModel, EMModelTrainer
+from joint_snv_mix.classification.em.em_posterior import EMPosterior
+from joint_snv_mix.classification.em.joint_models.joint_latent_variables import JointLatentVariables
+from joint_snv_mix.classification.utils.beta_binomial_map_estimators import get_mle_p
+from joint_snv_mix.classification.utils.log_pdf import log_gamma_pdf, log_beta_pdf, log_beta_binomial_likelihood
 import multiprocessing
-
 import numpy as np
 
-from jsm_models.em.em_lower_bound import EMLowerBound
-from jsm_models.em.em_model import EMModel, EMModelTrainer
-from jsm_models.em.em_posterior import EMPosterior
-from jsm_models.em.joint_models.joint_latent_variables import \
-    JointLatentVariables
-from jsm_models.utils.beta_binomial_map_estimators import get_mle_p
-from jsm_models.utils.log_pdf import log_gamma_pdf, log_beta_pdf, \
-    log_beta_binomial_likelihood
-from jsm_models.utils.marginal_responsibilities import get_marginals
+
 
 class JointBetaBinomialModel( EMModel ):
     def __init__( self ):
@@ -79,12 +76,21 @@ class JointBetaBinomialPosterior( EMPosterior ):
         
         self._update_mix_weights()
         
-        s = self.priors['precision'][:, :, 0] * self.priors['precision'][:, :, 1] 
-        mu = self.priors['location'][:, :, 0] / \
-            ( self.priors['location'][:, :, 0] + self.priors['location'][:, :, 1] ) 
-        
-        self.parameters['alpha'] = s * mu
-        self.parameters['beta'] = s * ( 1 - mu )
+#        s = self.priors['precision'][:, :, 0] * self.priors['precision'][:, :, 1] 
+#        mu = self.priors['location'][:, :, 0] / \
+#            ( self.priors['location'][:, :, 0] + self.priors['location'][:, :, 1] ) 
+#        
+#        self.parameters['alpha'] = s * mu
+#        self.parameters['beta'] = s * ( 1 - mu )
+
+        self.parameters['alpha'] = np.array( [
+                                             [99, 5, 1, 99, 5, 1, 99, 5, 1],
+                                             [99, 99, 99, 5, 5, 5, 1, 1, 1],
+                                             ], dtype=np.float64 )
+        self.parameters['beta'] = np.array( [
+                                             [1, 5, 99, 1, 5, 99, 1, 5, 99],
+                                             [1, 1, 1, 5, 5, 5, 99, 99, 99],
+                                             ], dtype=np.float64 )
         
         print "Initial parameter values : ", self.parameters
     
@@ -133,6 +139,7 @@ def joint_beta_binomial_log_likelihood( data, parameters ):
     beta_2 = parameters['beta'][1]
     
     normal_log_likelihoods = log_beta_binomial_likelihood( a_1, d_1, alpha_1, beta_1 )
+
     tumour_log_likelihoods = log_beta_binomial_likelihood( a_2, d_2, alpha_2, beta_2 )
 
     log_likelihoods = normal_log_likelihoods + tumour_log_likelihoods

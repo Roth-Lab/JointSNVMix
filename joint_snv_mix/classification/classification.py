@@ -13,6 +13,8 @@ from bin.joint_beta_binomial_em import main as run_joint_beta_binomial
 
 from bin.joint_binomial_vb import main as run_joint_binomial_vb
 
+from bin.beta_binomial_mixture_em import main as run_beta_binomial_mixture
+
 def run_classifier( args ):
     if args.model == "independent":
         if args.density == "binomial":
@@ -29,3 +31,7 @@ def run_classifier( args ):
                 
         elif args.density == "beta_binomial":
             run_joint_beta_binomial( args )
+    
+    elif args.model == "mixture":
+        if args.density == "beta_binomial":
+            run_beta_binomial_mixture( args )
