@@ -10,7 +10,7 @@ import numpy as np
 from joint_snv_mix import constants
 from joint_snv_mix.classification.data import IndependentData
 from joint_snv_mix.classification.em.independent_models.beta_binomial import IndependenBetaBinomialModel
-from joint_snv_mix.classification.utils import subsample
+from joint_snv_mix.classification.utils.subsample import subsample
 from joint_snv_mix.file_formats.jcnt import JointCountsReader
 from joint_snv_mix.file_formats.jsm import JointSnvMixWriter
 

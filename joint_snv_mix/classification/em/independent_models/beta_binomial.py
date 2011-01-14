@@ -64,6 +64,11 @@ class IndependentBetaBinomialLowerBound( EMLowerBound ):
         return precision_term + location_term
     
 class IndependentBetaBinomialPosterior( EMPosterior ):
+    def __init__( self, *args ):
+        EMPosterior.__init__( self, *args )
+        
+        self.p = multiprocessing.Pool( processes=3, maxtasksperchild=1 )
+    
     def _init_parameters( self ):
         '''
         Initialise parameters using method of moments (MOM) estiamtes.
@@ -104,8 +109,8 @@ class IndependentBetaBinomialPosterior( EMPosterior ):
             
             vars.append( [x, a, b, resp, component, precision_prior, location_prior] )
                 
-        p = multiprocessing.Pool()
-        results = p.map( get_mle_p, vars )
+        
+        results = self.p.map( get_mle_p, vars )
         
         for component in range( 3 ):
             self.parameters['alpha'][component] = results[component][0]

@@ -10,7 +10,7 @@ import numpy as np
 from joint_snv_mix import constants
 from joint_snv_mix.classification.data import IndependentData
 from joint_snv_mix.classification.em.independent_models.binomial import IndependentBinomialModel
-from joint_snv_mix.classification.utils import subsample
+from joint_snv_mix.classification.utils.subsample import subsample
 from joint_snv_mix.file_formats.jcnt import JointCountsReader
 from joint_snv_mix.file_formats.jsm import JointSnvMixWriter
 
@@ -32,7 +32,7 @@ def main( args ):
         
         n = normal_data.nrows 
         
-        normal_priors, tumour_priors = parse_priors_file( args.priors_file_name, n )
+        normal_priors, tumour_priors = parse_priors_file( args.priors_file, n )
         
         normal_parameters = model.train( normal_data, normal_priors, args.max_iters, args.convergence_threshold )
         tumour_parameters = model.train( tumour_data, tumour_priors, args.max_iters, args.convergence_threshold )   

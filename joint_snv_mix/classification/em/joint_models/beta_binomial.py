@@ -64,6 +64,11 @@ class JointBetaBinomialLowerBound( EMLowerBound ):
         return precision_term + location_term
         
 class JointBetaBinomialPosterior( EMPosterior ):
+    def __init__( self, *args ):
+        EMPosterior.__init__( self, *args )
+        
+        self.p = multiprocessing.Pool( processes=6, maxtasksperchild=1 )
+
     def _init_parameters( self ):
         '''
         Initialise parameters using method of moments (MOM) estiamtes.
@@ -113,10 +118,8 @@ class JointBetaBinomialPosterior( EMPosterior ):
                 location_prior = self.priors['location'][genome][component]
                 
                 vars.append( [x, a, b, resp, component, precision_prior, location_prior] )
-                
-        p = multiprocessing.Pool( processes=6 )
         
-        results = p.map( get_mle_p, vars )
+        results = self.p.map( get_mle_p, vars )
         
         for genome in range( 2 ):
             for component in range( 3 ):
