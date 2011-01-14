@@ -94,6 +94,9 @@ parser_classify.add_argument( '--model', choices=['independent', 'joint'], defau
 parser_classify.add_argument( '--density', choices=['binomial', 'beta_binomial'], default='beta_binomial',
                               help='Density to be used in model.' )
 
+parser_classify.add_argument( '--inference_algorithm', choices=['em', 'vb'], default='em',
+                              help='Method used to infer model parameters.' )
+
 train_group.set_defaults( func=run_classifier )
 
 #===============================================================================

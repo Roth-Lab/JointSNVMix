@@ -47,24 +47,24 @@ class _LowerBound( object ):
         return term
     
     def _get_expectation_log_p_pi( self ):
-        term_1 = log_dirichlet_constant( self.priors.kappa )
+        term_1 = log_dirichlet_constant( self.priors['kappa'] )
         
-        term_2 = ( self.priors.kappa - 1. ) * self.posterior.expected_log_pi
+        term_2 = ( self.priors['kappa'] - 1. ) * self.posterior.expected_log_pi
         term_2 = term_2.sum()
         
         return term_1 + term_2
 
     def _get_expectation_log_p_mu( self ):
-        alpha_1 = self.priors.alpha_1
-        beta_1 = self.priors.beta_1
+        alpha_1 = self.priors['alpha'][0]
+        beta_1 = self.priors['beta'][0]
         
         term_1 = -betaln( alpha_1, beta_1 ) + \
                  ( alpha_1 - 1 ) * self.posterior.expected_log_mu_1 + \
                  ( beta_1 - 1 ) * self.posterior.expected_log_one_minus_mu_1
         term_1 = term_1.sum()
         
-        alpha_2 = self.priors.alpha_2
-        beta_2 = self.priors.beta_2
+        alpha_2 = self.priors['alpha'][1]
+        beta_2 = self.priors['beta'][1]
         
         term_2 = -betaln( alpha_2, beta_2 ) + \
                 ( alpha_2 - 1 ) * self.posterior.expected_log_mu_2 + \

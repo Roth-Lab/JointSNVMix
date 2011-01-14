@@ -11,6 +11,8 @@ from bin.joint_binomial_em import main as run_joint_binomial
 
 from bin.joint_beta_binomial_em import main as run_joint_beta_binomial
 
+from bin.joint_binomial_vb import main as run_joint_binomial_vb
+
 def run_classifier( args ):
     if args.model == "independent":
         if args.density == "binomial":
@@ -20,6 +22,10 @@ def run_classifier( args ):
             
     elif args.model == "joint":
         if args.density == "binomial":
-            run_joint_binomial( args )
+            if args.inference_algorithm == "vb":
+                run_joint_binomial_vb( args )
+            else:                
+                run_joint_binomial( args )
+                
         elif args.density == "beta_binomial":
             run_joint_beta_binomial( args )

@@ -7,17 +7,14 @@ import numpy as np
 
 class _ESS(object):
     def __init__(self, data):
-        nrows = data.shape[0]
-        shape = (nrows, 1)
+        nrows = data.nrows
+        shape = ( nrows, 1 )
         
-        self.a_1 = data[:, 0].reshape(shape)
-        self.a_2 = data[:, 2].reshape(shape)
+        self.a_1 = data.a[0].reshape( shape )
+        self.a_2 = data.a[1].reshape( shape )
         
-        self.b_1 = data[:, 1] - data[:, 0]
-        self.b_1 = self.b_1.reshape(shape)
-        
-        self.b_2 = data[:, 3] - data[:, 2]
-        self.b_2 = self.b_2.reshape(shape)
+        self.b_1 = data.b[0].reshape( shape )
+        self.b_2 = data.b[1].reshape( shape )
         
     def update(self, LatentVariables):
         self.N_g = LatentVariables.responsibilities.sum(axis=0)

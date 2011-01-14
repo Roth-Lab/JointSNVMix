@@ -9,18 +9,14 @@ from ._ess import _ESS
 from ._posterior import _Posterior
 from ._latent_variables import _LatentVariables
 from ._lower_bound import _LowerBound
-from ._priors import _Priors
 
 class MixtureModel:
-    def __init__( self ):
-        self.priors = _Priors()
-
-    def train( self, data, threshold=1e-8, max_iter=1000 ):
+    def train( self, data, priors, max_iter, threshold ):
         lv = _LatentVariables( data )
         ess = _ESS( data )
-        posterior = _Posterior( self.priors )
+        posterior = _Posterior( priors )
         
-        lower_bound = _LowerBound( self.priors, posterior, ess, lv )
+        lower_bound = _LowerBound( priors, posterior, ess, lv )
         
         lb_change = float( 'inf' )
         old_lb = float( '-inf' )
@@ -59,12 +55,11 @@ class MixtureModel:
         mu_2 = posterior.alpha_bar_2 / ( posterior.alpha_bar_2 + posterior.beta_bar_2 )
         parameters['mu'] = np.vstack( ( mu_1, mu_2 ) )
 
-        return parameters, lv.responsibilities
+        return posterior
         
 
-    def classify( self, data ):
+    def classify( self, data, posterior ):
         lv = _LatentVariables( data )
-        posterior = _Posterior( self.priors )
         
         lv.update( posterior )
 
