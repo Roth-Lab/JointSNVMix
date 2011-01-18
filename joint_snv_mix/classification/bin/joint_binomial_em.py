@@ -31,9 +31,14 @@ def main( args ):
         data = JointData( counts )
         
         priors = parse_priors_file( args.priors_file, data.nrows )
+        
+        writer.write_priors( priors )
+        
         parameters = model.train( data, priors, args.max_iters, args.convergence_threshold )   
     else:
         parameters = parse_parameters_file( args.params_file_name )
+    
+    writer.write_parameters( parameters )
     
     chr_list = reader.get_chr_list()
     

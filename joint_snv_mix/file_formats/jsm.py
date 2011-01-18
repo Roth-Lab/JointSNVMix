@@ -59,7 +59,7 @@ class JointSnvMixFile:
         atom = Float64Atom( () )
         
         for parameter_name, parameter_value in parameters.items():
-            shape = parameter_value.shape
+            shape = np.array( parameter_value ).shape
             parameter_array = fh.createCArray( param_group, parameter_name, atom, shape )
             
             parameter_array[:] = parameter_value[:]
