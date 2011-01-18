@@ -1,3 +1,10 @@
+#!/usr/bin/env python
+
+#=======================================================================================================================
+# Joint SNVMix
+# Author : Andrew Roth
+#=======================================================================================================================
+
 import argparse
 
 from joint_snv_mix.classification.classification import run_classifier

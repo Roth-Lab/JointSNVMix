@@ -24,5 +24,5 @@ setup(
       cmdclass={'build_ext': build_ext},
       ext_modules=ext_modules,
       
-      scripts=['jsm']
+      scripts=['jsm.py']
      )
