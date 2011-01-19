@@ -105,3 +105,73 @@ class EMModelTrainer( object ):
     
     def _init_components( self ):
         raise NotImplemented
+
+#=======================================================================================================================
+# Independent Models
+#=======================================================================================================================
+class IndependentBinomialModel( EMModel ):
+    def __init__( self ):
+        self.trainer_class = IndependentBinomialModelTrainer
+        
+        self.log_likelihood_func = independent_binomial_log_likelihood
+
+class IndependentBinomialModelTrainer( EMModelTrainer ):
+    def _init_components( self ):
+        self.latent_variables = IndependentBinomialLatentVariables( self.data )
+        
+        self.responsibilities = self.latent_variables.responsibilities
+        
+        self.posterior = IndependentBinomialPosterior( self.data, self.priors, self.responsibilities )
+        
+        self.lower_bound = IndependenBinomialLowerBound( self.data, self.priors )
+        
+class IndependentBinomialModel( EMModel ):
+    def __init__( self ):
+        self.trainer_class = IndependentBinomialModelTrainer
+        
+        self.log_likelihood_func = independent_binomial_log_likelihood
+
+class IndependentBinomialModelTrainer( EMModelTrainer ):
+    def _init_components( self ):
+        self.latent_variables = IndependentBinomialLatentVariables( self.data )
+        
+        self.responsibilities = self.latent_variables.responsibilities
+        
+        self.posterior = IndependentBinomialPosterior( self.data, self.priors, self.responsibilities )
+        
+        self.lower_bound = IndependenBinomialLowerBound( self.data, self.priors )
+        
+#=======================================================================================================================
+# Joint Models
+#=======================================================================================================================
+class JointBetaBinomialModel( EMModel ):
+    def __init__( self ):
+        self.trainer_class = JointBetaBinomialModelTrainer
+        
+        self.log_likelihood_func = joint_beta_binomial_log_likelihood
+
+class JointBetaBinomialModelTrainer( EMModelTrainer ):
+    def _init_components( self ):
+        self.latent_variables = JointBetaBinomialLatentVariables( self.data )
+        
+        self.responsibilities = self.latent_variables.responsibilities
+        
+        self.posterior = JointBetaBinomialPosterior( self.data, self.priors, self.responsibilities )
+        
+        self.lower_bound = JointBetaBinomialLowerBound( self.data, self.priors )
+        
+class JointBinomialModel( EMModel ):
+    def __init__( self ):
+        self.trainer_class = JointBinomialModelTrainer
+        
+        self.log_likelihood_func = joint_binomial_log_likelihood
+
+class JointBinomialModelTrainer( EMModelTrainer ):
+    def _init_components( self ):
+        self.latent_variables = JointBinomialLatentVariables( self.data )
+        
+        self.responsibilities = self.latent_variables.responsibilities
+        
+        self.posterior = JointBinomialPosterior( self.data, self.priors, self.responsibilities )
+        
+        self.lower_bound = JointBinomialLowerBound( self.data, self.priors )
