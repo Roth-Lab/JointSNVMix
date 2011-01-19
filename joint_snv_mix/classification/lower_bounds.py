@@ -1,3 +1,14 @@
+'''
+Created on 2011-01-18
+
+@author: Andrew Roth
+'''
+import numpy as np
+
+from joint_snv_mix.classification.utils.log_pdf import log_dirichlet_pdf, log_beta_pdf, log_gamma_pdf
+from joint_snv_mix.classification.likelihoods import independent_binomial_log_likelihood, \
+    independent_beta_binomial_log_likelihood, joint_beta_binomial_log_likelihood, joint_binomial_log_likelihood
+
 #=======================================================================================================================
 # Abstract Models
 #=======================================================================================================================
@@ -43,24 +54,30 @@ class EMLowerBound( object ):
 #=======================================================================================================================
 # Independent Models
 #=======================================================================================================================
-class IndependenBinomialLowerBound( EMLowerBound ):
+class IndependentBetaBinomialLowerBound( EMLowerBound ):
     def __init__( self, data, priors ):  
         EMLowerBound.__init__( self, data, priors )
         
-        self.log_likelihood_func = independent_binomial_log_likelihood
+        self.log_likelihood_func = independent_beta_binomial_log_likelihood
     
     def _get_log_density_parameters_prior( self ):
-        log_prior = 0.
-            
-        mu = self.parameters['mu']
-        alpha = self.priors['alpha']
-        beta = self.priors['beta']
+        precision_term = 0
+        location_term = 0
         
-        log_prior += log_beta_pdf( mu, alpha, beta )
+        for component in range( 3 ):
+            alpha = self.parameters['alpha'][component]
+            beta = self.parameters['beta'][component]
+            
+            s = alpha + beta
+            mu = alpha / s
     
-        log_prior = log_prior.sum()
-
-        return log_prior
+            precision_priors = self.priors['precision'][component]
+            location_priors = self.priors['location'][component]
+            
+            precision_term += log_gamma_pdf( s, precision_priors[0], precision_priors[1] )
+            location_term += log_beta_pdf( mu, location_priors[0], location_priors[1] )
+                
+        return precision_term + location_term
     
 class IndependenBinomialLowerBound( EMLowerBound ):
     def __init__( self, data, priors ):  

@@ -4,6 +4,8 @@ Created on 2011-01-18
 @author: Andrew Roth
 '''
 import numpy as np
+import multiprocessing
+from joint_snv_mix.classification.utils.beta_binomial_map_estimators import get_mle_p
 
 def get_marginals( responsibilities ):
     marginals = []
@@ -76,21 +78,22 @@ class EMPosterior( object ):
 # Independent Models
 #=======================================================================================================================
 class IndependentBetaBinomialPosterior( EMPosterior ):
+    def __init__( self, data, priors, responsibilities ):
+        EMPosterior.__init__( self, data, priors, responsibilities )
+        
+        self.pool = multiprocessing.Pool( maxtasksperchild=1 )
+    
     def _init_parameters( self ):
         '''
-        Initialise parameters using method of moments (MOM) estiamtes.
+        Initialise parameters. This is only necessary to initialise gradient descent.
         '''
         self.parameters = {}
         
         self._update_mix_weights()
         
-        s = self.priors['precision'][:, 0] * self.priors['precision'][ :, 1] 
-        
-        mu = self.priors['location'][:, 0] / \
-            ( self.priors['location'][:, 0] + self.priors['location'][ :, 1] ) 
-        
-        self.parameters['alpha'] = s * mu
-        self.parameters['beta'] = s * ( 1 - mu )
+        self.parameters['alpha'] = np.array( [99, 5, 1], np.float )
+
+        self.parameters['beta'] = np.array( [1, 5, 99] , np.float )
         
         print "Initial parameter values : ", self.parameters
     
@@ -113,8 +116,7 @@ class IndependentBetaBinomialPosterior( EMPosterior ):
             
             vars.append( [x, a, b, resp, component, precision_prior, location_prior] )
                 
-        p = multiprocessing.Pool()
-        results = p.map( get_mle_p, vars )
+        results = self.pool.map( get_mle_p, vars )
         
         for component in range( 3 ):
             self.parameters['alpha'][component] = results[component][0]
@@ -162,18 +164,21 @@ class IndependentBinomialPosterior( EMPosterior ):
 class JointBetaBinomialPosterior( EMPosterior ):
     def _init_parameters( self ):
         '''
-        Initialise parameters using method of moments (MOM) estiamtes.
+        Initialise parameters. This is only necessary to initialise gradient descent. 
         '''
         self.parameters = {}
         
         self._update_mix_weights()
         
-        s = self.priors['precision'][:, :, 0] * self.priors['precision'][:, :, 1] 
-        mu = self.priors['location'][:, :, 0] / \
-            ( self.priors['location'][:, :, 0] + self.priors['location'][:, :, 1] ) 
+        self.parameters['alpha'] = np.array( [
+                                              [99, 5, 1],
+                                              [99, 5, 1]
+                                              ], np.float )
         
-        self.parameters['alpha'] = s * mu
-        self.parameters['beta'] = s * ( 1 - mu )
+        self.parameters['beta'] = np.array( [
+                                            [1, 5, 99],
+                                            [1, 5, 99]
+                                            ], np.float )
         
         print "Initial parameter values : ", self.parameters
     

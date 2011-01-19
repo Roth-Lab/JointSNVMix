@@ -3,23 +3,25 @@ Created on 2011-01-18
 
 @author: Andrew Roth
 '''
+import numpy as np
+from joint_snv_mix.classification.utils.log_pdf import log_beta_binomial_likelihood, log_binomial_likelihood
+
 #=======================================================================================================================
 # Independent Models
 #=======================================================================================================================
-def independent_binomial_log_likelihood( data, parameters ):
+def independent_beta_binomial_log_likelihood( data, parameters ):
     a = data.a
     b = data.b
     
     d = a + b
     
-    mu = parameters['mu']
-
-    log_likelihoods = log_binomial_likelihood( a, d, mu )
+    alpha = parameters['alpha']
+    beta = parameters['beta']
+    
+    log_likelihoods = log_beta_binomial_likelihood( a, d, alpha, beta )
 
     pi = parameters['pi']
-    log_pi = np.log( pi )
-
-    log_likelihoods = log_likelihoods + log_pi
+    log_likelihoods = log_likelihoods + np.log( pi )
     
     return log_likelihoods
 
@@ -59,16 +61,9 @@ def joint_beta_binomial_log_likelihood( data, parameters ):
     normal_log_likelihoods = log_beta_binomial_likelihood( a_1, d_1, alpha_1, beta_1 )
     tumour_log_likelihoods = log_beta_binomial_likelihood( a_2, d_2, alpha_2, beta_2 )
 
-    column_shape = ( normal_log_likelihoods[:, 0].size, 1 )
-
-    log_likelihoods = np.hstack( ( 
-                                 normal_log_likelihoods[:, 0].reshape( column_shape ) + tumour_log_likelihoods ,
-                                 normal_log_likelihoods[:, 1].reshape( column_shape ) + tumour_log_likelihoods ,
-                                 normal_log_likelihoods[:, 2].reshape( column_shape ) + tumour_log_likelihoods
-                                 ) )
-
     pi = parameters['pi']
-    log_likelihoods = log_likelihoods + np.log( pi )
+
+    log_likelihoods = get_joint_log_likelihoods( normal_log_likelihoods, tumour_log_likelihoods, pi )
     
     return log_likelihoods
 
@@ -86,6 +81,13 @@ def joint_binomial_log_likelihood( data, parameters ):
     normal_log_likelihoods = log_binomial_likelihood( a_1, d_1, mu_1 )
     tumour_log_likelihoods = log_binomial_likelihood( a_2, d_2, mu_2 )
 
+    pi = parameters['pi']
+
+    log_likelihoods = get_joint_log_likelihoods( normal_log_likelihoods, tumour_log_likelihoods, pi )
+    
+    return log_likelihoods
+
+def get_joint_log_likelihoods( normal_log_likelihoods, tumour_log_likelihoods, pi ):
     column_shape = ( normal_log_likelihoods[:, 0].size, 1 )
 
     log_likelihoods = np.hstack( ( 
@@ -93,10 +95,7 @@ def joint_binomial_log_likelihood( data, parameters ):
                                  normal_log_likelihoods[:, 1].reshape( column_shape ) + tumour_log_likelihoods ,
                                  normal_log_likelihoods[:, 2].reshape( column_shape ) + tumour_log_likelihoods
                                  ) )
-
-    pi = parameters['pi']
-    log_pi = np.log( pi )
-
-    log_likelihoods = log_likelihoods + log_pi
     
+    log_likelihoods = log_likelihoods + np.log( pi )
+
     return log_likelihoods
