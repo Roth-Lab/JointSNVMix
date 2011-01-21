@@ -8,7 +8,7 @@ import numpy as np
 from scipy.cluster.vq import kmeans2
 
 from joint_snv_mix.classification.utils.normalise import log_space_normalise_rows
-from joint_snv_mix.classification.likelihoods import independent_beta_binomial_log_likelihood,\
+from joint_snv_mix.classification.likelihoods import independent_beta_binomial_log_likelihood, \
     independent_binomial_log_likelihood, joint_beta_binomial_log_likelihood, joint_binomial_log_likelihood
 
 class EMLatentVariables( object ):
@@ -78,8 +78,8 @@ class JointLatentVariables( EMLatentVariables ):
         for id in range( 9 ):
             index = labels == id
             
-            responsibilities[index, :] = 0.
-            responsibilities[index, id] = 1.
+            responsibilities[index, :] = 0.01
+            responsibilities[index, id] = 0.99
         
         self.responsibilities = responsibilities
 
