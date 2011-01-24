@@ -7,39 +7,22 @@ import numpy as np
 import multiprocessing
 from joint_snv_mix.classification.utils.beta_binomial_map_estimators import get_mle_p
 
-def get_marginals( responsibilities ):
+def get_marginals( responsibilities, nclass ):
+    nrows = responsibilities.shape[0]
+
+    shape = ( nrows, nclass, nclass )
+    
+    responsibilities = responsibilities.reshape( shape )
+    
+    normal_marginals = responsibilities.sum( axis=2 )
+    tumour_marginals = responsibilities.sum( axis=1 )
+    
     marginals = []
 
-    marginals.append( get_normal_marginals( responsibilities ) )
-    marginals.append( get_tumour_marginals( responsibilities ) )
+    marginals.append( normal_marginals )
+    marginals.append( tumour_marginals )
 
     return marginals
-
-def get_normal_marginals( responsibilities ):
-    nrows = responsibilities.shape[0]
-
-    shape = ( nrows, 3 )
-
-    normal_marginals = np.zeros( shape )
-
-    normal_marginals[:, 0] = responsibilities[:, 0] + responsibilities[:, 1] + responsibilities[:, 2]
-    normal_marginals[:, 1] = responsibilities[:, 3] + responsibilities[:, 4] + responsibilities[:, 5]
-    normal_marginals[:, 2] = responsibilities[:, 6] + responsibilities[:, 7] + responsibilities[:, 8]
-
-    return normal_marginals
-
-def get_tumour_marginals( responsibilities ):
-    nrows = responsibilities.shape[0]
-
-    shape = ( nrows, 3 )
-
-    tumour_marginals = np.zeros( shape )
-
-    tumour_marginals[:, 0] = responsibilities[:, 0] + responsibilities[:, 3] + responsibilities[:, 6]
-    tumour_marginals[:, 1] = responsibilities[:, 1] + responsibilities[:, 4] + responsibilities[:, 7]
-    tumour_marginals[:, 2] = responsibilities[:, 2] + responsibilities[:, 5] + responsibilities[:, 8]
-
-    return tumour_marginals
 
 #=======================================================================================================================
 # Abstract Models
@@ -111,10 +94,14 @@ class IndependentBetaBinomialPosterior( EMPosterior ):
             
             resp = self.responsibilities[:, component]
             
-            precision_prior = self.priors['precision'][component]
-            location_prior = self.priors['location'][component]
+            precision_shape = self.priors['precision']['shape'][component]
+            precision_scale = self.priors['precision']['scale'][component]
             
-            vars.append( [x, a, b, resp, component, precision_prior, location_prior] )
+            location_alpha = self.priors['location']['alpha'][component]
+            location_beta = self.priors['location']['beta'][component]
+            
+            vars.append( [x, a, b, resp, component, precision_shape,
+                          precision_scale, location_alpha, location_beta] )
                 
         results = self.pool.map( get_mle_p, vars )
         
@@ -162,6 +149,15 @@ class IndependentBinomialPosterior( EMPosterior ):
 # Joint Models
 #=======================================================================================================================
 class JointBetaBinomialPosterior( EMPosterior ):
+    def __init__( self, data, priors, responsibilities, nclass=3 ):
+        self.nclass = nclass
+        
+        ncpus = nclass * 2
+        
+        self.pool = multiprocessing.Pool( processes=ncpus, maxtasksperchild=1 )
+        
+        EMPosterior.__init__( self, data, priors, responsibilities )
+    
     def _init_parameters( self ):
         '''
         Initialise parameters. This is only necessary to initialise gradient descent. 
@@ -170,27 +166,25 @@ class JointBetaBinomialPosterior( EMPosterior ):
         
         self._update_mix_weights()
         
-        self.parameters['alpha'] = np.array( [
-                                              [99, 5, 1],
-                                              [99, 5, 1]
-                                              ], np.float )
+        values = np.linspace( 1, 99, self.nclass )
         
-        self.parameters['beta'] = np.array( [
-                                            [1, 5, 99],
-                                            [1, 5, 99]
-                                            ], np.float )
+        print values
+        
+        self.parameters['alpha'] = np.vstack( ( values[::-1], values[::-1] ) )
+        
+        self.parameters['beta'] = np.vstack( ( values, values ) )
         
         print "Initial parameter values : ", self.parameters
     
     def _update_density_parameters( self ):        
-        marginals = get_marginals( self.responsibilities )
+        marginals = get_marginals( self.responsibilities, self.nclass )
         
         print "Begining numerical optimisation of alpha and beta."
         
         vars = []
         
         for genome in range( 2 ):
-            for component in range( 3 ):
+            for component in range( self.nclass ):
                 a = self.data.a[genome]
                 b = self.data.b[genome]
                 
@@ -205,36 +199,33 @@ class JointBetaBinomialPosterior( EMPosterior ):
                 location_prior = self.priors['location'][genome][component]
                 
                 vars.append( [x, a, b, resp, component, precision_prior, location_prior] )
-                
-        p = multiprocessing.Pool( processes=6 )
         
-        results = p.map( get_mle_p, vars )
+        results = self.pool.map( get_mle_p, vars )
         
         for genome in range( 2 ):
-            for component in range( 3 ):
-                i = genome * 3 + component
+            for component in range( self.nclass ):
+                i = genome * self.nclass + component
                 
                 self.parameters['alpha'][genome][component] = results[i][0]
                 self.parameters['beta'][genome][component] = results[i][1]
                 
 class JointBinomialPosterior( EMPosterior ):
+    def __init__( self, data, priors, responsibilities, nclass=3 ):
+        self.nclass = nclass
+        
+        EMPosterior.__init__( self, data, priors, responsibilities )
+    
     def _init_parameters( self ):
         self.parameters = {}
         
         self._update_mix_weights()
         
-        self.parameters['mu'] = []
-        
-        for i in range( 2 ):
-            alpha = self.priors['alpha'][i, :]
-            beta = self.priors['beta'][i, :]
-            
-            mu = alpha / ( alpha + beta )
-            
-            self.parameters['mu'].append( mu )
+        self._update_density_parameters()
            
     def _update_density_parameters( self ):
-        marginals = get_marginals( self.responsibilities )
+        marginals = get_marginals( self.responsibilities, self.nclass )
+        
+        self.parameters['mu'] = []
         
         for genome in range( 2 ):
             a = self.data.a[genome]
@@ -245,7 +236,7 @@ class JointBinomialPosterior( EMPosterior ):
             
             tau = marginals[genome]
             
-            self.parameters['mu'][genome] = self._update_mu( a, b, alpha, beta, tau )
+            self.parameters['mu'].append( self._update_mu( a, b, alpha, beta, tau ) )
     
     def _update_mu( self, a, b, alpha, beta, tau ):       
         d = a + b
