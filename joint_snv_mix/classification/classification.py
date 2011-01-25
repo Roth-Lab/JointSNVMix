@@ -37,7 +37,10 @@ def subsample( reader, sample_size ):
         chr_size = reader.get_chr_size( chr_name=chr_name )
         
         chr_sample_size = math.ceil( float( chr_size ) / nrows * sample_size )
+        
         chr_sample_size = int( chr_sample_size )
+        
+        chr_sample_size = min( chr_size, chr_sample_size )
         
         chr_sample_indices = random.sample( xrange( chr_size ), chr_sample_size )
         
