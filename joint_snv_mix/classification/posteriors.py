@@ -181,6 +181,8 @@ class JointBetaBinomialPosterior( EMPosterior ):
                                             ], np.float )
         
         print "Initial parameter values : ", self.parameters
+        
+        self.pool = multiprocessing.Pool( processes=6, maxtasksperchild=1 )
     
     def _update_density_parameters( self ):        
         marginals = get_marginals( self.responsibilities )
@@ -206,9 +208,9 @@ class JointBetaBinomialPosterior( EMPosterior ):
                 
                 vars.append( [x, a, b, resp, component, precision_prior, location_prior] )
                 
-        p = multiprocessing.Pool( processes=6 )
         
-        results = p.map( get_mle_p, vars )
+        
+        results = self.pool.map( get_mle_p, vars )
         
         for genome in range( 2 ):
             for component in range( 3 ):
