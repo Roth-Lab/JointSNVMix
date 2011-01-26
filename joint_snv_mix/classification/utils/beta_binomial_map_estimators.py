@@ -14,21 +14,21 @@ def get_mle_p( vars ):
     b = vars[2]
     resp = vars[3]
     component = vars[4]
-    precision_prior = vars[5]
-    location_prior = vars[6]  
+    alpha_prior = vars[5]
+    beta_prior = vars[6]  
     
-    return get_ml_estimates( x, a, b, resp, component, precision_prior, location_prior )
+    return get_ml_estimates( x, a, b, resp, component, alpha_prior, beta_prior )
 
-def get_ml_estimates( x, a, b, resp, i, precision_prior, location_prior ):
+def get_ml_estimates( x, a, b, resp, i, alpha_prior, beta_prior ):
     if np.all( resp == 0 ):
         print "Empty class."
         return x
     
     f = lambda y:-1 * ( get_f( y, a, b, resp ) + \
-                        get_penalty( y, precision_prior, location_prior ) )
+                        get_penalty( y, alpha_prior, beta_prior ) )
     
     g = lambda y:-1 * ( get_gradient( y, a, b, resp ) + \
-                        get_penalty_gradient( y, precision_prior, location_prior ) )
+                        get_penalty_gradient( y, alpha_prior, beta_prior ) )
     
     # Bounds to keep the alpha, beta search away from 0.
     bounds = [( 1e-6, None ), ( 1e-6, None )]
@@ -37,41 +37,35 @@ def get_ml_estimates( x, a, b, resp, i, precision_prior, location_prior ):
     
     return x[0]
 
-def get_penalty( x, precision_prior, location_prior ):
+def get_penalty( x, alpha_prior, beta_prior ):
     alpha = x[0]
     beta = x[1]
     
-    precision_prior_shape = precision_prior[0]
-    precision_prior_scale = precision_prior[1]
+    alpha_prior_shape = alpha_prior[0]
+    alpha_prior_scale = alpha_prior[1]
     
-    location_prior_alpha = location_prior[0]
-    location_prior_beta = location_prior[1]
+    beta_prior_shape = beta_prior[0]
+    beta_prior_scale = beta_prior[1]
+    
+    alpha_penalty = ( alpha_prior_shape - 1 ) * np.log( alpha ) - alpha / alpha_prior_scale
+    beta_penalty = ( beta_prior_shape - 1 ) * np.log( beta ) - beta / beta_prior_scale
+    
+    return alpha_penalty + beta_penalty
 
-    s = alpha + beta
-    mu = alpha / s
-    
-    scale_penalty = ( precision_prior_shape - 1 ) * np.log( s ) - s / precision_prior_scale
-    location_penalty = ( location_prior_alpha - 1 ) * np.log( mu ) + ( location_prior_beta - 1 ) * np.log( 1 - mu )
-    
-    return scale_penalty + location_penalty
-
-def get_penalty_gradient( x, precision_prior, location_prior ):
+def get_penalty_gradient( x, alpha_prior, beta_prior ):
     alpha = x[0]
     beta = x[1]
     
-    precision_prior_shape = precision_prior[0]
-    precision_prior_scale = precision_prior[1]
+    alpha_prior_shape = alpha_prior[0]
+    alpha_prior_scale = alpha_prior[1]
     
-    location_prior_alpha = location_prior[0]
-    location_prior_beta = location_prior[1]
+    beta_prior_shape = beta_prior[0]
+    beta_prior_scale = beta_prior[1]
 
-    s = alpha + beta
-    mu = alpha / s
-
-    grad_scale_penalty = ( precision_prior_shape - 1 ) / s - 1 / precision_prior_scale
-    grad_location_penalty = ( location_prior_alpha - 1 ) / mu - ( location_prior_beta - 1 ) / ( 1 - mu )
+    alpha_penalty = ( alpha_prior_shape - 1 ) / alpha - 1 / alpha_prior_scale
+    beta_penalty = ( beta_prior_shape - 1 ) / beta - 1 / beta_prior_scale
     
-    grad_penalty = np.array( [grad_scale_penalty, grad_location_penalty] )
+    grad_penalty = np.array( [alpha_penalty, beta_penalty] )
     
     return grad_penalty
 

@@ -108,24 +108,21 @@ class JointBetaBinomialLowerBound( EMLowerBound ):
         self.log_likelihood_func = joint_beta_binomial_log_likelihood
     
     def _get_log_density_parameters_prior( self ):
-        precision_term = 0
-        location_term = 0
+        alpha_term = 0
+        beta_term = 0
         
         for genome in range( 2 ):
             for component in range( 3 ):
                 alpha = self.parameters['alpha'][genome][component]
                 beta = self.parameters['beta'][genome][component]
                 
-                s = alpha + beta
-                mu = alpha / s
-        
-                precision_priors = self.priors['precision'][genome][component]
-                location_priors = self.priors['location'][genome][component]
+                alpha_priors = self.priors['alpha'][genome][component]
+                beta_priors = self.priors['beta'][genome][component]
                 
-                precision_term += log_gamma_pdf( s, precision_priors[0], precision_priors[1] )
-                location_term += log_beta_pdf( mu, location_priors[0], location_priors[1] )
+                alpha_term += log_gamma_pdf( alpha, alpha_priors[0], alpha_priors[1] )
+                beta_term += log_gamma_pdf( beta, beta_priors[0], beta_priors[1] )
                 
-        return precision_term + location_term
+        return alpha_term + beta_term
 
 class JointBinomialLowerBound( EMLowerBound ):
     def __init__( self, data, priors ):  

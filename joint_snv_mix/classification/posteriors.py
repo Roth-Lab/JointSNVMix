@@ -203,10 +203,10 @@ class JointBetaBinomialPosterior( EMPosterior ):
                 
                 resp = marginals[genome][:, component]
                 
-                precision_prior = self.priors['precision'][genome][component]
-                location_prior = self.priors['location'][genome][component]
+                alpha_priors = self.priors['alpha'][genome][component]
+                beta_priors = self.priors['beta'][genome][component]
                 
-                vars.append( [x, a, b, resp, component, precision_prior, location_prior] )
+                vars.append( [x, a, b, resp, component, alpha_priors, beta_priors] )
                 
         
         

@@ -343,24 +343,24 @@ def parse_joint_priors_file( priors_file_name, n, density ):
     return priors
 
 def get_joint_beta_binomial_density_priors( parser, priors ):
-    priors['location'] = np.zeros( ( 2, 3, 2 ) )
-    priors['precision'] = np.zeros( ( 2, 3, 2 ) )
+    priors['alpha'] = np.zeros( ( 2, 3, 2 ) )
+    priors['beta'] = np.zeros( ( 2, 3, 2 ) )
           
     for i, genotype in enumerate( constants.genotypes ):
         normal_genotype = "_".join( ( 'normal', genotype ) )
         tumour_genotype = "_".join( ( 'tumour', genotype ) )
         
-        priors['location'][0, i, 0] = parser.getfloat( 'location_alpha', normal_genotype )
-        priors['location'][0, i, 1] = parser.getfloat( 'location_beta', normal_genotype )
+        priors['alpha'][0, i, 0] = parser.getfloat( 'alpha_shape', normal_genotype )
+        priors['alpha'][0, i, 1] = parser.getfloat( 'alpha_scale', normal_genotype )
         
-        priors['location'][1, i, 0] = parser.getfloat( 'location_alpha', tumour_genotype )
-        priors['location'][1, i, 1] = parser.getfloat( 'location_beta', tumour_genotype )
+        priors['alpha'][1, i, 0] = parser.getfloat( 'alpha_shape', tumour_genotype )
+        priors['alpha'][1, i, 1] = parser.getfloat( 'alpha_scale', tumour_genotype )
         
-        priors['precision'][0, i, 0] = parser.getfloat( 'precision_shape', normal_genotype )
-        priors['precision'][0, i, 1] = parser.getfloat( 'precision_scale', normal_genotype )
+        priors['beta'][0, i, 0] = parser.getfloat( 'beta_shape', normal_genotype )
+        priors['beta'][0, i, 1] = parser.getfloat( 'beta_scale', normal_genotype )
         
-        priors['precision'][1, i, 0] = parser.getfloat( 'precision_shape', tumour_genotype )
-        priors['precision'][1, i, 1] = parser.getfloat( 'precision_scale', tumour_genotype )
+        priors['beta'][1, i, 0] = parser.getfloat( 'beta_shape', tumour_genotype )
+        priors['beta'][1, i, 1] = parser.getfloat( 'beta_shape', tumour_genotype )
         
     return priors
 
