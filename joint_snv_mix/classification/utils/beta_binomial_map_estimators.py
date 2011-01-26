@@ -43,9 +43,17 @@ def get_penalty( x, alpha_prior, beta_prior ):
     
     alpha_prior_shape = alpha_prior[0]
     alpha_prior_scale = alpha_prior[1]
+    alpha_prior_min = alpha_prior[2]
     
     beta_prior_shape = beta_prior[0]
     beta_prior_scale = beta_prior[1]
+    beta_prior_min = beta_prior[2]
+    
+    alpha = alpha - alpha_prior_min
+    beta = beta - beta_prior_min
+    
+    if alpha <= 0 or beta <= 0:
+        return float( '-inf' )
     
     alpha_penalty = ( alpha_prior_shape - 1 ) * np.log( alpha ) - alpha / alpha_prior_scale
     beta_penalty = ( beta_prior_shape - 1 ) * np.log( beta ) - beta / beta_prior_scale
@@ -58,9 +66,14 @@ def get_penalty_gradient( x, alpha_prior, beta_prior ):
     
     alpha_prior_shape = alpha_prior[0]
     alpha_prior_scale = alpha_prior[1]
+    alpha_prior_min = alpha_prior[2]
     
     beta_prior_shape = beta_prior[0]
     beta_prior_scale = beta_prior[1]
+    beta_prior_min = beta_prior[2]
+    
+    alpha = alpha - alpha_prior_min
+    beta = beta - beta_prior_min
 
     alpha_penalty = ( alpha_prior_shape - 1 ) / alpha - 1 / alpha_prior_scale
     beta_penalty = ( beta_prior_shape - 1 ) / beta - 1 / beta_prior_scale

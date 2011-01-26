@@ -28,10 +28,17 @@ def log_dirichlet_pdf( x, kappa ):
 
     return log_p
 
-def log_gamma_pdf( x, shape, scale ):   
+def log_gamma_pdf( x, shape, scale ):
+    print x, shape, scale
+    
     log_p = ( shape - 1 ) * np.log( x ) - gammaln( shape ) - shape * np.log( scale ) - ( x / scale )
     
     return log_p
+
+def log_translated_gamma_pdf( x, scale, shape, min ):
+    x = ( x - min )
+    
+    return log_gamma_pdf( x, shape, scale )
 
 def log_beta_binomial_likelihood( k, n, alpha, beta ):
     column_shape = ( k.size, 1 )

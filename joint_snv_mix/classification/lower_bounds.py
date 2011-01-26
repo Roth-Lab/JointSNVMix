@@ -5,7 +5,8 @@ Created on 2011-01-18
 '''
 import numpy as np
 
-from joint_snv_mix.classification.utils.log_pdf import log_dirichlet_pdf, log_beta_pdf, log_gamma_pdf
+from joint_snv_mix.classification.utils.log_pdf import log_dirichlet_pdf, log_beta_pdf, log_gamma_pdf, \
+    log_translated_gamma_pdf
 from joint_snv_mix.classification.likelihoods import independent_binomial_log_likelihood, \
     independent_beta_binomial_log_likelihood, joint_beta_binomial_log_likelihood, joint_binomial_log_likelihood
 
@@ -119,8 +120,8 @@ class JointBetaBinomialLowerBound( EMLowerBound ):
                 alpha_priors = self.priors['alpha'][genome][component]
                 beta_priors = self.priors['beta'][genome][component]
                 
-                alpha_term += log_gamma_pdf( alpha, alpha_priors[0], alpha_priors[1] )
-                beta_term += log_gamma_pdf( beta, beta_priors[0], beta_priors[1] )
+                alpha_term += log_translated_gamma_pdf( alpha, alpha_priors[0], alpha_priors[1], alpha_priors[2] )
+                beta_term += log_translated_gamma_pdf( beta, beta_priors[0], beta_priors[1], alpha_priors[2] )
                 
         return alpha_term + beta_term
 
