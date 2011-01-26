@@ -64,6 +64,19 @@ class JointSnvMixFile:
             
             parameter_array[:] = parameter_value[:]
             
+    def get_parameters( self ):
+        param_group = self._parameters_group
+        
+        params = {}
+        
+        for table in self._file_handle.iterNodes( where=param_group ):
+            param_name = table._v_name
+            param_value = table.read()
+        
+            params[param_name] = param_value
+        
+        return params
+            
     def write_chr_table( self, chr_name, data ):
         chr_table = self._file_handle.createTable( '/data', chr_name, JointSnvMixTable )
         
@@ -175,6 +188,9 @@ class JointSnvMixReader:
         
     def get_rows( self, chr_name ):
         return self._file_handle.get_rows( chr_name )
+    
+    def get_parameters( self ):
+        return self._file_handle.get_parameters()        
     
     def _get_rows_by_argmax( self, chr_name, class_labels ):
         responsibilities = self._file_handle.get_responsibilities( chr_name )
