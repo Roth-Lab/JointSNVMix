@@ -344,7 +344,7 @@ def parse_joint_priors_file( priors_file_name, n, density ):
 
 def get_joint_beta_binomial_density_priors( parser, priors ):
     priors['location'] = np.zeros( ( 2, 3, 2 ) )
-    priors['precision'] = np.zeros( ( 2, 3, 2 ) )
+    priors['precision'] = np.zeros( ( 2, 3, 3 ) )
           
     for i, genotype in enumerate( constants.genotypes ):
         normal_genotype = "_".join( ( 'normal', genotype ) )
@@ -358,9 +358,11 @@ def get_joint_beta_binomial_density_priors( parser, priors ):
         
         priors['precision'][0, i, 0] = parser.getfloat( 'precision_shape', normal_genotype )
         priors['precision'][0, i, 1] = parser.getfloat( 'precision_scale', normal_genotype )
+        priors['precision'][0, i, 2] = parser.getfloat( 'precision_min', normal_genotype )
         
         priors['precision'][1, i, 0] = parser.getfloat( 'precision_shape', tumour_genotype )
         priors['precision'][1, i, 1] = parser.getfloat( 'precision_scale', tumour_genotype )
+        priors['precision'][1, i, 2] = parser.getfloat( 'precision_min', tumour_genotype )
         
     return priors
 

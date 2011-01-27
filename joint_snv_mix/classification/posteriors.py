@@ -212,6 +212,10 @@ class JointBetaBinomialPosterior( EMPosterior ):
         
         results = self.pool.map( get_mle_p, vars )
         
+#        results = []
+#        for var in vars:
+#            results.append( get_mle_p( var ) )
+#        
         for genome in range( 2 ):
             for component in range( 3 ):
                 i = genome * 3 + component

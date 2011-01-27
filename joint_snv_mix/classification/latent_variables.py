@@ -78,8 +78,7 @@ class JointLatentVariables( EMLatentVariables ):
         for id in range( 9 ):
             index = labels == id
             
-            responsibilities[index, :] = 0.01
-            responsibilities[index, id] = 0.99
+            responsibilities[index, id] = 1.
         
         self.responsibilities = responsibilities
 
