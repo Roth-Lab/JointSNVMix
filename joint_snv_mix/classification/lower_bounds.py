@@ -121,7 +121,7 @@ class JointBetaBinomialLowerBound( EMLowerBound ):
                 beta_priors = self.priors['beta'][genome][component]
                 
                 alpha_term += log_translated_gamma_pdf( alpha, alpha_priors[0], alpha_priors[1], alpha_priors[2] )
-                beta_term += log_translated_gamma_pdf( beta, beta_priors[0], beta_priors[1], alpha_priors[2] )
+                beta_term += log_translated_gamma_pdf( beta, beta_priors[0], beta_priors[1], beta_priors[2] )
                 
         return alpha_term + beta_term
 
