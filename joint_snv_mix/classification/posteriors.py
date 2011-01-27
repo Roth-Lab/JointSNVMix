@@ -206,18 +206,22 @@ class JointBetaBinomialPosterior( EMPosterior ):
                 alpha_priors = self.priors['alpha'][genome][component]
                 beta_priors = self.priors['beta'][genome][component]
                 
-                vars.append( [x, a, b, resp, component, alpha_priors, beta_priors] )
+                print genome, component, resp
+                
+                vars.append( [x, a, b, resp, alpha_priors, beta_priors] )
 
         
-        results = self.pool.map( get_mle_p, vars )
+#        results = self.pool.map( get_mle_p, vars )
         
-#        results = []
-#        for var in vars:
-#            results.append( get_mle_p( var ) )
-#        
+        results = []
+        for var in vars:
+            results.append( get_mle_p( var ) )
+        
         for genome in range( 2 ):
             for component in range( 3 ):
                 i = genome * 3 + component
+                
+                print genome, component, i, vars[i], results[i]
                 
                 self.parameters['alpha'][genome][component] = results[i][0]
                 self.parameters['beta'][genome][component] = results[i][1]
