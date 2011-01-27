@@ -305,16 +305,29 @@ def run_joint_model( args ):
     
     chr_list = reader.get_chr_list()
     
-    for chr_name in sorted( chr_list ):
+    for chr_name in sorted( chr_list ):        
         counts = reader.get_counts( chr_name )
-        
-        data = JointData( counts )
-        
-        responsibilities = model.classify( data, parameters )
-        
         jcnt_rows = reader.get_rows( chr_name )
         
-        writer.write_data( chr_name, jcnt_rows, responsibilities )
+        end = reader.get_chr_size( chr_name )
+
+        n = max( int( 1e5 ), args.subsample_size )
+        start = 0
+        stop = min( n, end )
+        
+
+        while start < end:
+            sub_counts = counts[start:stop]
+            sub_rows = jcnt_rows[start:stop]
+                          
+            data = JointData( sub_counts )
+            
+            responsibilities = model.classify( data, parameters )
+            
+            writer.write_data( chr_name, sub_rows, responsibilities )
+            
+            start = stop
+            stop = min( stop + n, end )
     
     reader.close()
     writer.close()
