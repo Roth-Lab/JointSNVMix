@@ -78,9 +78,12 @@ class JointSnvMixFile:
         return params
             
     def write_chr_table( self, chr_name, data ):
-        chr_table = self._file_handle.createTable( '/data', chr_name, JointSnvMixTable )
-        
-        self._chr_tables[chr_name] = chr_table
+        if chr_name not in self._chr_tables:
+            chr_table = self._file_handle.createTable( '/data', chr_name, JointSnvMixTable )
+            
+            self._chr_tables[chr_name] = chr_table
+        else:
+            chr_table = self._chr_tables[chr_name]        
         
         chr_table.append( data )
         

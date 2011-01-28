@@ -38,7 +38,7 @@ class IndependentLatenVariables( EMLatentVariables ):
         
         p = a / ( a + b )
         
-        init_centers = np.array( [0.99, 0.5, 0.01] )
+        init_centers = np.array( [1., 0.5, 0.] )
         
         cluster_centers, labels = kmeans2( p, init_centers )
         
