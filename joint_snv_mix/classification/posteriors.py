@@ -169,16 +169,28 @@ class JointBetaBinomialPosterior( EMPosterior ):
         self.parameters = {}
         
         self._update_mix_weights()
+
+        location_alpha = self.priors['location'][:, :, 0]
+        location_beta = self.priors['location'][:, :, 1]
         
-        self.parameters['alpha'] = np.array( [
-                                              [99, 5, 1],
-                                              [99, 5, 1]
-                                              ], np.float )
+        precision_shape = self.priors['precision'][:, :, 0]
+        precision_scale = self.priors['precision'][:, :, 1] 
         
-        self.parameters['beta'] = np.array( [
-                                            [1, 5, 99],
-                                            [1, 5, 99]
-                                            ], np.float )
+        s = precision_shape * precision_scale
+        mu = location_alpha / ( location_alpha + location_beta ) 
+        
+        self.parameters['alpha'] = s * mu
+        self.parameters['beta'] = s * ( 1 - mu )
+#        
+#        self.parameters['alpha'] = np.array( [
+#                                              [1000, 10, 1],
+#                                              [1000, 10, 1]
+#                                              ], np.float )
+#        
+#        self.parameters['beta'] = np.array( [
+#                                            [1, 10, 1000],
+#                                            [1, 10, 1000]
+#                                            ], np.float )
         
         print "Initial parameter values : ", self.parameters
         
