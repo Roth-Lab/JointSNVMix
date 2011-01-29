@@ -1,0 +1,7 @@
+
+syntax: regexp
+^build$
+syntax: regexp
+^joint_snv_mix/classification/file_mover\.py$
+syntax: regexp
+\.pdf$
