@@ -26,9 +26,9 @@ for row in varscan_reader:
     if row['var'] == '':
         row['var'] = 'N'
     
-    if row['var'] not in nucs:
-#        print row
-        continue
+#    if row['var'] not in nucs:
+##        print row
+#        continue
     
     chr_name = row['chrom']
     

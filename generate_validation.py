@@ -4,6 +4,8 @@ import os
 from joint_snv_mix.file_formats.jsm import JointSnvMixReader
 from joint_snv_mix.classification.classification import run_classifier
 from argparse import Namespace
+from bisect import bisect_right
+import bisect
 
 excluded_chrom = ['MT', 'Y']
 
@@ -80,21 +82,27 @@ def run_jsm( validation_dir ):
             
         tech = base_name.split( '.' )[1]
         
-        jsm_file_name = case + "." + tech + ".jsm"
-        jsm_file_name = os.path.join( validation_dir, jsm_file_name )
-               
-        jsm_files[case][tech] = jsm_file_name
-        
-        if not os.path.exists( jsm_file_name ):
-            run_joint_bb( jcnt_file_name, jsm_file_name )
-                
         ism_file_name = case + "." + tech + ".ism"
         ism_file_name = os.path.join( validation_dir, ism_file_name )
         
         ism_files[case][tech] = ism_file_name
         
         if not os.path.exists( ism_file_name ):
-            run_indep_bin( jcnt_file_name, ism_file_name )        
+            try:
+                run_indep_bin( jcnt_file_name, ism_file_name )
+            except:
+                pass 
+        
+        jsm_file_name = case + "." + tech + ".jsm"
+        jsm_file_name = os.path.join( validation_dir, jsm_file_name )
+               
+        jsm_files[case][tech] = jsm_file_name
+        
+        if not os.path.exists( jsm_file_name ):
+            try:
+                run_joint_bb( jcnt_file_name, jsm_file_name )
+            except:
+                pass       
     
     return jsm_files, ism_files
 
@@ -149,28 +157,29 @@ def load_jsm_predictions( jsm_files, varscan_predictions ):
             
             n = len( varscan_predictions[case][tech] )
             
-            predictions = load_predictions_from_jsm_file( jsm_files[case][tech] )
+            predictions = load_predictions_from_jsm_file( jsm_files[case][tech], n )
             
-            predictions = predictions[:n]
+#            predictions = predictions[:n]
             
             jsm_predictions[case][tech] = predictions
     
     return jsm_predictions
     
 
-def load_predictions_from_jsm_file( jsm_file_name ):
-    position_score = load_somatics( jsm_file_name )
+def load_predictions_from_jsm_file( jsm_file_name, n ):
+    position_score = load_somatics( jsm_file_name, n )
     
-    position_score = sort_position_score( position_score )    
+#    position_score = sort_position_score( position_score )    
     
     return position_score
 
-def load_somatics( jsm_file_name ):
+def load_somatics( jsm_file_name, n ):
     reader = JointSnvMixReader( jsm_file_name )
     
     chr_list = reader.get_chr_list()
     
     position_score = []
+    scores = []
     
     for chr_name in sorted( chr_list ):
         if chr_name in excluded_chrom:
@@ -180,9 +189,20 @@ def load_somatics( jsm_file_name ):
         
         for row in chr_rows:
             position = int( row['position'] )
-            score = row['p_aa_ab'] + row['p_aa_bb']
+            score = float( row['p_aa_ab'] + row['p_aa_bb'] )            
             
-            position_score.append( ( chr_name, position, score ) )
+            insert_position = bisect.bisect( scores, score )
+            
+            if insert_position > 0 or len( scores ) == 0:               
+                position_score.insert( insert_position, ( chr_name, position, score ) )
+                scores.insert( insert_position, score )
+                
+                if len( scores ) >= n:
+                    scores.pop( 0 )
+                    position_score.pop( 0 )
+                
+                print position, insert_position, position_score[0], position_score[-1]
+            
     
     reader.close()
         
