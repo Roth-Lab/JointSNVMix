@@ -3,3 +3,11 @@ syntax: regexp
 ^build$
 syntax: regexp
 ^joint_snv_mix/classification/file_mover\.py$
+syntax: regexp
+\.project$
+syntax: regexp
+\.project$
+syntax: regexp
+\.pydevproject$
+syntax: regexp
+\.pdf$
