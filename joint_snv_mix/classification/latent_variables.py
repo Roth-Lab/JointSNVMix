@@ -38,7 +38,7 @@ class IndependentLatenVariables( EMLatentVariables ):
         
         p = a / ( a + b )
         
-        init_centers = np.array( [0.99, 0.5, 0.01] )
+        init_centers = np.array( [1., 0.5, 0.] )
         
         cluster_centers, labels = kmeans2( p, init_centers )
         
@@ -78,8 +78,7 @@ class JointLatentVariables( EMLatentVariables ):
         for id in range( 9 ):
             index = labels == id
             
-            responsibilities[index, :] = 0.01
-            responsibilities[index, id] = 0.99
+            responsibilities[index, id] = 1.
         
         self.responsibilities = responsibilities
 

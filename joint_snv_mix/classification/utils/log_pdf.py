@@ -33,6 +33,11 @@ def log_gamma_pdf( x, shape, scale ):
     
     return log_p
 
+def log_translated_gamma_pdf( x, shape, scale, min ):
+    x = ( x - min )
+    
+    return log_gamma_pdf( x, shape, scale )
+
 def log_beta_binomial_likelihood( k, n, alpha, beta ):
     column_shape = ( k.size, 1 )
     k = k.reshape( column_shape )

@@ -16,15 +16,19 @@ jcnt_file_name = sys.argv[2]
 varscan_reader = csv.DictReader( open( varscan_file_name ), delimiter='\t' )
 jcnt_file = JointCountsFile( jcnt_file_name, 'w' )
 
-nucs = ['A', 'C', 'G', 'T']
+nucs = ['A', 'C', 'G', 'T', 'N']
     
 rows = {}
 i = 0
     
 for row in varscan_reader:
     # Skip rows without a variant in the tumour or normal or with indel or >= 3 bases.
-    if row['var'] not in nucs:
-        continue
+    if row['var'] == '':
+        row['var'] = 'N'
+    
+#    if row['var'] not in nucs:
+##        print row
+#        continue
     
     chr_name = row['chrom']
     
