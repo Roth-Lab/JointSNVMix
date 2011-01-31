@@ -4,7 +4,7 @@ Created on 2010-11-22
 @author: Andrew Roth
 '''
 import numpy as np
-np.seterr( invalid='raise' )
+#np.seterr( invalid='raise' )
 
 from joint_snv_mix.classification.latent_variables import IndependentBinomialLatentVariables, IndependentBetaBinomialLatentVariables, JointBetaBinomialLatentVariables, JointBinomialLatentVariables
 from joint_snv_mix.classification.likelihoods import independent_binomial_log_likelihood, independent_beta_binomial_log_likelihood, joint_beta_binomial_log_likelihood, joint_binomial_log_likelihood

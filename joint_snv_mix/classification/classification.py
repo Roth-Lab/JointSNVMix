@@ -37,7 +37,10 @@ def subsample( reader, sample_size ):
         chr_size = reader.get_chr_size( chr_name=chr_name )
         
         chr_sample_size = math.ceil( float( chr_size ) / nrows * sample_size )
+        
         chr_sample_size = int( chr_sample_size )
+        
+        chr_sample_size = min( chr_size, chr_sample_size )
         
         chr_sample_indices = random.sample( xrange( chr_size ), chr_sample_size )
         
@@ -123,18 +126,31 @@ def run_independent_model( args ):
     
     for chr_name in sorted( chr_list ):
         counts = reader.get_counts( chr_name )
-        
-        normal_data = IndependentData( counts, 'normal' )
-        tumour_data = IndependentData( counts, 'tumour' )
-        
-        normal_responsibilities = model.classify( normal_data, normal_parameters )
-        tumour_responsibilities = model.classify( tumour_data, tumour_parameters )
-        
-        responsibilities = get_joint_responsibilities( normal_responsibilities, tumour_responsibilities )
-              
         jcnt_rows = reader.get_rows( chr_name )
         
-        writer.write_data( chr_name, jcnt_rows, responsibilities )
+        end = reader.get_chr_size( chr_name )
+
+        n = max( int( 1e5 ), args.subsample_size )
+        start = 0
+        stop = min( n, end )
+        
+
+        while start < end:
+            sub_counts = counts[start:stop]
+            sub_rows = jcnt_rows[start:stop]
+                          
+            normal_data = IndependentData( sub_counts, 'normal' )
+            tumour_data = IndependentData( sub_counts, 'tumour' )
+            
+            normal_responsibilities = model.classify( normal_data, normal_parameters )
+            tumour_responsibilities = model.classify( tumour_data, tumour_parameters )
+            
+            responsibilities = get_joint_responsibilities( normal_responsibilities, tumour_responsibilities )
+        
+            writer.write_data( chr_name, sub_rows, responsibilities )
+            
+            start = stop
+            stop = min( stop + n, end )
         
     reader.close()
     writer.close()
@@ -316,14 +332,27 @@ def run_joint_model( args ):
     
     for chr_name in sorted( chr_list ):
         counts = reader.get_counts( chr_name )
-        
-        data = JointData( counts )
-        
-        responsibilities = model.classify( data, parameters )
-        
         jcnt_rows = reader.get_rows( chr_name )
         
-        writer.write_data( chr_name, jcnt_rows, responsibilities )
+        end = reader.get_chr_size( chr_name )
+
+        n = max( int( 1e5 ), args.subsample_size )
+        start = 0
+        stop = min( n, end )
+        
+
+        while start < end:
+            sub_counts = counts[start:stop]
+            sub_rows = jcnt_rows[start:stop]
+                          
+            data = JointData( sub_counts )
+            
+            responsibilities = model.classify( data, parameters )
+            
+            writer.write_data( chr_name, sub_rows, responsibilities )
+            
+            start = stop
+            stop = min( stop + n, end )
     
     reader.close()
     writer.close()
@@ -367,9 +396,11 @@ def get_joint_beta_binomial_density_priors( parser, priors ):
         
         priors['precision'][0, i, 0] = parser.getfloat( 'precision_shape', normal_genotype )
         priors['precision'][0, i, 1] = parser.getfloat( 'precision_scale', normal_genotype )
+        priors['precision'][0, i, 2] = parser.getfloat( 'precision_min', normal_genotype )
         
         priors['precision'][1, i, 0] = parser.getfloat( 'precision_shape', tumour_genotype )
         priors['precision'][1, i, 1] = parser.getfloat( 'precision_scale', tumour_genotype )
+        priors['precision'][1, i, 2] = parser.getfloat( 'precision_min', tumour_genotype )
         
     return priors
 

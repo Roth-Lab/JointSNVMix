@@ -94,14 +94,10 @@ class IndependentBetaBinomialPosterior( EMPosterior ):
             
             resp = self.responsibilities[:, component]
             
-            precision_shape = self.priors['precision']['shape'][component]
-            precision_scale = self.priors['precision']['scale'][component]
+            precision_prior = self.priors['precision'][component]
+            location_prior = self.priors['location'][component]
             
-            location_alpha = self.priors['location']['alpha'][component]
-            location_beta = self.priors['location']['beta'][component]
-            
-            vars.append( [x, a, b, resp, component, precision_shape,
-                          precision_scale, location_alpha, location_beta] )
+            vars.append( [x, a, b, resp, component, precision_prior, location_prior] )
                 
         results = self.pool.map( get_mle_p, vars )
         
@@ -165,14 +161,28 @@ class JointBetaBinomialPosterior( EMPosterior ):
         self.parameters = {}
         
         self._update_mix_weights()
+
+        location_alpha = self.priors['location'][:, :, 0]
+        location_beta = self.priors['location'][:, :, 1]
         
-        values = np.linspace( 1, 99, self.nclass )
+        precision_shape = self.priors['precision'][:, :, 0]
+        precision_scale = self.priors['precision'][:, :, 1] 
         
-        print values
+        s = precision_shape * precision_scale
+        mu = location_alpha / ( location_alpha + location_beta ) 
         
-        self.parameters['alpha'] = np.vstack( ( values[::-1], values[::-1] ) )
-        
-        self.parameters['beta'] = np.vstack( ( values, values ) )
+        self.parameters['alpha'] = s * mu
+        self.parameters['beta'] = s * ( 1 - mu )
+#        
+#        self.parameters['alpha'] = np.array( [
+#                                              [1000, 10, 1],
+#                                              [1000, 10, 1]
+#                                              ], np.float )
+#        
+#        self.parameters['beta'] = np.array( [
+#                                            [1, 10, 1000],
+#                                            [1, 10, 1000]
+#                                            ], np.float )
         
         print "Initial parameter values : ", self.parameters
     
