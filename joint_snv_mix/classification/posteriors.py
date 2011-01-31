@@ -208,9 +208,13 @@ class JointBetaBinomialPosterior( EMPosterior ):
                 precision_prior = self.priors['precision'][genome][component]
                 location_prior = self.priors['location'][genome][component]
                 
-                vars.append( [x, a, b, resp, component, precision_prior, location_prior] )
+                vars.append( [x, a, b, resp, precision_prior, location_prior] )
         
-        results = self.pool.map( get_mle_p, vars )
+        results = []
+        for var in vars:
+            results.append( get_mle_p(var) )
+        
+#        results = self.pool.map( get_mle_p, vars )
         
         for genome in range( 2 ):
             for component in range( self.nclass ):
