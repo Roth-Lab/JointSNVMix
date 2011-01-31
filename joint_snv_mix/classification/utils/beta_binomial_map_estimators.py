@@ -13,13 +13,12 @@ def get_mle_p( vars ):
     a = vars[1]
     b = vars[2]
     resp = vars[3]
-    component = vars[4]
-    precision_prior = vars[5]
-    location_prior = vars[6]  
+    alpha_prior = vars[4]
+    beta_prior = vars[5]  
     
-    return get_ml_estimates( x, a, b, resp, component, precision_prior, location_prior )
+    return get_ml_estimates( x, a, b, resp, alpha_prior, beta_prior )
 
-def get_ml_estimates( x, a, b, resp, i, precision_prior, location_prior ):
+def get_ml_estimates( x, a, b, resp, precision_prior, location_prior ):
     if np.all( resp == 0 ):
         print "Empty class."
         return x
