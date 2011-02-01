@@ -62,21 +62,17 @@ class IndependentBetaBinomialLowerBound( EMLowerBound ):
         self.log_likelihood_func = independent_beta_binomial_log_likelihood
     
     def _get_log_density_parameters_prior( self ):
-        precision_term = 0
-        location_term = 0
-        
-        for component in range( 3 ):
-            alpha = self.parameters['alpha'][component]
-            beta = self.parameters['beta'][component]
+        alpha = self.parameters['alpha']
+        beta = self.parameters['beta']
             
-            s = alpha + beta
-            mu = alpha / s
+        s = alpha + beta
+        mu = alpha / s
     
-            precision_priors = self.priors['precision'][component]
-            location_priors = self.priors['location'][component]
+        precision_priors = self.priors['precision']
+        location_priors = self.priors['location']
             
-            precision_term += log_gamma_pdf( s, precision_priors[0], precision_priors[1] )
-            location_term += log_beta_pdf( mu, location_priors[0], location_priors[1] )
+        precision_term = np.sum( log_gamma_pdf( s, precision_priors['shape'], precision_priors['scale'] ) )
+        location_term = np.sum( log_beta_pdf( mu, location_priors['alpha'], location_priors['beta'] ) )
                 
         return precision_term + location_term
     
@@ -112,8 +108,10 @@ class JointBetaBinomialLowerBound( EMLowerBound ):
         precision_term = 0
         location_term = 0
         
+        ncomponents = self.parameters['alpha'][0].size
+        
         for genome in range( 2 ):
-            for component in range( 3 ):
+            for component in range( ncomponents ):
                 alpha = self.parameters['alpha'][genome][component]
                 beta = self.parameters['beta'][genome][component]
                 

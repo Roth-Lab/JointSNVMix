@@ -115,16 +115,16 @@ def run_independent_model( args ):
         
         n = normal_data.nrows 
         
-        normal_priors, tumour_priors = parse_independent_priors_file( args.priors_file, n, args.density )
+        priors = parse_independent_priors_file( args.priors_file, n, args.density )
         
-        normal_parameters = model.train( normal_data, normal_priors, args.max_iters, args.convergence_threshold )
-        tumour_parameters = model.train( tumour_data, tumour_priors, args.max_iters, args.convergence_threshold )   
+        normal_parameters = model.train( normal_data, priors['normal'], args.max_iters, args.convergence_threshold )
+        tumour_parameters = model.train( tumour_data, priors['tumour'], args.max_iters, args.convergence_threshold )   
     else:
         normal_parameters, tumour_data = parse_independent_parameters_file( args.params_file, args.density )
     
     chr_list = reader.get_chr_list()
     
-    for chr_name in sorted( chr_list ):        
+    for chr_name in sorted( chr_list ):
         counts = reader.get_counts( chr_name )
         jcnt_rows = reader.get_rows( chr_name )
         
@@ -160,52 +160,64 @@ def parse_independent_priors_file( priors_file_name, n, density ):
     parser.read( priors_file_name )
     
     priors = {}
-    priors['kappa'] = np.zeros( ( 2, 3 ) )
     
-    for i, genotype in enumerate( constants.genotypes ):
-        normal_genotype = "_".join( ( 'normal', genotype ) )
-        tumour_genotype = "_".join( ( 'tumour', genotype ) )
-        
-        priors['kappa'][0, i] = parser.getfloat( 'kappa', normal_genotype )
-        priors['kappa'][1, i] = parser.getfloat( 'kappa', tumour_genotype )
+    priors['normal'] = {}
+    priors['tumour'] = {}
+    
+    priors['normal']['kappa'] = np.zeros( ( 3, ) )
+    priors['tumour']['kappa'] = np.zeros( ( 3, ) )
+    
+    for genome in ( 'normal', 'tumour' ):
+        for i, genotype in enumerate( constants.genotypes ):
+            genome_genotype = "_".join( ( genome, genotype ) )
+            
+            priors[genome]['kappa'][i] = parser.getfloat( 'kappa', genome_genotype )
         
     scaling = parser.getint( 'kappa', 'scaling' )
     
-    priors = scale_priors( priors, n, scaling )
+    priors['normal'] = scale_priors( priors['normal'], n, scaling )
+    priors['tumour'] = scale_priors( priors['tumour'], n, scaling )
     
     if density == "beta_binomial":
-        normal_priors, tumour_priors = get_independent_beta_binomial_density_priors( parser, priors )
+        priors = get_independent_beta_binomial_density_priors( parser, priors )
     elif density == "binomial":
-        normal_priors, tumour_priors = get_independent_binomial_density_priors( parser, priors )
+        priors = get_independent_binomial_density_priors( parser, priors )
     else:
         raise NotImplementedError
     
-    return normal_priors, tumour_priors
+    return priors
 
 def get_independent_beta_binomial_density_priors( parser, priors ):
-    priors['location'] = np.zeros( ( 2, 3, 2 ) )
-    priors['precision'] = np.zeros( ( 2, 3, 2 ) )
+    shape = ( 3, )
     
-    for i, genotype in enumerate( constants.genotypes ):
-        normal_genotype = "_".join( ( 'normal', genotype ) )
-        tumour_genotype = "_".join( ( 'tumour', genotype ) )
-        
-        priors['location'][0, i, 0] = parser.getfloat( 'location_alpha', normal_genotype )
-        priors['location'][0, i, 1] = parser.getfloat( 'location_beta', normal_genotype )
-        
-        priors['location'][1, i, 0] = parser.getfloat( 'location_alpha', tumour_genotype )
-        priors['location'][1, i, 1] = parser.getfloat( 'location_beta', tumour_genotype )
-        
-        priors['precision'][0, i, 0] = parser.getfloat( 'precision_shape', normal_genotype )
-        priors['precision'][0, i, 1] = parser.getfloat( 'precision_scale', normal_genotype )
-        
-        priors['precision'][1, i, 0] = parser.getfloat( 'precision_shape', tumour_genotype )
-        priors['precision'][1, i, 1] = parser.getfloat( 'precision_scale', tumour_genotype )
-        
-    normal_priors = {'kappa' : priors['kappa'][0], 'location' : priors['location'][0], 'precision' : priors['precision'][0]}
-    tumour_priors = {'kappa' : priors['kappa'][1], 'location' : priors['location'][1], 'precision' : priors['precision'][1]}
-        
-    return normal_priors, tumour_priors
+    priors['normal']['precision'] = {}
+    priors['normal']['precision']['shape'] = np.zeros( shape )
+    priors['normal']['precision']['scale'] = np.zeros( shape )
+    
+    priors['tumour']['precision'] = {}
+    priors['tumour']['precision']['shape'] = np.zeros( shape )
+    priors['tumour']['precision']['scale'] = np.zeros( shape )
+    
+    
+    priors['normal']['location'] = {}
+    priors['normal']['location']['alpha'] = np.zeros( shape )
+    priors['normal']['location']['beta'] = np.zeros( shape )
+    
+    priors['tumour']['location'] = {}
+    priors['tumour']['location']['alpha'] = np.zeros( shape )
+    priors['tumour']['location']['beta'] = np.zeros( shape )
+    
+    for genome in ( 'normal', 'tumour' ):
+        for i, genotype in enumerate( constants.genotypes ):
+            genome_genotype = "_".join( ( genome, genotype ) )
+            
+            priors[genome]['location']['alpha'][i] = parser.getfloat( 'location_alpha', genome_genotype )
+            priors[genome]['location']['beta'][i] = parser.getfloat( 'location_beta', genome_genotype )
+
+            priors[genome]['precision']['shape'][i] = parser.getfloat( 'precision_shape', genome_genotype )
+            priors[genome]['precision']['scale'][i] = parser.getfloat( 'precision_scale', genome_genotype )
+            
+    return priors
 
 def get_independent_binomial_density_priors( parser, priors ):
     priors['alpha'] = np.zeros( ( 2, 3 ) )
@@ -318,7 +330,7 @@ def run_joint_model( args ):
     
     chr_list = reader.get_chr_list()
     
-    for chr_name in sorted( chr_list ):        
+    for chr_name in sorted( chr_list ):
         counts = reader.get_counts( chr_name )
         jcnt_rows = reader.get_rows( chr_name )
         
