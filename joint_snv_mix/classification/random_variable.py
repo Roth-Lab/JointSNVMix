@@ -11,11 +11,12 @@ from scipy.optimize.tnc import fmin_tnc
 from joint_snv_mix import constants
 import ConfigParser
 from scipy.cluster.vq import kmeans2
-from scipy.optimize.optimize import check_grad
+from scipy.optimize.optimize import check_grad, approx_fprime
+import multiprocessing
 
 
 class EMTrainer( object ):
-    def __init__( self, tolerance=1e-6, max_iters=1000 ):
+    def __init__( self, tolerance=1e-12, max_iters=1000 ):
         self.tolerance = tolerance
         self.max_iters = max_iters
         
@@ -37,7 +38,7 @@ class EMTrainer( object ):
             else:
                 posterior_change = float( 'inf' )
             
-            self._print_diagnostic_message( iters, posterior_value, old_posterior_value, posterior_change )
+            self._print_diagnostic_message( iters, posterior_value, old_posterior_value, posterior_change, density )
             old_posterior_value = posterior_value
             
             if posterior_change < 0:
@@ -55,7 +56,7 @@ class EMTrainer( object ):
                      
         return density
     
-    def _print_diagnostic_message( self, iters, posterior_value, old_posterior_value, posterior_change ):
+    def _print_diagnostic_message( self, iters, posterior_value, old_posterior_value, posterior_change, density ):
         print "#" * 100
         print "# Diagnostics."
         print "#" * 100
@@ -65,9 +66,7 @@ class EMTrainer( object ):
         print "Posterior change : ", posterior_change
     
         print "Parameters :"
-        
-#        for param_name, param_value in self.posterior.parameters.items():
-#            print param_name, param_value         
+        density.print_parameters()     
 
 def initialise_joint_responsibilities( data ):
 
@@ -99,6 +98,7 @@ def initialise_joint_responsibilities( data ):
         responsibilities[index, id] = 1.
     
     return responsibilities
+
 
 #=======================================================================================================================
 # Beta-Binomial Code
@@ -264,6 +264,10 @@ class JointBetaBinomialMixtureDensity( object ):
         
         return ll
     
+    def print_parameters( self ):
+        print "Mix-weights : ", self.mix_weights.value
+        self.densities.print_parameters()
+    
     def _log_space_normalise_rows( self, log_X ):
         nrows = log_X.shape[0]
         shape = ( nrows, 1 )
@@ -311,7 +315,14 @@ class JointBetaBinomialDensities( object ):
         
         self.normal_compents.update( data.a[0], data.b[0], normal_resp )
         self.tumour_compents.update( data.a[1], data.b[1], tumour_resp )
+    
+    def print_parameters( self ):
+        print "Normal"
+        self.normal_compents.print_parameters()
         
+        print "Tumour"
+        self.tumour_compents.print_parameters()
+    
     def _get_marginals( self, responsibilities ):
         nrows = responsibilities.shape[0]
     
@@ -367,51 +378,46 @@ class BetaBinomialMixtureVariable( object ):
         
         return self.priors.log_likelihood( self.alpha, self.beta )
     
-    def update( self, a, b, resp, penalty_func=None ):        
+    def update( self, a, b, resp ):        
         vars = []
         
         alpha = self.alpha.flatten()
         beta = self.beta.flatten()
         
         for i in range( self.nclass ):
-            x0 = ( alpha[i], beta[i] )
-            
-            r = resp[:, i]
-        
-            f_unpen = lambda x:-1 * self._complete_data_log_likelihood( a, b, r, alpha=x[0], beta=x[1] )
-            g_unpen = lambda x:-1 * self._complete_data_log_likelihood_gradient( a, b, r, alpha=x[0], beta=x[1] )
-            
-            if self.use_penalty:
-                f = lambda x: f_unpen( x ) - self.penalty_func( x[0], x[1], component=i )
-                g = lambda x: g_unpen( x ) - self.penalty_grad( x[0], x[1], component=i )
-            else:
-                f = f_unpen
-                g = g_unpen
-            
-            print check_grad( f, g, x0 )
-            
-            vars.append( 
-                        ( x0, f, g )
-                        )
+            x = self._run_update( a, b, resp, alpha, beta, i )  
+            alpha[i] = x[0]
+            beta[i] = x[1]
 
-        self._run_update( vars )
+        self.alpha = self._reshape_parameters( alpha )
+        self.beta = self._reshape_parameters( beta )
+        
+    def print_parameters( self ):
+        print "Alpha :", self.alpha.flatten().tolist()
+        print "Beta :", self.beta.flatten().tolist()
     
-    def _run_update( self, vars ):
-        alpha = np.zeros( ( 3, ) )
-        beta = np.zeros( ( 3, ) )
+    def _run_update( self, a, b, resp, alpha, beta, i ):
+        x0 = ( alpha[i], beta[i] )
+        
+        r = resp[:, i]
+    
+        f_unpen = lambda x:-1 * self._complete_data_log_likelihood( a, b, r, alpha=x[0], beta=x[1] )
+        g_unpen = lambda x:-1 * self._complete_data_log_likelihood_gradient( a, b, r, alpha=x[0], beta=x[1] )
+        
+        if self.use_penalty:
+            f = lambda x: f_unpen( x ) - self.penalty_func( x[0], x[1], component=i )
+            g = lambda x: g_unpen( x ) - self.penalty_grad( x[0], x[1], component=i )
+        else:
+            f = f_unpen
+            g = g_unpen
         
         bounds = [( 1e-6, None ), ( 1e-6, None )]
         
-        for i, var in enumerate( vars ):
-            x = fmin_l_bfgs_b( var[1], var[0], fprime=var[2], bounds=bounds )
+        result = fmin_tnc( f, x0, fprime=g, bounds=bounds )
         
-            alpha[i] = x[0][0]
-            beta[i] = x[0][1]
+        x = result[0]
         
-            print x
-        
-        self.alpha = self._reshape_parameters( alpha )
-        self.beta = self._reshape_parameters( beta )
+        return x
     
     def _complete_data_log_likelihood( self, a, b, resp, alpha=None, beta=None ):     
         if alpha <= 0 or beta <= 0:
@@ -484,8 +490,11 @@ class BetaBinomialPrior( object ):
         
         s = s - precision_min
         
-        if np.isscalar( s ) <= 0:
-            return float( '-inf' )
+        if np.isscalar( s ): 
+            if s <= 0:
+                return float( '-inf' )
+        else:
+            s[s <= 0] = float( '-inf' )
         
         scale_penalty = ( precision_shape - 1 ) * np.log( s ) - s / precision_scale
         location_penalty = ( location_alpha - 1 ) * np.log( mu ) + ( location_beta - 1 ) * np.log( 1 - mu )
@@ -517,6 +526,7 @@ class BetaBinomialPrior( object ):
         grad_penalty = np.array( [grad_scale_penalty, grad_location_penalty] )
         
         return grad_penalty
+
     
 #=======================================================================================================================
 # Mix-weights
