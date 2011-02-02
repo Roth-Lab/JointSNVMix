@@ -147,11 +147,7 @@ class IndependentBinomialPosterior( EMPosterior ):
 class JointBetaBinomialPosterior( EMPosterior ):
     def __init__( self, data, priors, responsibilities, nclass=3 ):
         self.nclass = nclass
-        
-        ncpus = nclass * 2
-        
-        self.pool = multiprocessing.Pool( processes=ncpus, maxtasksperchild=1 )
-        
+               
         EMPosterior.__init__( self, data, priors, responsibilities )
     
     def _init_parameters( self ):
@@ -213,8 +209,12 @@ class JointBetaBinomialPosterior( EMPosterior ):
         results = []
         for var in vars:
             results.append( get_mle_p(var) )
+
+#        ncpus = self.nclass * 2
         
+#        pool = multiprocessing.Pool( processes=ncpus, maxtasksperchild=1 )
 #        results = self.pool.map( get_mle_p, vars )
+#        pool.close()
         
         for genome in range( 2 ):
             for component in range( self.nclass ):
