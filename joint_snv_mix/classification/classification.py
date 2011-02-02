@@ -220,23 +220,17 @@ def get_independent_beta_binomial_density_priors( parser, priors ):
     return priors
 
 def get_independent_binomial_density_priors( parser, priors ):
-    priors['alpha'] = np.zeros( ( 2, 3 ) )
-    priors['beta'] = np.zeros( ( 2, 3 ) )
-    
-    for i, genotype in enumerate( constants.genotypes ):
-        normal_genotype = "_".join( ( 'normal', genotype ) )
-        tumour_genotype = "_".join( ( 'tumour', genotype ) )
+    for genome in constants.genomes:
+        priors[genome]['alpha'] = np.zeros( ( 3, ) )
+        priors[genome]['beta'] = np.zeros( ( 3, ) ) 
         
-        priors['alpha'][0, i] = parser.getfloat( 'alpha', normal_genotype )
-        priors['beta'][0, i] = parser.getfloat( 'beta', normal_genotype )
+        for i, genotype in enumerate( constants.genotypes ):
+            genome_genotype = "_".join( ( genome, genotype ) )
+            
+            priors[genome]['alpha'][i] = parser.getfloat( 'alpha', genome_genotype )
+            priors[genome]['beta'][i] = parser.getfloat( 'beta', genome_genotype )
         
-        priors['alpha'][1, i] = parser.getfloat( 'alpha', tumour_genotype )
-        priors['beta'][1, i] = parser.getfloat( 'beta', tumour_genotype )
-        
-    normal_priors = {'kappa' : priors['kappa'][0, :], 'alpha' : priors['alpha'][0, :], 'beta' : priors['beta'][0, :]}
-    tumour_priors = {'kappa' : priors['kappa'][1, :], 'alpha' : priors['alpha'][1, :], 'beta' : priors['beta'][1, :]}
-        
-    return normal_priors, tumour_priors
+    return priors
     
 def parse_independent_parameters_file( parameters_file_name, density ):
     parser = ConfigParser.SafeConfigParser()
@@ -491,14 +485,25 @@ def run_chromosome_model( args ):
     chr_list = reader.get_chr_list()
     
     for chr_name in sorted( chr_list ):
-        counts = reader.get_counts( chr_name )
+        print chr_name
+        
+        if args.subsample_size > 0:
+            counts = chrom_subsample( reader, chr_name, args.subsample_size )
+        else:        
+            counts = reader.get_counts( chr_name )
         
         data = JointData( counts )
+        print data.nrows
         
         parameters = model.train( data, priors, args.max_iters, args.convergence_threshold )
         
+        writer.write_chr_parameters( parameters, chr_name )
+        
         print "Converged parameter for chromosome {0} are.".format( chr_name )
-        print parameters
+        print parameters        
+        
+        counts = reader.get_counts( chr_name )        
+        data = JointData( counts )
         
         responsibilities = model.classify( data, parameters )
         
@@ -509,98 +514,15 @@ def run_chromosome_model( args ):
     reader.close()
     writer.close()
 
-#---------------------------------------------------------------------------------------------------------------------- 
-class PriorsParser( object ):
-    def __init__( self, priors_file_name ):
-        self.parser = ConfigParser.SafeConfigParser()
-        
-        self.parser.read( priors_file_name )
-        
-        self.priors = {}
-        
-        self._parse_mix_weight_priors()
-        
-        self._parse_density_priors()
-        
-    def get_priors( self, n ):
-        self.scaling = self.parser.getint( 'kappa', 'scaling' )
-        
-        self._scale_mix_weight_priors( n )
-        
-        return self.priors
+def chrom_subsample( reader, chr_name, sample_size ):
+    chr_size = reader.get_chr_size( chr_name=chr_name )
     
-    def _parse_mix_weight_priors( self ):
-        raise NotImplemented
+    sample_size = min( chr_size, sample_size )
     
-    def _parse_density_priors( self ):
-        raise NotImplemented
+    chr_sample_indices = random.sample( xrange( chr_size ), sample_size )
     
-    def _scale_mix_weight_priors( self, n ):
-        scaling = self.scaling
-        priors = self.priors
-        n = self.n
-        
-        if scaling == 1:
-            priors['kappa'] = np.log( n ) * priors['kappa']
-        elif scaling == 2:
-            priors['kappa'] = np.sqrt( n ) * priors['kappa']
-        elif scaling == 3:
-            priors['kappa'] = n / 10. * priors['kappa']
-        elif scaling == 4:
-            priors['kappa'] = n / 2. * priors['kappa']
-        elif scaling == 5:
-            priors['kappa'] = n * priors['kappa']
-
-class IndependentPriorsParser( PriorsParser ):
-    def _parse_mix_weight_priors( self ):
-        priors = self.priors
-        
-        priors['kappa'] = np.zeros( ( 2, 3 ) )
-        
-        for i, genotype in enumerate( constants.genotypes ):
-            normal_genotype = "_".join( ( 'normal', genotype ) )
-            tumour_genotype = "_".join( ( 'tumour', genotype ) )
-            
-            priors['kappa'][0, i] = self.parser.getfloat( 'kappa', normal_genotype )
-            priors['kappa'][1, i] = self.parser.getfloat( 'kappa', tumour_genotype )
-            
-class JointPriorsParser( PriorsParser ):
-    def _parse_mix_weight_priors( self ):
-        priors = self.priors
+    chr_counts = reader.get_counts( chr_name )
     
-        priors['kappa'] = np.zeros( ( 9, ) )
-        
-        for i, genotype_tuple in enumerate( constants.joint_genotypes ):
-            genotype = "_".join( genotype_tuple )
-            
-            priors['kappa'][i] = self.parser.getfloat( 'kappa', genotype )
-
-class IndependentBetaBinomialPriorsParser( IndependentPriorsParser ):
-    def _parse_density_priors( self ):
-        priors = self.priors
-        parser = self.parser
-        
-        priors['location'] = np.zeros( ( 2, 3, 2 ) )
-        priors['precision'] = np.zeros( ( 2, 3, 2 ) )
-        
-        for i, genotype in enumerate( constants.genotypes ):
-            normal_genotype = "_".join( ( 'normal', genotype ) )
-            tumour_genotype = "_".join( ( 'tumour', genotype ) )
-            
-            priors['location'][0, i, 0] = parser.getfloat( 'location_alpha', normal_genotype )
-            priors['location'][0, i, 1] = parser.getfloat( 'location_beta', normal_genotype )
-            
-            priors['location'][1, i, 0] = parser.getfloat( 'location_alpha', tumour_genotype )
-            priors['location'][1, i, 1] = parser.getfloat( 'location_beta', tumour_genotype )
-            
-            priors['precision'][0, i, 0] = parser.getfloat( 'precision_shape', normal_genotype )
-            priors['precision'][0, i, 1] = parser.getfloat( 'precision_scale', normal_genotype )
-            
-            priors['precision'][1, i, 0] = parser.getfloat( 'precision_shape', tumour_genotype )
-            priors['precision'][1, i, 1] = parser.getfloat( 'precision_scale', tumour_genotype )
-            
-        normal_priors = {'kappa' : priors['kappa'][0], 'location' : priors['location'][0], 'precision' : priors['precision'][0]}
-        tumour_priors = {'kappa' : priors['kappa'][1], 'location' : priors['location'][1], 'precision' : priors['precision'][1]}
-            
-        return normal_priors, tumour_priors
-        
+    chr_sample = chr_counts[chr_sample_indices]
+    
+    return chr_sample
