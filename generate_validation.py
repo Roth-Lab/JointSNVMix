@@ -5,6 +5,7 @@ from joint_snv_mix.file_formats.jsm import JointSnvMixReader
 from joint_snv_mix.classification.classification import run_classifier
 from argparse import Namespace
 import bisect
+import multiprocessing
 
 excluded_chrom = ['MT', 'Y']
 
@@ -14,15 +15,21 @@ def main( validation_dir ):
     
     models = {
               'indep_bin' : run_indep_bin,
-              'indep_bb' : run_indep_bb,
               'joint_bin' : run_joint_bin,
-              'joint_bb' : run_joint_bb
+              'joint_bb' : run_joint_bb,
+              'joint_bb_fixed' : run_joint_bb_fixed              
               }
     
-    for model_name, run_func in models.iteritems():            
-        files = run_model( validation_dir, model_name, run_func )
-        predictions = load_jsm_predictions( files, varscan_predictions )
-        write_predictions_to_tsv( predictions, validation_dir, model_name )
+    p = multiprocessing.Pool()
+    
+    for model_name, run_func in models.iteritems():
+        args = ( model_name, run_func, varscan_predictions )
+        p.apply_async( write_model_predicitions, args )
+
+def write_model_predicitions( model_name, run_func, varscan_predictions ):
+    files = run_model( validation_dir, model_name, run_func )
+    predictions = load_jsm_predictions( files, varscan_predictions )
+    write_predictions_to_tsv( predictions, validation_dir, model_name )
             
 def load_varscan_predictions( validation_dir ):
     glob_str = os.path.join( validation_dir, "*.hc" )
@@ -79,10 +86,7 @@ def run_model( validation_dir, model_name, run_model_func ):
         
         if case not in model_files.keys():
             model_files[case] = {}    
-        
-        #===============================================================================================================
-        # Indep Bin
-        #===============================================================================================================
+
         model_file_name = case + "." + tech + "." + model_name + ".jsm" 
         
         model_file_name = os.path.join( validation_dir, model_file_name )
@@ -170,6 +174,22 @@ def run_joint_bb( jcnt_file_name, jsm_file_name ):
     
     args['train'] = True
     args['subsample_size'] = int( 1e6 )
+    
+    args = Namespace( **args )
+    
+    run_classifier( args )
+
+def run_joint_bb_fixed( jcnt_file_name, jsm_file_name ):
+    args = {}
+    
+    args['model'] = "joint"
+    args['density'] = "beta_binomial"
+    args['params_file'] = '/home/andrew/workspace/joint_snv_mix/config/joint_bb.params.cfg'
+    
+    args['jcnt_file_name'] = jcnt_file_name
+    args['jsm_file_name'] = jsm_file_name
+    
+    args['train'] = False
     
     args = Namespace( **args )
     
