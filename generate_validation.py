@@ -17,14 +17,21 @@ def main( validation_dir ):
               'indep_bin' : run_indep_bin,
               'joint_bin' : run_joint_bin,
               'joint_bb' : run_joint_bb,
-              'joint_bb_fixed' : run_joint_bb_fixed              
+              'joint_bb_fixed' : run_joint_bb_fixed,
+              'chrom_bin' : run_chrom_bin,
+              'chrom_bb' : run_chrom_bb
               }
     
-    p = multiprocessing.Pool()
+    p = multiprocessing.Pool( processes=6 )   
     
     for model_name, run_func in models.iteritems():
         args = ( model_name, run_func, varscan_predictions )
         p.apply_async( write_model_predicitions, args )
+    
+    p.close()
+    p.join()
+    
+#    write_model_predicitions( 'chrom_bin' , run_chrom_bin, varscan_predictions )
 
 def write_model_predicitions( model_name, run_func, varscan_predictions ):
     files = run_model( validation_dir, model_name, run_func )
@@ -78,7 +85,7 @@ def run_model( validation_dir, model_name, run_model_func ):
     
     model_files = {}
     
-    for jcnt_file_name in jcnt_file_list:
+    for jcnt_file_name in jcnt_file_list:        
         base_name = os.path.basename( jcnt_file_name )
         
         case = base_name.split( '.' )[0]
@@ -91,13 +98,12 @@ def run_model( validation_dir, model_name, run_model_func ):
         
         model_file_name = os.path.join( validation_dir, model_file_name )
         
+        print model_file_name
+        
         model_files[case][tech] = model_file_name
         
         if not os.path.exists( model_file_name ):
-            try:
-                run_model_func( jcnt_file_name, model_file_name )
-            except:
-                pass 
+            run_model_func( jcnt_file_name, model_file_name )  
 
 def run_indep_bin( jcnt_file_name, jsm_file_name ):
     args = {}
@@ -190,6 +196,47 @@ def run_joint_bb_fixed( jcnt_file_name, jsm_file_name ):
     args['jsm_file_name'] = jsm_file_name
     
     args['train'] = False
+    args['subsample_size'] = int( 1e6 )
+    
+    args = Namespace( **args )
+    
+    run_classifier( args )
+
+def run_chrom_bin( jcnt_file_name, jsm_file_name ):
+    args = {}
+    
+    args['model'] = "chromosome"
+    args['density'] = "binomial"
+    args['priors_file'] = '/home/andrew/workspace/joint_snv_mix/config/joint_bin.priors.cfg'
+    
+    args['jcnt_file_name'] = jcnt_file_name
+    args['jsm_file_name'] = jsm_file_name
+    
+    args['max_iters'] = int( 1e3 ) 
+    args['convergence_threshold'] = float( 1e-6 )
+    
+    args['train'] = True
+    args['subsample_size'] = int( 1e6 )
+    
+    args = Namespace( **args )
+    
+    run_classifier( args )
+    
+def run_chrom_bb( jcnt_file_name, jsm_file_name ):
+    args = {}
+    
+    args['model'] = "chromosome"
+    args['density'] = "beta_binomial"
+    args['priors_file'] = '/home/andrew/workspace/joint_snv_mix/config/joint_bb.priors.cfg'
+    
+    args['jcnt_file_name'] = jcnt_file_name
+    args['jsm_file_name'] = jsm_file_name
+    
+    args['max_iters'] = int( 1e3 ) 
+    args['convergence_threshold'] = float( 1e-6 )
+    
+    args['train'] = True
+    args['subsample_size'] = int( 1e6 )
     
     args = Namespace( **args )
     
