@@ -130,7 +130,7 @@ def run_independent_model( args ):
         
         end = reader.get_chr_size( chr_name )
 
-        n = max( int( 1e5 ), args.subsample_size )
+        n = int( 1e5 )
         start = 0
         stop = min( n, end )
         
@@ -293,6 +293,31 @@ def get_independent_binomial_density_parameters( parser, parameters ):
 #=======================================================================================================================
 # Joint Models
 #=======================================================================================================================       
+
+def write_chr_responsibilities( model, reader, writer, parameters, chr_name ):
+    counts = reader.get_counts( chr_name )
+    
+    jcnt_rows = reader.get_rows( chr_name )
+    
+    end = reader.get_chr_size( chr_name )
+    
+    n = int( 1e5 )
+    
+    start = 0
+    stop = min( n, end )
+    
+    while start < end:
+        sub_counts = counts[start:stop]
+        sub_rows = jcnt_rows[start:stop]
+        
+        data = JointData( sub_counts )
+        responsibilities = model.classify( data, parameters )
+        
+        writer.write_data( chr_name, sub_rows, responsibilities )
+        
+        start = stop
+        stop = min( stop + n, end )
+
 def run_joint_model( args ):
     if args.density == "beta_binomial":
         model = JointBetaBinomialModel()
@@ -325,28 +350,7 @@ def run_joint_model( args ):
     chr_list = reader.get_chr_list()
     
     for chr_name in sorted( chr_list ):
-        counts = reader.get_counts( chr_name )
-        jcnt_rows = reader.get_rows( chr_name )
-        
-        end = reader.get_chr_size( chr_name )
-
-        n = max( int( 1e5 ), args.subsample_size )
-        start = 0
-        stop = min( n, end )
-        
-
-        while start < end:
-            sub_counts = counts[start:stop]
-            sub_rows = jcnt_rows[start:stop]
-                          
-            data = JointData( sub_counts )
-            
-            responsibilities = model.classify( data, parameters )
-            
-            writer.write_data( chr_name, sub_rows, responsibilities )
-            
-            start = stop
-            stop = min( stop + n, end )
+        write_chr_responsibilities( model, reader, writer, parameters, chr_name )
     
     reader.close()
     writer.close()
@@ -500,16 +504,9 @@ def run_chromosome_model( args ):
         writer.write_chr_parameters( parameters, chr_name )
         
         print "Converged parameter for chromosome {0} are.".format( chr_name )
-        print parameters        
+        print parameters
         
-        counts = reader.get_counts( chr_name )        
-        data = JointData( counts )
-        
-        responsibilities = model.classify( data, parameters )
-        
-        jcnt_rows = reader.get_rows( chr_name )
-        
-        writer.write_data( chr_name, jcnt_rows, responsibilities )
+        write_chr_responsibilities( model, reader, writer, parameters, chr_name )
     
     reader.close()
     writer.close()
