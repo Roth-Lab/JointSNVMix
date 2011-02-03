@@ -27,6 +27,8 @@ class EMModel( object ):
         trainer = self.trainer_class( data, max_iters, tolerance, priors )
         
         parameters = trainer.run()
+        
+        trainer.responsibilities = []
                 
         return parameters
 
