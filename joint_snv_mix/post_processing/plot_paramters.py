@@ -18,12 +18,12 @@ def main( jsm_file_name ):
     a = np.linspace( 0, n, n + 1 )
     b = n - a
     
-    alpha = parameters['alpha'][0].reshape( ( 3, 1 ) )
-    beta = parameters['beta'][0].reshape( ( 3, 1 ) )
+    alpha = parameters['alpha'][1].reshape( ( 3, 1 ) )
+    beta = parameters['beta'][1].reshape( ( 3, 1 ) )
     
     pi = parameters['pi'].reshape( ( 3, 3 ) )
     
-    mw = pi.sum( axis=1 ).reshape( ( 3,1 ) )
+    mw = pi.sum( axis=0 ).reshape( ( 3,1 ) )
        
     p = bb_pdf( a, b, alpha, beta )
     p = p * mw

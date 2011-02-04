@@ -5,14 +5,14 @@ Created on 2010-11-19
 '''
 class JointData( object ):
     def __init__( self, X ):
-        self.a = []
-        self.b = []
+        self.a = {}
+        self.b = {}
         
-        self.a.append( X[:, 0] )
-        self.a.append( X[:, 2] )
+        self.a['normal'] = X[:, 0]
+        self.a['tumour'] = X[:, 2]
         
-        self.b.append( X[:, 1] )
-        self.b.append( X[:, 3] )
+        self.b['normal'] = X[:, 1]
+        self.b['tumour'] = X[:, 3]
         
         self.nrows = X.shape[0]
 
