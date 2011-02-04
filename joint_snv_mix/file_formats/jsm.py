@@ -63,20 +63,6 @@ class JointSnvMixFile:
                 parameter_array = self._file_handle.createCArray( group, name, atom, shape )
                 
                 parameter_array[:] = value[:]
-
-            
-    def write_chr_parameters( self, parameters, chr_name ):
-        fh = self._file_handle
-        param_group = self._parameters_group
-        chr_param_group = fh.createGroup( param_group, chr_name )
-        
-        atom = Float64Atom( () )
-        
-        for parameter_name, parameter_value in parameters.items():
-            shape = np.array( parameter_value ).shape
-            parameter_array = fh.createCArray( chr_param_group, parameter_name, atom, shape )
-            
-            parameter_array[:] = parameter_value[:]
             
     def get_parameters( self ):
         param_group = self._parameters_group
@@ -252,9 +238,6 @@ class JointSnvMixWriter:
         
     def write_parameters( self, parameters ):
         self._file_handle.write_parameters( parameters )
-        
-    def write_chr_parameters( self, parameters, chr_name ):
-        self._file_handle.write_chr_parameters( parameters, chr_name )
         
     def write_data( self, chr_name, jcnt_rows, responsibilities ):
         data = []
