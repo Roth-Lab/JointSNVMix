@@ -66,22 +66,20 @@ def joint_beta_binomial_log_likelihood( data, parameters ):
     return log_likelihoods
 
 def joint_binomial_log_likelihood( data, parameters ):
-    a_1 = data.a[0]
-    a_2 = data.a[1]
+    log_likelihoods = {}
     
-    d_1 = data.a[0] + data.b[0]
-    d_2 = data.a[1] + data.b[1]
+    for genome in constants.genomes:
+        a = data.a[genome]
+        b = data.b[genome]
+        d = a + b
+        
+        mu = parameters[genome]['mu']
     
-    mu_1 = parameters['mu'][0]
-    mu_2 = parameters['mu'][1]
-
-    
-    normal_log_likelihoods = log_binomial_likelihood( a_1, d_1, mu_1 )
-    tumour_log_likelihoods = log_binomial_likelihood( a_2, d_2, mu_2 )
+        log_likelihoods[genome] = log_binomial_likelihood( a, d, mu )
 
     pi = parameters['pi']
 
-    log_likelihoods = get_joint_log_likelihoods( normal_log_likelihoods, tumour_log_likelihoods, pi )
+    log_likelihoods = get_joint_log_likelihoods( log_likelihoods, pi )
     
     return log_likelihoods
 

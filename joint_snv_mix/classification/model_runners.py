@@ -58,7 +58,7 @@ class ModelRunner( object ):
         
         self._write_parameters()
         
-#        self._classify( args )
+        self._classify( args )
                             
         self.reader.close()
         self.writer.close()
@@ -161,7 +161,7 @@ class IndependentModelRunner( ModelRunner ):
         
         n = normal_resp.shape[0]
         
-        nclass_normal = normal_resp.shape[0] 
+        nclass_normal = normal_resp.shape[1] 
         
         column_shape = ( n, 1 )
         
