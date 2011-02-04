@@ -92,12 +92,16 @@ class IndependentBetaBinomialPosterior( EMPosterior ):
             
             resp = self.responsibilities[:, component]
             
-            precision_prior = self.priors['precision'][component]
-            location_prior = self.priors['location'][component]
+            precision_prior = self.priors['precision']
+            location_prior = self.priors['location']
             
-            vars.append( [x, a, b, resp, component, precision_prior, location_prior] )
+            vars.append( [x, a, b, resp, location_prior, precision_prior, component] )
                 
-        results = self.pool.map( get_mle_p, vars )
+#        results = self.pool.map( get_mle_p, vars )
+        
+        results = []        
+        for var in vars:
+            results.append( get_mle_p( var ) )
         
         for component in range( 3 ):
             self.parameters['alpha'][component] = results[component][0]
@@ -109,8 +113,8 @@ class IndependentBinomialPosterior( EMPosterior ):
         
         self._update_mix_weights()
 
-        alpha = self.priors['alpha']
-        beta = self.priors['beta']
+        alpha = self.priors['mu']['alpha']
+        beta = self.priors['mu']['beta']
         
         self.parameters['mu'] = alpha / ( alpha + beta )
         
@@ -125,8 +129,8 @@ class IndependentBinomialPosterior( EMPosterior ):
         a = a.reshape( shape )
         d = d.reshape( shape )
         
-        alpha = self.priors['alpha']
-        beta = self.priors['beta']
+        alpha = self.priors['mu']['alpha']
+        beta = self.priors['mu']['beta']
         
         resp = self.responsibilities
         
@@ -232,6 +236,8 @@ class JointBinomialPosterior( EMPosterior ):
     
     def _init_parameters( self ):
         self.parameters = {}
+        self.parameters['normal'] = {}
+        self.parameters['tumour'] = {}
         
         self._update_mix_weights()
         
@@ -240,18 +246,16 @@ class JointBinomialPosterior( EMPosterior ):
     def _update_density_parameters( self ):
         marginals = get_marginals( self.responsibilities, self.nclass )
         
-        self.parameters['mu'] = []
-        
-        for genome in range( 2 ):
+        for genome in constants.genomes:
             a = self.data.a[genome]
             b = self.data.b[genome]
             
-            alpha = self.priors['alpha'][genome]
-            beta = self.priors['beta'][genome]
+            alpha = self.priors[genome]['mu']['alpha']
+            beta = self.priors[genome]['mu']['beta']
             
             tau = marginals[genome]
             
-            self.parameters['mu'].append( self._update_mu( a, b, alpha, beta, tau ) )
+            self.parameters[genome]['mu'] = self._update_mu( a, b, alpha, beta, tau )
     
     def _update_mu( self, a, b, alpha, beta, tau ):       
         d = a + b

@@ -7,7 +7,7 @@
 
 import argparse
 
-from joint_snv_mix.classification.classification import run_classifier
+from joint_snv_mix.classification.model_runners import run_classifier
 
 from joint_snv_mix.pre_processing.mpileup_to_jcnt import main as mpileup_to_jcnt
 

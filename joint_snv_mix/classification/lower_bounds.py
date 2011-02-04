@@ -87,8 +87,9 @@ class IndependenBinomialLowerBound( EMLowerBound ):
         log_prior = 0.
             
         mu = self.parameters['mu']
-        alpha = self.priors['alpha']
-        beta = self.priors['beta']
+        
+        alpha = self.priors['mu']['alpha']
+        beta = self.priors['mu']['beta']
         
         log_prior += log_beta_pdf( mu, alpha, beta )
     
@@ -140,10 +141,11 @@ class JointBinomialLowerBound( EMLowerBound ):
     def _get_log_density_parameters_prior( self ):
         log_prior = 0.
         
-        for genome in range( 2 ):
-            mu = self.parameters['mu'][genome]
-            alpha = self.priors['alpha'][genome]
-            beta = self.priors['beta'][genome]
+        for genome in constants.genomes:
+            mu = self.parameters[genome]['mu']
+            
+            alpha = self.priors[genome]['mu']['alpha']
+            beta = self.priors[genome]['mu']['beta']
             
             log_prior += log_beta_pdf( mu, alpha, beta )
         
