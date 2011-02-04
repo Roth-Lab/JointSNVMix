@@ -6,6 +6,7 @@ Created on 2011-01-18
 import numpy as np
 import multiprocessing
 from joint_snv_mix.classification.utils.beta_binomial_map_estimators import get_mle_p
+from joint_snv_mix import constants
 
 def get_marginals( responsibilities, nclass ):
     nrows = responsibilities.shape[0]
@@ -14,13 +15,10 @@ def get_marginals( responsibilities, nclass ):
     
     responsibilities = responsibilities.reshape( shape )
     
-    normal_marginals = responsibilities.sum( axis=2 )
-    tumour_marginals = responsibilities.sum( axis=1 )
+    marginals = {}
     
-    marginals = []
-
-    marginals.append( normal_marginals )
-    marginals.append( tumour_marginals )
+    marginals['normal'] = responsibilities.sum( axis=2 )
+    marginals['tumour'] = responsibilities.sum( axis=1 )
 
     return marginals
 
@@ -155,20 +153,23 @@ class JointBetaBinomialPosterior( EMPosterior ):
         Initialise parameters. This is only necessary to initialise gradient descent. 
         '''
         self.parameters = {}
-        
+
         self._update_mix_weights()
 
-        location_alpha = self.priors['location'][:, :, 0]
-        location_beta = self.priors['location'][:, :, 1]
+        for genome in constants.genomes:
+            self.parameters[genome] = {}
+            
+            location_alpha = self.priors[genome]['location']['alpha']
+            location_beta = self.priors[genome]['location']['beta']
         
-        precision_shape = self.priors['precision'][:, :, 0]
-        precision_scale = self.priors['precision'][:, :, 1] 
+            precision_shape = self.priors[genome]['precision']['shape']
+            precision_scale = self.priors[genome]['precision']['scale'] 
         
-        s = precision_shape * precision_scale
-        mu = location_alpha / ( location_alpha + location_beta ) 
+            s = precision_shape * precision_scale
+            mu = location_alpha / ( location_alpha + location_beta ) 
         
-        self.parameters['alpha'] = s * mu
-        self.parameters['beta'] = s * ( 1 - mu )
+            self.parameters[genome]['alpha'] = s * mu
+            self.parameters[genome]['beta'] = s * ( 1 - mu )
 #        
 #        self.parameters['alpha'] = np.array( [
 #                                              [1000, 10, 1],
@@ -189,26 +190,26 @@ class JointBetaBinomialPosterior( EMPosterior ):
         
         vars = []
         
-        for genome in range( 2 ):
+        for genome in constants.genomes:
             for component in range( self.nclass ):
                 a = self.data.a[genome]
                 b = self.data.b[genome]
                 
                 x = np.zeros( ( 2, ) )
                 
-                x[0] = self.parameters['alpha'][genome][component]
-                x[1] = self.parameters['beta'][genome][component]
+                x[0] = self.parameters[genome]['alpha'][component]
+                x[1] = self.parameters[genome]['beta'][component]
                 
                 resp = marginals[genome][:, component]
                 
-                precision_prior = self.priors['precision'][genome][component]
-                location_prior = self.priors['location'][genome][component]
+                precision_prior = self.priors[genome]['precision']
+                location_prior = self.priors[genome]['location']
                 
-                vars.append( [x, a, b, resp, precision_prior, location_prior] )
+                vars.append( [x, a, b, resp, location_prior, precision_prior, component] )
         
         results = []
         for var in vars:
-            results.append( get_mle_p(var) )
+            results.append( get_mle_p( var ) )
 
 #        ncpus = self.nclass * 2
         
@@ -216,12 +217,12 @@ class JointBetaBinomialPosterior( EMPosterior ):
 #        results = self.pool.map( get_mle_p, vars )
 #        pool.close()
         
-        for genome in range( 2 ):
+        for i, genome in enumerate( constants.genomes ):
             for component in range( self.nclass ):
-                i = genome * self.nclass + component
+                index = i * self.nclass + component
                 
-                self.parameters['alpha'][genome][component] = results[i][0]
-                self.parameters['beta'][genome][component] = results[i][1]
+                self.parameters[genome]['alpha'][component] = results[index][0]
+                self.parameters[genome]['beta'][component] = results[index][1]
                 
 class JointBinomialPosterior( EMPosterior ):
     def __init__( self, data, priors, responsibilities, nclass=3 ):

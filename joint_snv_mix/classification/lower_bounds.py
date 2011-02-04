@@ -5,10 +5,11 @@ Created on 2011-01-18
 '''
 import numpy as np
 
-from joint_snv_mix.classification.utils.log_pdf import log_dirichlet_pdf, log_beta_pdf, log_gamma_pdf,\
+from joint_snv_mix.classification.utils.log_pdf import log_dirichlet_pdf, log_beta_pdf, log_gamma_pdf, \
     log_translated_gamma_pdf
 from joint_snv_mix.classification.likelihoods import independent_binomial_log_likelihood, \
     independent_beta_binomial_log_likelihood, joint_beta_binomial_log_likelihood, joint_binomial_log_likelihood
+from joint_snv_mix import constants
 
 #=======================================================================================================================
 # Abstract Models
@@ -107,22 +108,26 @@ class JointBetaBinomialLowerBound( EMLowerBound ):
     def _get_log_density_parameters_prior( self ):
         precision_term = 0
         location_term = 0
-        
-        ncomponents = self.parameters['alpha'][0].size
-        
-        for genome in range( 2 ):
-            for component in range( ncomponents ):
-                alpha = self.parameters['alpha'][genome][component]
-                beta = self.parameters['beta'][genome][component]
                 
-                s = alpha + beta
-                mu = alpha / s
-        
-                precision_priors = self.priors['precision'][genome][component]
-                location_priors = self.priors['location'][genome][component]
-                
-                precision_term += log_translated_gamma_pdf( s, precision_priors[0], precision_priors[1], precision_priors[2] )
-                location_term += log_beta_pdf( mu, location_priors[0], location_priors[1] )
+        for genome in constants.genomes:   
+            alpha = self.parameters[genome]['alpha']
+            beta = self.parameters[genome]['beta']
+            
+            s = alpha + beta
+            mu = alpha / s
+    
+            precision_priors = self.priors[genome]['precision']
+            location_priors = self.priors[genome]['location']
+            
+            precision_term += np.sum( log_translated_gamma_pdf( s,
+                                                                precision_priors['shape'],
+                                                                precision_priors['scale'],
+                                                                precision_priors['min'] 
+                                                                ) )
+            
+            location_term += np.sum( log_beta_pdf( mu,
+                                                   location_priors['alpha'],
+                                                   location_priors['beta'] ) )
                 
         return precision_term + location_term
 

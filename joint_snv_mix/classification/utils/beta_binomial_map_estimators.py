@@ -13,21 +13,22 @@ def get_mle_p( vars ):
     a = vars[1]
     b = vars[2]
     resp = vars[3]
-    alpha_prior = vars[4]
-    beta_prior = vars[5]  
+    location_prior = vars[4]
+    precision_prior = vars[5]
+    component = vars[6]
     
-    return get_ml_estimates( x, a, b, resp, alpha_prior, beta_prior )
+    return get_ml_estimates( x, a, b, resp, location_prior, precision_prior, component )
 
-def get_ml_estimates( x, a, b, resp, precision_prior, location_prior ):
+def get_ml_estimates( x, a, b, resp, location_prior, precision_prior, component ):
     if np.all( resp == 0 ):
         print "Empty class."
         return x
     
     f = lambda y:-1 * ( get_f( y, a, b, resp ) + \
-                        get_penalty( y, precision_prior, location_prior ) )
+                        get_penalty( y, location_prior, precision_prior, component ) )
     
     g = lambda y:-1 * ( get_gradient( y, a, b, resp ) + \
-                        get_penalty_gradient( y, precision_prior, location_prior ) )
+                        get_penalty_gradient( y, location_prior, precision_prior, component ) )
     
     # Bounds to keep the alpha, beta search away from 0.
     bounds = [( 1e-6, None ), ( 1e-6, None )]
@@ -36,16 +37,16 @@ def get_ml_estimates( x, a, b, resp, precision_prior, location_prior ):
     
     return x[0]
 
-def get_penalty( x, precision_prior, location_prior ):
+def get_penalty( x, location_prior, precision_prior, component ):
     alpha = x[0]
     beta = x[1]
     
-    precision_prior_shape = precision_prior[0]
-    precision_prior_scale = precision_prior[1]
-    precision_prior_min = precision_prior[2]
+    precision_prior_shape = precision_prior['shape'][component]
+    precision_prior_scale = precision_prior['scale'][component]
+    precision_prior_min = precision_prior['min'][component]
     
-    location_prior_alpha = location_prior[0]
-    location_prior_beta = location_prior[1]
+    location_prior_alpha = location_prior['alpha'][component]
+    location_prior_beta = location_prior['beta'][component]
 
     s = alpha + beta
     mu = alpha / s
@@ -60,16 +61,16 @@ def get_penalty( x, precision_prior, location_prior ):
     
     return scale_penalty + location_penalty
 
-def get_penalty_gradient( x, precision_prior, location_prior ):
+def get_penalty_gradient( x, location_prior, precision_prior, component ):
     alpha = x[0]
     beta = x[1]
     
-    precision_prior_shape = precision_prior[0]
-    precision_prior_scale = precision_prior[1]
-    precision_prior_min = precision_prior[2]
+    precision_prior_shape = precision_prior['shape'][component]
+    precision_prior_scale = precision_prior['scale'][component]
+    precision_prior_min = precision_prior['min'][component]
     
-    location_prior_alpha = location_prior[0]
-    location_prior_beta = location_prior[1]
+    location_prior_alpha = location_prior['alpha'][component]
+    location_prior_beta = location_prior['beta'][component]
 
     s = alpha + beta
     mu = alpha / s

@@ -5,6 +5,7 @@ Created on 2011-01-18
 '''
 import numpy as np
 from joint_snv_mix.classification.utils.log_pdf import log_beta_binomial_likelihood, log_binomial_likelihood
+from joint_snv_mix import constants
 
 #=======================================================================================================================
 # Independent Models
@@ -45,25 +46,22 @@ def independent_binomial_log_likelihood( data, parameters ):
 #=======================================================================================================================
 # Joint Models
 #=======================================================================================================================
-def joint_beta_binomial_log_likelihood( data, parameters ):
-    a_1 = data.a[0]
-    a_2 = data.a[1]
+def joint_beta_binomial_log_likelihood( data, parameters ):    
+    log_likelihoods = {}
     
-    d_1 = data.a[0] + data.b[0]
-    d_2 = data.a[1] + data.b[1]
+    for genome in constants.genomes:
+        a = data.a[genome]
+        b = data.b[genome]
+        d = a + b
+        
+        alpha = parameters[genome]['alpha']
+        beta = parameters[genome]['beta']
     
-    alpha_1 = parameters['alpha'][0]
-    alpha_2 = parameters['alpha'][1]
-    
-    beta_1 = parameters['beta'][0]
-    beta_2 = parameters['beta'][1]
-    
-    normal_log_likelihoods = log_beta_binomial_likelihood( a_1, d_1, alpha_1, beta_1 )
-    tumour_log_likelihoods = log_beta_binomial_likelihood( a_2, d_2, alpha_2, beta_2 )
+        log_likelihoods[genome] = log_beta_binomial_likelihood( a, d, alpha, beta )
 
     pi = parameters['pi']
 
-    log_likelihoods = get_joint_log_likelihoods( normal_log_likelihoods, tumour_log_likelihoods, pi )
+    log_likelihoods = get_joint_log_likelihoods( log_likelihoods, pi )
     
     return log_likelihoods
 
@@ -87,7 +85,10 @@ def joint_binomial_log_likelihood( data, parameters ):
     
     return log_likelihoods
 
-def get_joint_log_likelihoods( normal_log_likelihoods, tumour_log_likelihoods, pi ):
+def get_joint_log_likelihoods( log_likelihoods, pi ):
+    normal_log_likelihoods = log_likelihoods['normal']
+    tumour_log_likelihoods = log_likelihoods['tumour']
+    
     column_shape = ( normal_log_likelihoods[:, 0].size, 1 )
 
     log_likelihoods = np.hstack( ( 

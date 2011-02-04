@@ -56,12 +56,12 @@ class JointLatentVariables( EMLatentVariables ):
         '''
         Intialise responsibilities via k-means clustering.
         '''
-        a_1 = np.asarray( data.a[0], dtype=np.float64 )
-        b_1 = np.asarray( data.b[0], dtype=np.float64 )
+        a_1 = np.asarray( data.a['normal'], dtype=np.float64 )
+        b_1 = np.asarray( data.b['normal'], dtype=np.float64 )
         p_1 = a_1 / ( a_1 + b_1 )
               
-        a_2 = np.asarray( data.a[1], dtype=np.float64 )
-        b_2 = np.asarray( data.b[1], dtype=np.float64 )
+        a_2 = np.asarray( data.a['tumour'], dtype=np.float64 )
+        b_2 = np.asarray( data.b['tumour'], dtype=np.float64 )
         p_2 = a_2 / ( a_2 + b_2 )
 
         shape = ( data.nrows, 9 )
