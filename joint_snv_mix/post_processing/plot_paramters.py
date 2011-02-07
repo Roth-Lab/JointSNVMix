@@ -5,35 +5,74 @@ from scipy.special import gammaln, betaln
 import matplotlib.pyplot as plot
 
 from joint_snv_mix.file_formats.jsm import JointSnvMixReader
+from joint_snv_mix import constants
 
-def main( jsm_file_name ):
-    reader = JointSnvMixReader( jsm_file_name )
-    
-    parameters = reader.get_parameters()
-    
+def main( jsm_file_name, prefix ):
+    reader = JointSnvMixReader( jsm_file_name )    
+    parameters = reader.get_parameters()    
     reader.close()
     
     n = 100
     
+    global a, b 
     a = np.linspace( 0, n, n + 1 )
     b = n - a
     
-    alpha = parameters['alpha'][1].reshape( ( 3, 1 ) )
-    beta = parameters['beta'][1].reshape( ( 3, 1 ) )
-    
-    pi = parameters['pi'].reshape( ( 3, 3 ) )
-    
-    mw = pi.sum( axis=0 ).reshape( ( 3,1 ) )
-       
-    p = bb_pdf( a, b, alpha, beta )
-    p = p * mw
-    p = p / p.sum( axis=0 ).reshape( ( 1, p.shape[1] ) )
+    a = a.reshape( ( a.size, 1 ) )
+    b = b.reshape( ( b.size, 1 ) )
 
-    plot.plot( a, p[0] )
-    plot.plot( a, p[1] )
-    plot.plot( a, p[2] )
+    recursive_plot( parameters, prefix )
+
+def recursive_plot( params, plot_name ):    
+    for name, value in sorted( params.iteritems() ):
+        if name in constants.genomes:
+            plot_name = plot_name + "_" + name + ".pdf"
+            
+            resp = get_marginal_resp( params['pi'], name )            
+            
+            plot_parameters( value['alpha'], value['beta'], resp, plot_name )
+        
+        elif isinstance( value, dict ):
+            plot_name = plot_name + "_" + name
+            
+            recursive_plot( value, plot_name )            
+        else:
+            continue
+                
+def get_marginal_resp( pi, genome ):
+    pi = pi.reshape( ( 3, 3 ) )
     
-    plot.savefig( 'dist.pdf' )
+    if genome == "normal":    
+        resp = pi.sum( axis=1 ).reshape( ( 1, 3 ) )
+    else:
+        resp = pi.sum( axis=1 ).reshape( ( 1, 3 ) )
+        
+    return resp
+
+def plot_parameters( alpha, beta, resp, plot_name ):
+    alpha = alpha.reshape( ( 1, 3 ) )
+    beta = beta.reshape( ( 1, 3 ) )
+    
+    nclass = resp.size
+        
+    posterior = bb_pdf( a, b, alpha, beta )
+    posterior = posterior * resp
+    posterior = posterior / posterior.sum( axis=1 ).reshape( ( a.size, 1 ) )
+
+    fig = plot.figure()
+    ax = plot.subplot( 111 )
+    
+    lines = []
+    
+    for i in range( 3 ):
+        p = ax.plot( a, posterior[:, i] )
+        lines.append( p )    
+            
+    line_labels = ['AA', 'AB', 'BB']
+    
+    fig.legend( lines, line_labels, loc='center right' )    
+    
+    plot.savefig( plot_name )    
 
 def log_factorial( x ):
     return gammaln( x + 1 )
@@ -57,5 +96,6 @@ if __name__ == "__main__":
     import sys
     
     jsm_file_name = sys.argv[1]
+    prefix = sys.argv[1]
     
-    main( jsm_file_name )
+    main( jsm_file_name, prefix )
