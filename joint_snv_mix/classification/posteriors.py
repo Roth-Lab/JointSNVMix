@@ -211,15 +211,15 @@ class JointBetaBinomialPosterior( EMPosterior ):
                 
                 vars.append( [x, a, b, resp, location_prior, precision_prior, component] )
         
-        results = []
-        for var in vars:
-            results.append( get_mle_p( var ) )
+#        results = []
+#        for var in vars:
+#            results.append( get_mle_p( var ) )
 
-#        ncpus = self.nclass * 2
+        ncpus = self.nclass * 2
         
-#        pool = multiprocessing.Pool( processes=ncpus, maxtasksperchild=1 )
-#        results = self.pool.map( get_mle_p, vars )
-#        pool.close()
+        pool = multiprocessing.Pool( processes=ncpus, maxtasksperchild=1 )
+        results = pool.map( get_mle_p, vars )
+        pool.close()
         
         for i, genome in enumerate( constants.genomes ):
             for component in range( self.nclass ):
