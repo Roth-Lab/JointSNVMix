@@ -24,11 +24,18 @@ def get_ml_estimates( x, a, b, resp, location_prior, precision_prior, component 
         print "Empty class."
         return x
     
+    prec_shape = precision_prior['shape'][component]
+    prec_scale = precision_prior['scale'][component]
+    prec_min = precision_prior['min'][component]
+    
+    loc_alpha = location_prior['alpha'][component]
+    loc_beta = location_prior['beta'][component]
+    
     f = lambda y:-1 * ( get_f( y, a, b, resp ) + \
-                        get_penalty( y, location_prior, precision_prior, component ) )
+                        get_penalty( y, loc_alpha, loc_beta, prec_shape, prec_scale, prec_min ) )
     
     g = lambda y:-1 * ( get_gradient( y, a, b, resp ) + \
-                        get_penalty_gradient( y, location_prior, precision_prior, component ) )
+                        get_penalty_gradient( y, loc_alpha, loc_beta, prec_shape, prec_scale, prec_min ) )
     
     # Bounds to keep the alpha, beta search away from 0.
     bounds = [( 1e-6, None ), ( 1e-6, None )]
@@ -37,57 +44,49 @@ def get_ml_estimates( x, a, b, resp, location_prior, precision_prior, component 
     
     return x[0]
 
-def get_penalty( x, location_prior, precision_prior, component ):
+def get_penalty( x, loc_alpha, loc_beta, prec_shape, prec_scale, prec_min ):
     alpha = x[0]
     beta = x[1]
     
-    precision_prior_shape = precision_prior['shape'][component]
-    precision_prior_scale = precision_prior['scale'][component]
-    precision_prior_min = precision_prior['min'][component]
-    
-    location_prior_alpha = location_prior['alpha'][component]
-    location_prior_beta = location_prior['beta'][component]
-
+    mu = alpha / ( alpha + beta )
     s = alpha + beta
-    mu = alpha / s
     
-    s = s - precision_prior_min
+    s = s - prec_min
     
     if s <= 0:
         return float( '-inf' )
     
-    scale_penalty = ( precision_prior_shape - 1 ) * np.log( s ) - s / precision_prior_scale
-    location_penalty = ( location_prior_alpha - 1 ) * np.log( mu ) + ( location_prior_beta - 1 ) * np.log( 1 - mu )
+    scale_penalty = ( prec_shape - 1 ) * np.log( s ) - s / prec_scale
+    location_penalty = ( loc_alpha - 1 ) * np.log( mu ) + ( loc_beta - 1 ) * np.log( 1 - mu )
     
     return scale_penalty + location_penalty
 
-def get_penalty_gradient( x, location_prior, precision_prior, component ):
+def get_penalty_gradient( x, loc_alpha, loc_beta, prec_shape, prec_scale, prec_min ):
     alpha = x[0]
     beta = x[1]
     
-    precision_prior_shape = precision_prior['shape'][component]
-    precision_prior_scale = precision_prior['scale'][component]
-    precision_prior_min = precision_prior['min'][component]
-    
-    location_prior_alpha = location_prior['alpha'][component]
-    location_prior_beta = location_prior['beta'][component]
-
+    mu = alpha / ( alpha + beta )
     s = alpha + beta
-    mu = alpha / s
     
-    s = s - precision_prior_min
+    s = s - prec_min
 
-    grad_scale_penalty = ( precision_prior_shape - 1 ) / s - 1 / precision_prior_scale
-    grad_location_penalty = ( location_prior_alpha - 1 ) / mu - ( location_prior_beta - 1 ) / ( 1 - mu )
+    d_pen_s = ( prec_shape - 1 ) / s - 1 / prec_scale
+    d_pen_mu = ( loc_alpha - 1 ) / mu - ( loc_beta - 1 ) / ( 1 - mu )
     
-    grad_penalty = np.array( [grad_scale_penalty, grad_location_penalty] )
+    d_mu_alpha = beta / ( alpha + beta ) ** 2
+    d_mu_beta = -alpha / ( alpha + beta ) ** 2
+    
+    d_pen_alpha = d_pen_mu * d_mu_alpha + d_pen_s
+    d_pen_beta = d_pen_mu * d_mu_beta + d_pen_s
+    
+    grad_penalty = np.array( [d_pen_alpha, d_pen_beta] )
     
     return grad_penalty
 
-def get_f( x, a, b, resp ):
+def get_f( x, a, b, resp ):  
     alpha = x[0]
     beta = x[1]
-    
+      
     nrows = a.shape[0]
     
     d = a + b
@@ -115,7 +114,7 @@ def get_gradient( x, a, b, resp ):
     deriv_wrt_beta = resp * deriv_wrt_beta
     deriv_wrt_beta = deriv_wrt_beta.sum( axis=0 )
     
-    grad = np.array( [deriv_wrt_alpha, deriv_wrt_beta] ) 
+    grad = np.array( [deriv_wrt_alpha, deriv_wrt_beta] )
     
     return grad
     
