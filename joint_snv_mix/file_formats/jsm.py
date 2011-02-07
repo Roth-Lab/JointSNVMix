@@ -7,7 +7,7 @@ import time
 
 import numpy as np
 
-from tables import openFile, Filters, Float64Atom, StringCol, IsDescription, UInt32Col, Float64Col
+from tables import openFile, Filters, Float64Atom, StringCol, IsDescription, UInt32Col, Float64Col, Leaf
    
 class JointSnvMixFile:
     def __init__( self, file_name, file_mode, compression_level=1, compression_lib='zlib' ):
@@ -63,19 +63,44 @@ class JointSnvMixFile:
                 parameter_array = self._file_handle.createCArray( group, name, atom, shape )
                 
                 parameter_array[:] = value[:]
-            
+                
+    def get_priors( self ):
+        priors = {}
+        
+        self._read_tree( priors, self._priors_group )
+        
+        return priors
+    
     def get_parameters( self ):
-        param_group = self._parameters_group
+        parameters = {}
         
-        params = {}
+        self._read_tree( parameters, self._parameters_group )
         
-        for table in self._file_handle.iterNodes( where=param_group ):
-            param_name = table._v_name
-            param_value = table.read()
-        
-            params[param_name] = param_value
-        
-        return params
+        return parameters
+    
+    def _read_tree( self, params, group ):
+        for entry in self._file_handle.iterNodes( where=group ):
+            name = entry._v_name 
+            
+            if isinstance( entry, Leaf ):
+                params[name] = entry[:]
+            else:
+                params[name] = {}
+                self._read_tree( params[name], entry )
+            
+            
+#    def get_parameters( self ):
+#        param_group = self._parameters_group
+#        
+#        params = {}
+#        
+#        for table in self._file_handle.iterNodes( where=param_group ):
+#            param_name = table._v_name
+#            param_value = table.read()
+#        
+#            params[param_name] = param_value
+#        
+#        return params
             
     def write_chr_table( self, chr_name, data ):
         if chr_name not in self._chr_tables:
