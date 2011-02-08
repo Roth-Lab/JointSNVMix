@@ -22,6 +22,11 @@ from joint_snv_mix import constants
 import math
 
 def run_classifier( args ):
+    if args.priors_file is None:
+        args.train = False
+    else:
+        args.train = True
+    
     if args.model == "independent":
         if args.density == "binomial":
             runner = IndependentBinomialRunner()

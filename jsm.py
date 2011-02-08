@@ -13,6 +13,8 @@ from joint_snv_mix.pre_processing.mpileup_to_jcnt import main as mpileup_to_jcnt
 
 from joint_snv_mix.pre_processing.mpileup_to_mcnt import main as mpileup_to_mcnt
 
+from joint_snv_mix.pre_processing.varscan_to_jcnt import main as varscan_to_jcnt
+
 from joint_snv_mix.post_processing.call_joint_genotypes import main as call_genotypes
 
 from joint_snv_mix.post_processing.extract_jsm_positions import main as extract_jsm_positions
@@ -57,6 +59,21 @@ parser_mcnt.add_argument( '--min_depth', default=1, type=int,
                           the analysis.''' )
 
 parser_mcnt.set_defaults( func=mpileup_to_mcnt )
+
+#===============================================================================
+# Add mcnt sub-command
+#===============================================================================
+parser_mcnt = subparsers.add_parser( 'varscan',
+                                     help='Convert varscan files to jcnt file format.' )
+
+parser_mcnt.add_argument( 'varscan_file_name',
+                          help='''Samtools mpileup format file. When creating file with samtools the first bam file
+                          passed as arguments should be the normal and the second the tumour file.''' )
+
+parser_mcnt.add_argument( 'jcnt_file_name',
+                          help='Name of joint counts (jcnt) output files to be created.' )
+
+parser_mcnt.set_defaults( func=varscan_to_jcnt )
 
 #===============================================================================
 # Add analyse sub-command
@@ -149,10 +166,5 @@ parser_extract.set_defaults( func=extract_jsm_positions )
 # Run
 #===============================================================================
 args = parser.parse_args()
-
-if args.priors_file is None:
-    args.train = False
-else:
-    args.train = True
 
 args.func( args )
