@@ -130,14 +130,25 @@ class MultinomialModelPriorParser( PriorParser ):
         
         self.ncomponent = self.nclass['normal'] * self.nclass['tumour']
         
+    def _load_density_priors( self ):        
+        for genome in constants.genomes:
+            for param_name in self.parameter_names:
+                self.priors[genome][param_name] = {}
+                    
+                for hyper_param_name in self.hyper_parameter_names[param_name]:
+                    self.priors[genome][param_name][hyper_param_name] = np.zeros( ( self.nclass[genome], 4 ) )
+                    
+                    self._load_hyperparameter( genome, param_name, hyper_param_name )
+        
     def _load_hyperparameter( self, genome, param_name, hyper_param_name ):                           
         for i, genotype in enumerate( constants.multinomial_genotypes ):
-            for nuc in constants.nucleotides:         
+            for j, nuc in enumerate( constants.nucleotides ):         
                 genome_genotype_nuc = "_".join( ( genome, genotype, nuc ) )
                 
                 section_name = "_".join( ( param_name, hyper_param_name ) )
                 
-                self.priors[genome][param_name][hyper_param_name][i] = self.parser.getfloat( section_name, genome_genotype_nuc )
+                self.priors[genome][param_name][hyper_param_name][i, j] = self.parser.getfloat( section_name, genome_genotype_nuc )
+                
     
     def _load_mix_weight_priors( self ):       
         self.priors['kappa'] = np.zeros( ( self.ncomponent, ) )

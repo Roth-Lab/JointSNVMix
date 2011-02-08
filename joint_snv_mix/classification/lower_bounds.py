@@ -167,8 +167,8 @@ class JointMultinomialLowerBound( EMLowerBound ):
         log_prior = 0.
         
         for genome in constants.genomes:
-            rho = self.parameters['rho'][genome]
-            delta = self.priors['delta'][genome]
+            rho = self.parameters[genome]['rho']
+            delta = self.priors[genome]['rho']['delta']
             
             log_prior += log_dirichlet_pdf( rho, delta )
         

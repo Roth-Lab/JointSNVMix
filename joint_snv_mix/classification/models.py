@@ -10,8 +10,10 @@ from joint_snv_mix.classification.latent_variables import IndependentBinomialLat
     JointMultinomialLatentVariables
 from joint_snv_mix.classification.likelihoods import independent_binomial_log_likelihood, independent_beta_binomial_log_likelihood, joint_beta_binomial_log_likelihood, joint_binomial_log_likelihood,\
     joint_multinomial_log_likelihood
-from joint_snv_mix.classification.lower_bounds import IndependenBinomialLowerBound, IndependentBetaBinomialLowerBound, JointBetaBinomialLowerBound, JointBinomialLowerBound
-from joint_snv_mix.classification.posteriors import IndependentBinomialPosterior, IndependentBetaBinomialPosterior, JointBetaBinomialPosterior, JointBinomialPosterior
+from joint_snv_mix.classification.lower_bounds import IndependenBinomialLowerBound, IndependentBetaBinomialLowerBound, JointBetaBinomialLowerBound, JointBinomialLowerBound,\
+    JointMultinomialLowerBound
+from joint_snv_mix.classification.posteriors import IndependentBinomialPosterior, IndependentBetaBinomialPosterior, JointBetaBinomialPosterior, JointBinomialPosterior,\
+    JointMultinomialPosterior
 from joint_snv_mix.classification.utils.normalise import log_space_normalise_rows
 
 class EMModel( object ):

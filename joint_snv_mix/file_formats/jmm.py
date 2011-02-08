@@ -42,33 +42,60 @@ class JointMultiMixFile:
         self._init_chr_tables()
         
     def write_priors( self, priors ):
-        fh = self._file_handle
         priors_group = self._priors_group
         
-        atom = Float64Atom( () )
+        self._write_tree( priors, priors_group )
         
-        for parameter_name, parameter_value in priors.items():
-            shape = parameter_value.shape
-            parameter_array = fh.createCArray( priors_group, parameter_name, atom, shape )
+    def write_parameters( self, parameters ):    
+        params_group = self._parameters_group
+        
+        self._write_tree( parameters, params_group )
+    
+    def _write_tree( self, params, group ):
+        for name, value in params.items():
+            if isinstance( value, dict ):
+                new_group = self._file_handle.createGroup( group, name )
+                self._write_tree( value, new_group )
+            else:
+                atom = Float64Atom( () )
+        
+                shape = np.array( value ).shape
+        
+                parameter_array = self._file_handle.createCArray( group, name, atom, shape )
+                
+                parameter_array[:] = value[:]
+                
+    def get_priors( self ):
+        priors = {}
+        
+        self._read_tree( priors, self._priors_group )
+        
+        return priors
+    
+    def get_parameters( self ):
+        parameters = {}
+        
+        self._read_tree( parameters, self._parameters_group )
+        
+        return parameters
+    
+    def _read_tree( self, params, group ):
+        for entry in self._file_handle.iterNodes( where=group ):
+            name = entry._v_name 
             
-            parameter_array[:] = parameter_value[:]
-        
-    def write_parameters( self, parameters ):
-        fh = self._file_handle
-        param_group = self._parameters_group
-        
-        atom = Float64Atom( () )
-        
-        for parameter_name, parameter_value in parameters.items():
-            shape = parameter_value.shape
-            parameter_array = fh.createCArray( param_group, parameter_name, atom, shape )
-            
-            parameter_array[:] = parameter_value[:]
+            if isinstance( entry, Leaf ):
+                params[name] = entry[:]
+            else:
+                params[name] = {}
+                self._read_tree( params[name], entry )
             
     def write_chr_table( self, chr_name, data ):
-        chr_table = self._file_handle.createTable( '/data', chr_name, JointSnvMixTable )
-        
-        self._chr_tables[chr_name] = chr_table
+        if chr_name not in self._chr_tables:
+            chr_table = self._file_handle.createTable( '/data', chr_name, JointSnvMixTable )
+            
+            self._chr_tables[chr_name] = chr_table
+        else:
+            chr_table = self._chr_tables[chr_name]        
         
         chr_table.append( data )
         
@@ -133,7 +160,7 @@ class JointMultiMixFile:
 
 class JointMultiMixReader:
     def __init__( self, file_name ):
-        self._file_handle = JointSnvMixFile( file_name, 'r' )
+        self._file_handle = JointMultiMixFile( file_name, 'r' )
 
     def get_chr_list( self ):
         return self._file_handle.entries
@@ -211,7 +238,7 @@ class JointMultiMixReader:
                
 class JointMultiMixWriter:
     def __init__( self, file_name, ):
-        self._file_handle = JointSnvMixFile( file_name, 'w' )
+        self._file_handle = JointMultiMixFile( file_name, 'w' )
         
     def write_priors( self, priors ):
         self._file_handle.write_priors( priors )
