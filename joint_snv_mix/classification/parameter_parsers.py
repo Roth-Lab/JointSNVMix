@@ -82,7 +82,7 @@ class JointParameterParser( ParameterParser ):
     def __init__( self ):
         ParameterParser.__init__( self )
         
-        self.ncomponent = self.nclass['normal'] * self.nclass['tumour']
+        self.ncomponent = sum( [self.nclass[genome] for genome in constants.genomes] )
 
     def _load_mix_weights( self ):       
         pi = np.zeros( ( self.ncomponent, ) )
@@ -91,6 +91,8 @@ class JointParameterParser( ParameterParser ):
             genotype = "_".join( genotype_tuple )
         
             pi[i] = self.parser.getfloat( 'pi', genotype )
+            
+        pi[9] = self.parser.getfloat( 'pi', 'junk' )
             
         self.parameters['pi'] = pi / pi.sum()
             

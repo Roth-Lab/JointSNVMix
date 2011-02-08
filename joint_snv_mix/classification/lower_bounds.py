@@ -109,8 +109,11 @@ class JointBetaBinomialLowerBound( EMLowerBound ):
     def _get_log_density_parameters_prior( self ):
         precision_term = 0
         location_term = 0
-                
-        for genome in constants.genomes:   
+        
+        genomes = ['junk']
+        genomes.extend( constants.genomes )
+        
+        for genome in genomes:   
             alpha = self.parameters[genome]['alpha']
             beta = self.parameters[genome]['beta']
             
@@ -129,7 +132,7 @@ class JointBetaBinomialLowerBound( EMLowerBound ):
             location_term += np.sum( log_beta_pdf( mu,
                                                    location_priors['alpha'],
                                                    location_priors['beta'] ) )
-                
+                    
         return precision_term + location_term
 
 class JointBinomialLowerBound( EMLowerBound ):

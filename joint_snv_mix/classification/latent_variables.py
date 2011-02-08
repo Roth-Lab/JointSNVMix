@@ -64,7 +64,7 @@ class JointLatentVariables( EMLatentVariables ):
         b_2 = np.asarray( data.b['tumour'], dtype=np.float64 )
         p_2 = a_2 / ( a_2 + b_2 )
 
-        shape = ( data.nrows, 9 )
+        shape = ( data.nrows, 10 )
         
         responsibilities = np.zeros( shape )
         
@@ -79,6 +79,10 @@ class JointLatentVariables( EMLatentVariables ):
             index = labels == id
             
             responsibilities[index, id] = 1.
+        
+        
+        responsibilities[labels == 4, 9] = 1e-3
+        responsibilities = responsibilities / responsibilities.sum( axis=1 ).reshape( ( data.nrows, 1 ) )
         
         self.responsibilities = responsibilities
 

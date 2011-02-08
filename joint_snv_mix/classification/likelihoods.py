@@ -48,6 +48,7 @@ def independent_binomial_log_likelihood( data, parameters ):
 #=======================================================================================================================
 def joint_beta_binomial_log_likelihood( data, parameters ):    
     log_likelihoods = {}
+    log_likelihoods['junk'] = np.zeros( ( data.nrows, 1 ) )
     
     for genome in constants.genomes:
         a = data.a[genome]
@@ -58,6 +59,11 @@ def joint_beta_binomial_log_likelihood( data, parameters ):
         beta = parameters[genome]['beta']
     
         log_likelihoods[genome] = log_beta_binomial_likelihood( a, d, alpha, beta )
+        
+        alpha = parameters['junk']['alpha']
+        beta = parameters['junk']['beta']
+        
+        log_likelihoods['junk'] += log_beta_binomial_likelihood( a, d, alpha, beta )
 
     pi = parameters['pi']
 
@@ -92,7 +98,8 @@ def get_joint_log_likelihoods( log_likelihoods, pi ):
     log_likelihoods = np.hstack( ( 
                                  normal_log_likelihoods[:, 0].reshape( column_shape ) + tumour_log_likelihoods ,
                                  normal_log_likelihoods[:, 1].reshape( column_shape ) + tumour_log_likelihoods ,
-                                 normal_log_likelihoods[:, 2].reshape( column_shape ) + tumour_log_likelihoods
+                                 normal_log_likelihoods[:, 2].reshape( column_shape ) + tumour_log_likelihoods,
+                                 log_likelihoods['junk']
                                  ) )
     
     log_likelihoods = log_likelihoods + np.log( pi )

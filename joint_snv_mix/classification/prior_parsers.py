@@ -12,7 +12,8 @@ class PriorParser( object ):
     def __init__( self ):
         self.nclass = {}
         self.nclass['normal'] = 3
-        self.nclass['tumour'] = 3        
+        self.nclass['tumour'] = 3       
+        self.nclass['junk'] = 1 
                 
         self.priors = {}
         
@@ -42,7 +43,10 @@ class PriorParser( object ):
                     
                     self._load_hyperparameter( genome, param_name, hyper_param_name )
                     
-    def _load_hyperparameter( self, genome, param_name, hyper_param_name ):                           
+    def _load_hyperparameter( self, genome, param_name, hyper_param_name ):
+        if genome == "junk":
+            
+                                 
         for i, genotype in enumerate( constants.genotypes ):                
             genome_genotype = "_".join( ( genome, genotype ) )
             
@@ -89,16 +93,19 @@ class JointModelPriorParser( PriorParser ):
     def __init__( self ):
         PriorParser.__init__( self )
         
-        self.ncomponent = self.nclass['normal'] * self.nclass['tumour']
+        self.ncomponent = sum( [self.nclass[genome] for genome in constants.genomes] )
     
     def _load_mix_weight_priors( self ):       
         self.priors['kappa'] = np.zeros( ( self.ncomponent, ) )
             
         for i, genotype_tuple in enumerate( constants.joint_genotypes ):
-            genotype = "_".join( genotype_tuple )
+            if isinstance(genotype_tuple, tuple):
+                genotype = "_".join( genotype_tuple )
+            else:
+                genotype = genotype_tuple
         
             self.priors['kappa'][i] = self.parser.getfloat( 'kappa', genotype )
-            
+        
 class JointBinomialPriorParser( JointModelPriorParser ):
     def __init__( self ):
         JointModelPriorParser.__init__( self )

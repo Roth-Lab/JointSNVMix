@@ -5,7 +5,7 @@ Created on 2011-01-18
 '''
 import numpy as np
 import multiprocessing
-from joint_snv_mix.classification.utils.beta_binomial_map_estimators import get_mle_p
+from joint_snv_mix.classification.utils.beta_binomial_map_estimators import get_mle_p, get_junk_map
 from joint_snv_mix import constants
 
 def get_marginals( responsibilities, nclass ):
@@ -209,7 +209,7 @@ class JointBetaBinomialPosterior( EMPosterior ):
                 precision_prior = self.priors[genome]['precision']
                 location_prior = self.priors[genome]['location']
                 
-                vars.append( [x, a, b, resp, location_prior, precision_prior, component] )
+                vars.append( [x, a, b, resp, location_prior, precision_prior, component] )        
         
 #        results = []
 #        for var in vars:
@@ -220,13 +220,16 @@ class JointBetaBinomialPosterior( EMPosterior ):
         pool = multiprocessing.Pool( processes=ncpus, maxtasksperchild=1 )
         results = pool.map( get_mle_p, vars )
         pool.close()
-        
+                
         for i, genome in enumerate( constants.genomes ):
             for component in range( self.nclass ):
                 index = i * self.nclass + component
                 
                 self.parameters[genome]['alpha'][component] = results[index][0]
                 self.parameters[genome]['beta'][component] = results[index][1]
+                
+        self.parameters['junk'] = get_junk_map( self.data, self.parameters['junk'], self.responsibilities[:, 10] )
+        
                 
 class JointBinomialPosterior( EMPosterior ):
     def __init__( self, data, priors, responsibilities, nclass=3 ):
