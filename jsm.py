@@ -118,7 +118,7 @@ train_group.add_argument( '--convergence_threshold', default=1e-6, type=float,
 parser_classify.add_argument( '--model', choices=['independent', 'joint', 'chromosome'], default='joint',
                               help='Model type to use for classification.' )
 
-parser_classify.add_argument( '--density', choices=['binomial', 'beta_binomial'], default='beta_binomial',
+parser_classify.add_argument( '--density', choices=['binomial', 'beta_binomial', 'multinomial'], default='beta_binomial',
                               help='Density to be used in model.' )
 
 parser_classify.add_argument( '--inference_algorithm', choices=['em', 'vb'], default='em',
