@@ -6,8 +6,10 @@ Created on 2010-11-22
 import numpy as np
 #np.seterr( invalid='raise' )
 
-from joint_snv_mix.classification.latent_variables import IndependentBinomialLatentVariables, IndependentBetaBinomialLatentVariables, JointBetaBinomialLatentVariables, JointBinomialLatentVariables
-from joint_snv_mix.classification.likelihoods import independent_binomial_log_likelihood, independent_beta_binomial_log_likelihood, joint_beta_binomial_log_likelihood, joint_binomial_log_likelihood
+from joint_snv_mix.classification.latent_variables import IndependentBinomialLatentVariables, IndependentBetaBinomialLatentVariables, JointBetaBinomialLatentVariables, JointBinomialLatentVariables,\
+    JointMultinomialLatentVariables
+from joint_snv_mix.classification.likelihoods import independent_binomial_log_likelihood, independent_beta_binomial_log_likelihood, joint_beta_binomial_log_likelihood, joint_binomial_log_likelihood,\
+    joint_multinomial_log_likelihood
 from joint_snv_mix.classification.lower_bounds import IndependenBinomialLowerBound, IndependentBetaBinomialLowerBound, JointBetaBinomialLowerBound, JointBinomialLowerBound
 from joint_snv_mix.classification.posteriors import IndependentBinomialPosterior, IndependentBetaBinomialPosterior, JointBetaBinomialPosterior, JointBinomialPosterior
 from joint_snv_mix.classification.utils.normalise import log_space_normalise_rows
@@ -181,3 +183,22 @@ class JointBinomialModelTrainer( EMModelTrainer ):
         self.posterior = JointBinomialPosterior( self.data, self.priors, self.responsibilities )
         
         self.lower_bound = JointBinomialLowerBound( self.data, self.priors )
+        
+#=======================================================================================================================
+# Multinomial
+#=======================================================================================================================
+class JointMultinomialModel( EMModel ):
+    def __init__( self ):
+        self.trainer_class = JointMultinomialModelTrainer
+        
+        self.log_likelihood_func = joint_multinomial_log_likelihood
+
+class JointMultinomialModelTrainer( EMModelTrainer ):
+    def _init_components( self ):
+        self.latent_variables = JointMultinomialLatentVariables( self.data )
+        
+        self.responsibilities = self.latent_variables.responsibilities
+        
+        self.posterior = JointMultinomialPosterior( self.data, self.priors, self.responsibilities )
+        
+        self.lower_bound = JointMultinomialLowerBound( self.data, self.priors )

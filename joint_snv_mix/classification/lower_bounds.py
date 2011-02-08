@@ -8,7 +8,8 @@ import numpy as np
 from joint_snv_mix.classification.utils.log_pdf import log_dirichlet_pdf, log_beta_pdf, log_gamma_pdf, \
     log_translated_gamma_pdf
 from joint_snv_mix.classification.likelihoods import independent_binomial_log_likelihood, \
-    independent_beta_binomial_log_likelihood, joint_beta_binomial_log_likelihood, joint_binomial_log_likelihood
+    independent_beta_binomial_log_likelihood, joint_beta_binomial_log_likelihood, joint_binomial_log_likelihood, \
+    joint_multinomial_log_likelihood
 from joint_snv_mix import constants
 
 #=======================================================================================================================
@@ -148,6 +149,28 @@ class JointBinomialLowerBound( EMLowerBound ):
             beta = self.priors[genome]['mu']['beta']
             
             log_prior += log_beta_pdf( mu, alpha, beta )
+        
+        log_prior = log_prior.sum()
+
+        return log_prior
+
+#=======================================================================================================================
+# Multinomial
+#=======================================================================================================================
+class JointMultinomialLowerBound( EMLowerBound ):
+    def __init__( self, data, priors ):  
+        EMLowerBound.__init__( self, data, priors )
+        
+        self.log_likelihood_func = joint_multinomial_log_likelihood
+    
+    def _get_log_density_parameters_prior( self ):
+        log_prior = 0.
+        
+        for genome in constants.genomes:
+            rho = self.parameters['rho'][genome]
+            delta = self.priors['delta'][genome]
+            
+            log_prior += log_dirichlet_pdf( rho, delta )
         
         log_prior = log_prior.sum()
 

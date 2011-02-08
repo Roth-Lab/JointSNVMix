@@ -58,10 +58,13 @@ parser_mcnt.add_argument( '--min_depth', default=1, type=int,
                           help='''Minimum depth of coverage in both tumour and normal sample required to use a site in
                           the analysis.''' )
 
+parser_mcnt.add_argument( '--bzip2', action='store_true',
+                          help='''Set if file is in bzip2 format.''' )
+
 parser_mcnt.set_defaults( func=mpileup_to_mcnt )
 
 #===============================================================================
-# Add mcnt sub-command
+# Add varscan sub-command
 #===============================================================================
 parser_mcnt = subparsers.add_parser( 'varscan',
                                      help='Convert varscan files to jcnt file format.' )

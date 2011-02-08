@@ -275,3 +275,50 @@ class JointBinomialPosterior( EMPosterior ):
         denominator = depth_sum + alpha + beta - 2.
         
         return np.exp( np.log( numerator ) - np.log( denominator ) )
+
+#=======================================================================================================================
+# Multinomial
+#=======================================================================================================================
+class JointMultinomialPosterior( EMPosterior ):
+    def __init__( self, data, priors, responsibilities, nclass=10 ):
+        self.nclass = nclass
+        
+        EMPosterior.__init__( self, data, priors, responsibilities )
+    
+    def _init_parameters( self ):
+        self.parameters = {}
+        self.parameters['normal'] = {}
+        self.parameters['tumour'] = {}
+        
+        self._update_mix_weights()
+        
+        self._update_density_parameters()
+           
+    def _update_density_parameters( self ):
+        marginals = get_marginals( self.responsibilities, self.nclass )
+        
+        for genome in constants.genomes:
+            counts = self.data.counts[genome]
+            
+            delta = self.priors[genome]['delta']
+            
+            tau = marginals[genome]
+            
+            self.parameters[genome]['rho'] = self._update_rho( counts, tau, delta )
+    
+    def _update_rho( self, counts, tau, delta ):       
+        counts = counts.reshape( ( 1, counts.shape[0], counts.shape[1] ) )
+        
+        tau = np.swapaxes( tau, 0, 1 )
+        
+        tau = tau.reshape( ( tau.shape[0], tau.shape[1], 1 ) )
+        
+        marginal_counts = tau * counts
+        
+        marginal_counts = marginal_counts.sum( axis=1 )
+        
+        numerator = marginal_counts + delta - 1
+        
+        denominator = numerator.sum( axis=1 ).reshape( ( numerator.shape[0], 1 ) )
+        
+        return np.exp( np.log( numerator ) - np.log( denominator ) )

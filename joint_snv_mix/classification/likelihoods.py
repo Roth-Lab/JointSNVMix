@@ -4,7 +4,8 @@ Created on 2011-01-18
 @author: Andrew Roth
 '''
 import numpy as np
-from joint_snv_mix.classification.utils.log_pdf import log_beta_binomial_likelihood, log_binomial_likelihood
+from joint_snv_mix.classification.utils.log_pdf import log_beta_binomial_likelihood, log_binomial_likelihood,\
+    log_multinomial_likelihood
 from joint_snv_mix import constants
 
 #=======================================================================================================================
@@ -87,14 +88,30 @@ def get_joint_log_likelihoods( log_likelihoods, pi ):
     normal_log_likelihoods = log_likelihoods['normal']
     tumour_log_likelihoods = log_likelihoods['tumour']
     
+    normal_nclass = normal_log_likelihoods.shape[1]
     column_shape = ( normal_log_likelihoods[:, 0].size, 1 )
 
-    log_likelihoods = np.hstack( ( 
-                                 normal_log_likelihoods[:, 0].reshape( column_shape ) + tumour_log_likelihoods ,
-                                 normal_log_likelihoods[:, 1].reshape( column_shape ) + tumour_log_likelihoods ,
-                                 normal_log_likelihoods[:, 2].reshape( column_shape ) + tumour_log_likelihoods
-                                 ) )
+    log_likelihoods = np.hstack( [normal_log_likelihoods[:, i].reshape( column_shape ) + tumour_log_likelihoods
+                                  for i in range( normal_nclass )] )
     
     log_likelihoods = log_likelihoods + np.log( pi )
 
+    return log_likelihoods
+
+#=======================================================================================================================
+# Multinomial
+#=======================================================================================================================
+def joint_multinomial_log_likelihood( data, parameters ):
+    log_likelihoods = {}
+    
+    for genome in constants.genomes:
+        counts = data.counts[genome]        
+        rho = parameters[genome]['rho']
+    
+        log_likelihoods[genome] = log_multinomial_likelihood( counts, rho )
+
+    pi = parameters['pi']
+    
+    log_likelihoods = get_joint_log_likelihoods( log_likelihoods, pi )
+    
     return log_likelihoods

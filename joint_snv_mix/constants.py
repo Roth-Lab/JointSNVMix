@@ -74,7 +74,7 @@ for i, g in enumerate( joint_multinomial_genotypes ):
 #=======================================================================================================================
 # Extended multinomial
 #=======================================================================================================================
-extended_multinomial_genotypes = multinomial_genotypes
+extended_multinomial_genotypes = multinomial_genotypes[:]
 extended_multinomial_genotypes.extend( ['ACG', 'ACT', 'AGT', 'CGT', 'ACGT'] ) 
 
 joint_extended_multinomial_genotypes = []

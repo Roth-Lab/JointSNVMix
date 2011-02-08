@@ -116,7 +116,46 @@ class JointBetaBinomialPriorParser( JointModelPriorParser ):
         
         self.hyper_parameter_names = {}
         self.hyper_parameter_names['location'] = ( 'alpha', 'beta' )
-        self.hyper_parameter_names['precision'] = ( 'shape', 'scale', 'min' )        
+        self.hyper_parameter_names['precision'] = ( 'shape', 'scale', 'min' )
+        
+#=======================================================================================================================
+# Multinomial
+#=======================================================================================================================
+class MultinomialModelPriorParser( PriorParser ):
+    def __init__( self ):
+        PriorParser.__init__( self )
+        
+        self.nclass['normal'] = 10
+        self.nclass['tumour'] = 10    
+        
+        self.ncomponent = self.nclass['normal'] * self.nclass['tumour']
+        
+    def _load_hyperparameter( self, genome, param_name, hyper_param_name ):                           
+        for i, genotype in enumerate( constants.multinomial_genotypes ):
+            for nuc in constants.nucleotides:         
+                genome_genotype_nuc = "_".join( ( genome, genotype, nuc ) )
+                
+                section_name = "_".join( ( param_name, hyper_param_name ) )
+                
+                self.priors[genome][param_name][hyper_param_name][i] = self.parser.getfloat( section_name, genome_genotype_nuc )
+    
+    def _load_mix_weight_priors( self ):       
+        self.priors['kappa'] = np.zeros( ( self.ncomponent, ) )
+            
+        for i, genotype_tuple in enumerate( constants.joint_multinomial_genotypes ):
+            genotype = "_".join( genotype_tuple )
+        
+            self.priors['kappa'][i] = self.parser.getfloat( 'kappa', genotype )
+            
+class JointMultinomialPriorParser( MultinomialModelPriorParser ):
+    def __init__( self ):
+        MultinomialModelPriorParser.__init__( self )
+        
+        self.parameter_names = ( 'rho', )
+        
+        self.hyper_parameter_names = {}
+        self.hyper_parameter_names['rho'] = ( 'delta', )
+        
 
 if __name__ == "__main__":
     def print_params( file_name, parser ):
@@ -139,3 +178,8 @@ if __name__ == "__main__":
     indep_bb_file_name = "../../config/indep_bb.priors.cfg"
     indep_bb_prior = IndependentBetaBinomialPriorParser()
     print_params( indep_bb_file_name, indep_bb_prior )
+    
+    multinomia_file_name = "../../config/joint_mul.priors.cfg"
+    multinomia_prior = JointMultinomialPriorParser()
+    print_params( multinomia_file_name, multinomia_prior )
+
