@@ -8,11 +8,10 @@ import csv
 
 import joint_snv_mix.constants as constants
 
-from joint_snv_mix.file_formats.jemm import JointExtendedMultiMixReader
+from joint_snv_mix.file_formats.jsm import JointSnvMixReader
 
 def main( args ):
-
-    reader = JointExtendedMultiMixReader( args.jsm_file_name )
+    reader = JointSnvMixReader( args.jsm_file_name )
     writer = csv.writer( open( args.call_file_name, 'w' ), delimiter="\t" )
 
     header = get_header()
