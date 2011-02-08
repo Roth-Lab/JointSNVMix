@@ -16,9 +16,11 @@ setup(
       
       packages=[ 
                 'joint_snv_mix',
-                'joint_snv_mix.pre_processing',
                 'joint_snv_mix.classification',
-                'joint_snv_mix.post_processing',                
+                'joint_snv_mix.classification.utils',
+                'joint_snv_mix.pre_processing',
+                'joint_snv_mix.post_processing',
+                'joint_snv_mix.file_formats'            
                 ],
       
       cmdclass={'build_ext': build_ext},
