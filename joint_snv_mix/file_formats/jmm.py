@@ -7,8 +7,9 @@ import time
 
 import numpy as np
 
-from tables import openFile, Filters, Float64Atom, StringCol, IsDescription, UInt32Col, Float64Col
+from tables import openFile, Filters, Float64Atom, StringCol, IsDescription, UInt32Col, Float64Col, Leaf
 from joint_snv_mix.constants import joint_multinomial_genotypes
+from joint_snv_mix import constants
    
 class JointMultiMixFile:
     def __init__( self, file_name, file_mode, compression_level=1, compression_lib='zlib' ):
@@ -120,7 +121,7 @@ class JointMultiMixFile:
         probs = []
         
         for i in class_labels:
-            prob = "_".join( joint_extended_multinomial_genotypes[i] )
+            prob = "_".join( constants.joint_multinomial_genotypes[i] )
             prob = "p" + "_" + prob
             
             probs.append( prob )
@@ -138,7 +139,7 @@ class JointMultiMixFile:
         table = self._chr_tables[chr_name]
         
         if row_indices is None:
-            return table[:]
+            return table
         else:
             return table[row_indices]
     
