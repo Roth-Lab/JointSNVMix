@@ -95,7 +95,7 @@ class JointMultiMixFile:
             
             self._chr_tables[chr_name] = chr_table
         else:
-            chr_table = self._chr_tables[chr_name]        
+            chr_table = self._chr_tables[chr_name]
         
         chr_table.append( data )
         
@@ -113,6 +113,26 @@ class JointMultiMixFile:
         responsibilities = np.column_stack( probs )
         
         return responsibilities
+    
+    def get_row_above_prob( self, chr_name, class_labels, prob_threshold ):
+        table = self._chr_tables[chr_name]
+        
+        probs = []
+        
+        for i in class_labels:
+            prob = "_".join( joint_extended_multinomial_genotypes[i] )
+            prob = "p" + "_" + prob
+            
+            probs.append( prob )
+            
+        
+        query_string = " + ".join( probs )
+        
+        query_string = "{0} >= {1}".format( query_string, prob_threshold )
+        
+        rows = table.readWhere( query_string )
+        
+        return rows
     
     def get_rows( self, chr_name, row_indices=None ):
         table = self._chr_tables[chr_name]
@@ -167,11 +187,11 @@ class JointMultiMixReader:
     
     def get_genotype_rows_by_argmax( self, chr_name, genotype_class ):
         if genotype_class == 'Somatic':
-            class_labels = [1, 2]
+            class_labels = constants.somatic_multinomial_genotypes_indices
         elif genotype_class == 'Germline':
-            class_labels = [4, 8]
+            class_labels = constants.matched_multinomial_genotypes_indices
         elif genotype_class == 'LOH':
-            class_labels = [3, 5]
+            class_labels = constants.loh_multinomial_genotypes_indices
         else:
             raise Exception( 'Class {0} not accepted.'.format( genotype_class ) )
         
@@ -181,15 +201,15 @@ class JointMultiMixReader:
     
     def get_genotype_rows_by_prob( self, chr_name, genotype_class, prob_threshold ):
         if genotype_class == 'Somatic':
-            class_labels = [1, 2]
+            class_labels = constants.somatic_multinomial_genotypes_indices
         elif genotype_class == 'Germline':
-            class_labels = [4, 8]
+            class_labels = constants.matched_multinomial_genotypes_indices
         elif genotype_class == 'LOH':
-            class_labels = [3, 5]
+            class_labels = constants.loh_multinomial_genotypes_indices
         else:
             raise Exception( 'Class {0} not accepted.'.format( genotype_class ) )
         
-        rows = self._get_rows_by_prob( chr_name, class_labels, prob_threshold )
+        rows = self._file_handle.get_row_above_prob( chr_name, class_labels, prob_threshold )
 
         return rows
     
