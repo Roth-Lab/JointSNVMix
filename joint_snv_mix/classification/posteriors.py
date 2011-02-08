@@ -300,7 +300,7 @@ class JointMultinomialPosterior( EMPosterior ):
         for genome in constants.genomes:
             counts = self.data.counts[genome]
             
-            delta = self.priors[genome]['delta']
+            delta = self.priors[genome]['rho']['delta']
             
             tau = marginals[genome]
             
@@ -309,12 +309,10 @@ class JointMultinomialPosterior( EMPosterior ):
     def _update_rho( self, counts, tau, delta ):       
         counts = counts.reshape( ( 1, counts.shape[0], counts.shape[1] ) )
         
-        tau = np.swapaxes( tau, 0, 1 )
+        tau = np.swapaxes( tau, 0, 1 )        
+        tau = tau.reshape( ( tau.shape[0], tau.shape[1], 1 ) )        
         
-        tau = tau.reshape( ( tau.shape[0], tau.shape[1], 1 ) )
-        
-        marginal_counts = tau * counts
-        
+        marginal_counts = tau * counts        
         marginal_counts = marginal_counts.sum( axis=1 )
         
         numerator = marginal_counts + delta - 1

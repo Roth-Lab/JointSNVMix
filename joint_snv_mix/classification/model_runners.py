@@ -8,10 +8,11 @@ import random
 import numpy as np
 
 from joint_snv_mix.classification.prior_parsers import IndependentBetaBinomialPriorParser, \
-    IndependentBinomialPriorParser, JointBinomialPriorParser, JointBetaBinomialPriorParser
+    IndependentBinomialPriorParser, JointBinomialPriorParser, JointBetaBinomialPriorParser, JointMultinomialPriorParser
 
 from joint_snv_mix.classification.parameter_parsers import IndependentBinomialParameterParser, \
-    IndependentBetaBinomialParameterParser, JointBinomialParameterParser, JointBetaBinomialParameterParser
+    IndependentBetaBinomialParameterParser, JointBinomialParameterParser, JointBetaBinomialParameterParser, \
+    JointMultinomialParameterParser
 
 from joint_snv_mix.classification.models import IndependenBetaBinomialModel, IndependentBinomialModel, \
     JointBinomialModel, JointBetaBinomialModel, JointMultinomialModel
@@ -20,6 +21,8 @@ from joint_snv_mix.file_formats.jsm import JointSnvMixWriter
 from joint_snv_mix.classification.data import IndependentData, JointData, MultinomialData
 from joint_snv_mix import constants
 import math
+from joint_snv_mix.file_formats.mcnt import MultinomialCountsReader
+from joint_snv_mix.file_formats.jmm import JointMultiMixWriter
 
 def run_classifier( args ):
     if args.priors_file is None:
@@ -53,10 +56,7 @@ def run_classifier( args ):
 # Classes
 #=======================================================================================================================
 class ModelRunner( object ):
-    def run( self, args ):
-        self.reader = JointCountsReader( args.jcnt_file_name )
-        self.writer = JointSnvMixWriter( args.jsm_file_name )
-        
+    def run( self, args ):        
         # Load parameters by training or from file.
         if args.train:
             self._train( args )
@@ -198,8 +198,14 @@ class IndependentBetaBinomialRunner( IndependentModelRunner ):
 #=======================================================================================================================
 # Joint Models
 #=======================================================================================================================
-class JointModelRunner( ModelRunner ):                
-    def _train( self, args ):
+class JointModelRunner( ModelRunner ):
+    def run( self, args ):
+        self.reader = JointCountsReader( args.jcnt_file_name )
+        self.writer = JointSnvMixWriter( args.jsm_file_name )
+        
+        ModelRunner.run( self, args )
+                    
+    def _train( self, args ):        
         if args.subsample_size > 0:
             counts = self._subsample( args.subsample_size )
         else:
@@ -254,7 +260,13 @@ class JointBetaBinomialRunner( JointModelRunner ):
 #=======================================================================================================================
 # Multinomial
 #=======================================================================================================================
-class MultinomialModelRunner( ModelRunner ):                
+class MultinomialModelRunner( ModelRunner ):
+    def run( self, args ):
+        self.reader = MultinomialCountsReader( args.jcnt_file_name )
+        self.writer = JointMultiMixWriter( args.jsm_file_name )
+        
+        ModelRunner.run( self, args )
+               
     def _train( self, args ):
         if args.subsample_size > 0:
             counts = self._subsample( args.subsample_size )

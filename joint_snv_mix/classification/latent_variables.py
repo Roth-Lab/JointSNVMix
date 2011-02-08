@@ -88,8 +88,8 @@ class MultinomialLatentVariables( EMLatentVariables ):
         '''
         Intialise responsibilities via k-means clustering.
         '''
-        counts_1 = np.asarray( data.counts[0], dtype=np.float64 )
-        counts_2 = np.asarray( data.counts[1], dtype=np.float64 )
+        counts_1 = np.asarray( data.counts['normal'], dtype=np.float64 )
+        counts_2 = np.asarray( data.counts['tumour'], dtype=np.float64 )
         
         shape = ( counts_1.shape[0], 1 )
         
