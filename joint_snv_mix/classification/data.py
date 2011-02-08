@@ -31,10 +31,10 @@ class IndependentData( object ):
         
 class MultinomialData( object ):
     def __init__( self, X ):
-        self.counts = []
+        self.counts = {}
 
-        self.counts.append( X[:, :4] )
-        self.counts.append( X[:, 4:] )
+        self.counts['normal'] = X[:, :4]
+        self.counts['tumour'] = X[:, 4:]
 
         self.nrows = X.shape[0]
         

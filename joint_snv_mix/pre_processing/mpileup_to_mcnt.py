@@ -2,6 +2,7 @@
 import tables
 import warnings
 from joint_snv_mix.constants import nucleotides
+import bz2
 warnings.filterwarnings( 'ignore', category=tables.NaturalNameWarning )
 
 import csv
@@ -13,7 +14,12 @@ from joint_snv_mix.file_formats.pileup import parse_call_string
 from joint_snv_mix.file_formats.mcnt import MultinomialCountsFile
 
 def main( args ):
-    reader = get_reader( args.mpileup_file_name )
+    if args.bzip2:
+        mpileup_file = bz2.BZ2File( args.mpileup_file_name )
+    else:
+        mpileup_file = open( args.mpileup_file_name )
+    
+    reader = get_reader( mpileup_file )
     mcnt_file = MultinomialCountsFile( args.mcnt_file_name, 'w' )
     
     rows = {}
@@ -74,7 +80,7 @@ def main( args ):
         i += 1
         
         if i >= 1e4:
-            print chr_name, chr_coord
+            print chr_name, chr_coord, mcnt_entry
             
             write_rows( mcnt_file, rows )
             
@@ -86,7 +92,7 @@ def main( args ):
         
     mcnt_file.close()
 
-def get_reader( mpileup_file_name ):
+def get_reader( mpileup_file ):
     csv.field_size_limit( 10000000 )
     
     fields = [
@@ -101,7 +107,7 @@ def get_reader( mpileup_file_name ):
           'tumour_base_qual_string'
           ]
 
-    reader = csv.DictReader( open( mpileup_file_name ), fieldnames=fields, delimiter='\t', quoting=csv.QUOTE_NONE )
+    reader = csv.DictReader( mpileup_file, fieldnames=fields, delimiter='\t', quoting=csv.QUOTE_NONE )
         
     return reader
 

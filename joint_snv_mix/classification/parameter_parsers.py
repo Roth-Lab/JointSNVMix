@@ -106,6 +106,32 @@ class JointBetaBinomialParameterParser( JointParameterParser ):
         
         self.parameter_names = ( 'alpha', 'beta' )
         
+#=======================================================================================================================
+# Multinomial
+#=======================================================================================================================
+class MultinomialParameterParser( ParameterParser ):
+    def __init__( self ):
+        ParameterParser.__init__( self )
+        
+        self.ncomponent = self.nclass['normal'] * self.nclass['tumour']
+
+    def _load_mix_weights( self ):       
+        pi = np.zeros( ( self.ncomponent, ) )
+            
+        for i, genotype_tuple in enumerate( constants.multinomial_genotypes ):
+            genotype = "_".join( genotype_tuple )
+        
+            pi[i] = self.parser.getfloat( 'pi', genotype )
+            
+        self.parameters['pi'] = pi / pi.sum()
+            
+class JointMultinomialParameterParser( MultinomialParameterParser ):
+    def __init__( self ):
+        MultinomialParameterParser.__init__( self )
+        
+        self.parameter_names = ( 'mu', )
+
+        
 if __name__ == "__main__":
     def print_params( file_name, parser ):
         parser.load_from_file( file_name )
