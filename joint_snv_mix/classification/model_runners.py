@@ -48,7 +48,9 @@ def run_classifier( args ):
         if args.density == "binomial":
             runner = ChromosomeBinomialRunner()
         elif args.density == "beta_binomial":
-            runner = ChromosomeBetaBinomialRunner()    
+            runner = ChromosomeBetaBinomialRunner()
+        elif args.density == "multinomial":
+            runner = ChromosomeMultinomialRunner()
 
     runner.run( args )
 
@@ -317,6 +319,12 @@ class JointMultinomialRunner( MultinomialModelRunner ):
 # Chromosome Models
 #=======================================================================================================================
 class ChromosomeModelRunner( ModelRunner ):
+    def run( self, args ):
+        self.reader = JointCountsReader( args.jcnt_file_name )
+        self.writer = JointSnvMixWriter( args.jsm_file_name )
+        
+        ModelRunner.run( self, args )
+    
     def _train( self, args ):                   
         self.priors_parser.load_from_file( args.priors_file )
         self.priors = self.priors_parser.to_dict()
@@ -335,7 +343,7 @@ class ChromosomeModelRunner( ModelRunner ):
             else:        
                 counts = self.reader.get_counts( chr_name )
             
-            data = JointData( counts )
+            data = self.data_class( counts )
             
             self.parameters[chr_name] = self.model.train( data, self.priors,
                                                           args.max_iters, args.convergence_threshold )
@@ -355,7 +363,7 @@ class ChromosomeModelRunner( ModelRunner ):
             sub_counts = counts[start:stop]
             sub_rows = jcnt_rows[start:stop]
                               
-            data = JointData( sub_counts )            
+            data = self.data_class( sub_counts )            
                 
             resp = self.model.classify( data, self.parameters[chr_name] )
         
@@ -379,12 +387,30 @@ class ChromosomeModelRunner( ModelRunner ):
 
 class ChromosomeBinomialRunner( ChromosomeModelRunner ):
     def __init__( self ):
+        self.data_class = JointData
+        
         self.model = JointBinomialModel()
         self.priors_parser = JointBinomialPriorParser()
         self.parameter_parser = JointBinomialParameterParser()
 
 class ChromosomeBetaBinomialRunner( ChromosomeModelRunner ):
     def __init__( self ):
+        self.data_class = JointData
+        
         self.model = JointBetaBinomialModel()
         self.priors_parser = JointBetaBinomialPriorParser()
         self.parameter_parser = JointBetaBinomialParameterParser()
+        
+class ChromosomeMultinomialRunner( ChromosomeModelRunner ):
+    def __init__( self ):
+        self.data_class = MultinomialData
+        
+        self.model = JointMultinomialModel()
+        self.priors_parser = JointMultinomialPriorParser()
+        self.parameter_parser = JointMultinomialParameterParser()
+        
+    def run( self, args ):
+        self.reader = MultinomialCountsReader( args.jcnt_file_name )
+        self.writer = JointMultiMixWriter( args.jsm_file_name )
+        
+        ModelRunner.run( self, args )
