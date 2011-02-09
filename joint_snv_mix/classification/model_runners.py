@@ -3,26 +3,21 @@ Created on 2011-02-03
 
 @author: Andrew Roth
 '''
+import math
 import random
 
 import numpy as np
 
-from joint_snv_mix.classification.prior_parsers import IndependentBetaBinomialPriorParser, \
-    IndependentBinomialPriorParser, JointBinomialPriorParser, JointBetaBinomialPriorParser, JointMultinomialPriorParser
-
-from joint_snv_mix.classification.parameter_parsers import IndependentBinomialParameterParser, \
-    IndependentBetaBinomialParameterParser, JointBinomialParameterParser, JointBetaBinomialParameterParser, \
-    JointMultinomialParameterParser
-
-from joint_snv_mix.classification.models import IndependenBetaBinomialModel, IndependentBinomialModel, \
-    JointBinomialModel, JointBetaBinomialModel, JointMultinomialModel
-from joint_snv_mix.file_formats.jcnt import JointCountsReader
-from joint_snv_mix.file_formats.jsm import JointSnvMixWriter
-from joint_snv_mix.classification.data import IndependentData, JointData, MultinomialData
 from joint_snv_mix import constants
-import math
-from joint_snv_mix.file_formats.mcnt import MultinomialCountsReader
+from joint_snv_mix.classification.data import IndependentData, JointData, MultinomialData
+from joint_snv_mix.classification.models import IndependenBetaBinomialModel, IndependentBinomialModel, JointBinomialModel, JointBetaBinomialModel, JointMultinomialModel
+from joint_snv_mix.classification.parameter_parsers import IndependentBinomialParameterParser, IndependentBetaBinomialParameterParser, JointBinomialParameterParser, JointBetaBinomialParameterParser, JointMultinomialParameterParser
+from joint_snv_mix.classification.prior_parsers import IndependentBetaBinomialPriorParser, IndependentBinomialPriorParser, JointBinomialPriorParser, JointBetaBinomialPriorParser, JointMultinomialPriorParser
+from joint_snv_mix.file_formats.jcnt import JointCountsReader
 from joint_snv_mix.file_formats.jmm import JointMultiMixWriter
+from joint_snv_mix.file_formats.jsm import JointSnvMixWriter
+from joint_snv_mix.file_formats.mcnt import MultinomialCountsReader
+
 
 def run_classifier( args ):
     if args.priors_file is None:
