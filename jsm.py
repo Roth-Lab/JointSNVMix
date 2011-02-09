@@ -15,7 +15,7 @@ from joint_snv_mix.pre_processing.mpileup_to_mcnt import main as mpileup_to_mcnt
 
 from joint_snv_mix.pre_processing.varscan_to_jcnt import main as varscan_to_jcnt
 
-from joint_snv_mix.post_processing.call_joint_genotypes import main as call_genotypes
+from joint_snv_mix.post_processing.call_somatics import main as call_somatics
 
 from joint_snv_mix.post_processing.extract_jsm_positions import main as extract_jsm_positions
 
@@ -135,20 +135,10 @@ parser_call = subparsers.add_parser( 'call',
 parser_call.add_argument( 'jsm_file_name',
                           help='Input JSM file name.' )
 
-parser_call.add_argument( 'call_file_name',
+parser_call.add_argument( 'out_file_name',
                           help='Output file name.' )
 
-parser_call.add_argument( '--genotype_class', choices=['Somatic', 'Germline', 'LOH'], default='Somatic',
-                          help='Joint genotype call to call from file.' )
-
-method_group = parser_call.add_mutually_exclusive_group( required=True )
-method_group.add_argument( '-p', dest='prob_threshold', default=0.95,
-                           help='Minimum probability to call a site in the given class.' )
-
-method_group.add_argument( '-a', dest='argmax', default=False, action='store_true',
-                           help='If set call call a site to a given class by argmax rule.' )
-
-parser_call.set_defaults( func=call_genotypes )
+parser_call.set_defaults( func=call_somatics )
 
 #===============================================================================
 # Add extract sub-command
