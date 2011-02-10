@@ -11,7 +11,7 @@ from joint_snv_mix import constants
 
 class FisherModel( object ):
     def __init__( self, p_value_threshold=0.05, base_line_error=0.001,
-                  min_var_freq=0.1, min_hom_freq=0.8, min_var_support=2 ):
+                  min_var_freq=0.1, min_hom_freq=0.8, min_var_depth=2 ):
         
         self.p_value_threshold = p_value_threshold
         
@@ -19,14 +19,14 @@ class FisherModel( object ):
         
         self.min_var_freq = min_var_freq
         self.min_hom_freq = min_hom_freq
-        self.min_var_depth = min_var_support
+        self.min_var_depth = min_var_depth
     
     def classify( self, data ):
         genotypes = self._call_genotypes( data )
         
-        joint_genotypes, germline_scores, somatic_scores = self._call_joint_genotypes( data, genotypes )
+        joint_genotypes = self._call_joint_genotypes( data, genotypes )
         
-        return joint_genotypes, germline_scores, somatic_scores
+        return joint_genotypes
     
     def _call_genotypes( self, data ):
         genotypes = {}
@@ -111,12 +111,7 @@ class FisherModel( object ):
         non_significant_p_values = np.logical_not( significant_p_values )
         non_significant_non_match = np.logical_and( non_match, non_significant_p_values )        
         germline = np.logical_or( germline, non_significant_non_match )
-        
-        a = a_N + a_T
-        b = b_N + b_T
-        
-        germline_pvalues = self._get_significance( a, b, self.base_line_error )
-        
+               
         n = a_N.size
         joint_genotypes = -1 * np.ones( ( n, ) )
         
@@ -126,7 +121,7 @@ class FisherModel( object ):
         joint_genotypes[loh] = 3
         joint_genotypes[uknown] = 4
         
-        return joint_genotypes, germline_pvalues, p_values
+        return joint_genotypes
 
     def _get_significance( self, a, b, expected_freq ):
         '''

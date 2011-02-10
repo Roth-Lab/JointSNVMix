@@ -452,23 +452,20 @@ class FisherTestRunner( object ):
                               
             data = self.data_class( sub_counts )            
                 
-            labels, germline_scores, somatic_scores = self.model.classify( data )
+            labels = self.model.classify( data )
             
-            self._write_rows( chr_name, sub_rows, labels, germline_scores, somatic_scores )
+            self._write_rows( chr_name, sub_rows, labels )
         
             start = stop
             stop = min( stop + n, end )
 
-    def _write_rows( self, chr_name, rows, labels, germline_scores, somatic_scores ):
+    def _write_rows( self, chr_name, rows, labels ):
         for i, row in enumerate( rows ):
             out_row = [chr_name]
             out_row.extend( row )
             
             label = int( labels[i] )                 
             out_row.append( self.classes[label] )
-            
-            out_row.append( germline_scores[i] )
-            out_row.append( somatic_scores[i] )
             
             if label == 2:
                 print out_row
