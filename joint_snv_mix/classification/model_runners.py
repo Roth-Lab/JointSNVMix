@@ -17,6 +17,8 @@ from joint_snv_mix.file_formats.jcnt import JointCountsReader
 from joint_snv_mix.file_formats.jmm import JointMultiMixWriter
 from joint_snv_mix.file_formats.jsm import JointSnvMixWriter
 from joint_snv_mix.file_formats.mcnt import MultinomialCountsReader
+from joint_snv_mix.classification.fisher_classifier import FisherModel
+import csv
 
 
 def run_classifier( args ):
@@ -46,6 +48,9 @@ def run_classifier( args ):
             runner = ChromosomeBetaBinomialRunner()
         elif args.density == "multinomial":
             runner = ChromosomeMultinomialRunner()
+            
+    elif args.model == "fisher":
+        runner = FisherTestRunner()
 
     runner.run( args )
 
@@ -409,3 +414,64 @@ class ChromosomeMultinomialRunner( ChromosomeModelRunner ):
         self.writer = JointMultiMixWriter( args.jsm_file_name )
         
         ModelRunner.run( self, args )
+
+#=======================================================================================================================
+# Fisher
+#=======================================================================================================================
+class FisherTestRunner( object ):
+    def __init__( self ):
+        self.model = FisherModel()
+        self.data_class = JointData
+        
+        self.classes = ( 'Reference', 'Germline', 'Somatic', 'LOH', 'Unknown' )
+    
+    def run( self, args ):
+        self.reader = JointCountsReader( args.jcnt_file_name )
+        self.writer = csv.writer( open( args.jsm_file_name, 'w' ), delimiter='\t' )
+        
+        chr_list = self.reader.get_chr_list()
+        
+        for chr_name in sorted( chr_list ):
+            self._classify_chromosome( chr_name )
+                            
+        self.reader.close()
+        
+    def _classify_chromosome( self, chr_name ):
+        counts = self.reader.get_counts( chr_name )
+        jcnt_rows = self.reader.get_rows( chr_name )
+        
+        end = self.reader.get_chr_size( chr_name )
+
+        n = int( 1e5 )
+        start = 0
+        stop = min( n, end )
+        
+        while start < end:
+            sub_counts = counts[start:stop]
+            sub_rows = jcnt_rows[start:stop]
+                              
+            data = self.data_class( sub_counts )            
+                
+            labels, germline_scores, somatic_scores = self.model.classify( data )
+            
+            self._write_rows( chr_name, sub_rows, labels, germline_scores, somatic_scores )
+        
+            start = stop
+            stop = min( stop + n, end )
+
+    def _write_rows( self, chr_name, rows, labels, germline_scores, somatic_scores ):
+        for i, row in enumerate( rows ):
+            out_row = [chr_name]
+            out_row.extend( row )
+            
+            label = int( labels[i] )                 
+            out_row.append( self.classes[label] )
+            
+            out_row.append( germline_scores[i] )
+            out_row.append( somatic_scores[i] )
+            
+            if label == 2:
+                print out_row
+            
+            self.writer.writerow( out_row )
+        
