@@ -36,8 +36,12 @@ def main( args ):
         
         segment_indices = np.logical_and( rows['position'] >= start, rows['position'] <= stop )
         
-        cncnt_file.add_rows( cn_status, chr_name, rows[segment_indices] )
-
+        segment_rows = rows[segment_indices]
+        
+        if len( segment_rows ) == 0:
+            continue
+        
+        cncnt_file.add_rows( cn_status, chr_name, segment_rows )
     
     reader.close()
     cncnt_file.close()

@@ -139,9 +139,6 @@ class ConanModelRunner( ModelRunner ):
             
             chr_sample_size = min( chr_size, chr_sample_size )
             
-            if chr_sample_size == 0:
-                continue
-            
             chr_sample_indices = random.sample( xrange( chr_size ), chr_sample_size )
             
             chr_counts = self.reader.get_counts( cn_state, chr_name )
