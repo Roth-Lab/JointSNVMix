@@ -18,6 +18,7 @@ from joint_snv_mix.pre_processing.varscan_to_jcnt import main as varscan_to_jcnt
 from joint_snv_mix.post_processing.call_somatics import main as call_somatics
 
 from joint_snv_mix.post_processing.extract_jsm_positions import main as extract_jsm_positions
+from joint_snv_mix.classification.conan import run_conan
 
 parser = argparse.ArgumentParser( prog='JointSNVMix' )
 subparsers = parser.add_subparsers()
@@ -125,6 +126,35 @@ parser_classify.add_argument( '--inference_algorithm', choices=['em', 'vb'], def
                               help='Method used to infer model parameters.' )
 
 train_group.set_defaults( func=run_classifier )
+
+#===============================================================================
+# Add conan sub-command
+#===============================================================================
+parser_classify = subparsers.add_parser( 'conan',
+                                        help='''Run a ConanSNVMix analysis. Requires that a cncnt file has been
+                                        created''' )
+
+parser_classify.add_argument( 'cncnt_file_name',
+                             help='Name of conan counts (cncnt) file to be used as input.' )
+
+parser_classify.add_argument( 'cnsm_file_name',
+                             help='Name of ConanSNVMix (cnsm) output files to be created.' )
+
+train_group = parser_classify.add_argument_group( title='Training Parameters',
+                                                 description='Options for training the model.' )
+
+train_group.add_argument( '--max_iters', default=1000, type=int,
+                          help='''Maximum number of iterations to used for training model. Default 1000''' )
+
+train_group.add_argument( '--subsample_size', default=0, type=int,
+                          help='''Size of random subsample to use for training. If not set the whole data set will be
+                          used.''' )
+
+train_group.add_argument( '--convergence_threshold', default=1e-6, type=float,
+                          help='''Convergence threshold for EM training. Once the change in objective function is below
+                          this value training will end. Defaul 1e-6''' )
+
+train_group.set_defaults( func=run_conan )
 
 #===============================================================================
 # Add call sub-command
