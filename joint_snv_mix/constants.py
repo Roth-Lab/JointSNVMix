@@ -128,10 +128,24 @@ for i, g in enumerate( joint_extended_multinomial_genotypes ):
 # Conan
 #=======================================================================================================================
 cn_state_map = {
-                '1' : 3, 
+                '1' : 3,
                 '2' : 3,
                 '3' : 3,
                 '4' : 4,
                 '5' : 5,
                 '6' : 6
                 }
+
+conan_somatic_indices = {}
+
+for cn_state in cn_state_map:
+    nclass = cn_state_map[cn_state]
+    
+    conan_somatic_indices[cn_state] = []
+    
+    for i in range( 1, nclass ):
+        conan_somatic_indices[cn_state].append( i )
+    
+        
+    
+    
