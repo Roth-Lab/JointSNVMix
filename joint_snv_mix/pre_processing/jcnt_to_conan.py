@@ -25,9 +25,26 @@ def main( args ):
         print row
         
         chr_name = row[0]
+        
+        if chr_name == '23':
+            chr_name = 'X'
+        if chr_name == '24':
+            chr_name = 'Y'
+        
         start = int( row[1] )
         stop = int( row[2] )
         cn_status = row[3]
+        
+        if cn_status == '7':
+            cn_status = '1'
+        elif cn_status == '8':
+            cn_status = '2'
+        elif cn_status == '9':
+            cn_status = '4'
+        elif cn_status == '10':
+            cn_status = '5'
+        elif cn_status == '11':
+            cn_status = '6'
         
         if chr_name not in chr_list:
             continue
