@@ -145,7 +145,33 @@ for cn_state in cn_state_map:
     
     for i in range( 1, nclass ):
         conan_somatic_indices[cn_state].append( i )
+
+binomial_alleles = ['a', 'b']
+
+conan_genotypes = {}
+
+for cn_state in cn_state_map:
+    nclass = cn_state_map[cn_state]
     
+    conan_genotypes[cn_state] = []
+    
+    for i in range( nclass + 1 ):
+        genotype = 'a' * ( nclass - i ) + 'b' * i
+        conan_genotypes[cn_state].append( genotype )
+        
+conan_joint_genotypes = {}        
+
+for cn_state in cn_state_map:
+    nclass = cn_state_map[cn_state]
+    
+    normal_genotypes = conan_genotypes['3']
+    tumour_genotypes = conan_genotypes[cn_state]
+    
+    conan_joint_genotypes[cn_state] = []
+    
+    for ng in normal_genotypes:
+        for tg in tumour_genotype:
+            conan_joint_genotypes[cn_state].append( ( ng, tg ) )
         
     
     
