@@ -42,7 +42,10 @@ class ConanSnvMixFile:
         self._init_entries()
 
         self._init_cn_groups()
-        
+    
+    def get_chr_list( self, cn_status ):
+        return self.entries[cn_status]
+    
     def write_priors( self, priors ):
         priors_group = self._priors_group
         
@@ -126,12 +129,12 @@ class ConanSnvMixFile:
     
     def get_rows( self, cn_state, chr_name, row_indices=None ):
         cn_group = self._cn_groups[cn_state]
-        table = self._file_handle.getnode( cn_group, chr_name )
+        chr_group = self._file_handle.getNode( cn_group, chr_name )
         
         if row_indices is None:
-            return table[:]
+            return chr_group.index, chr_group.soft_labels
         else:
-            return table[row_indices]
+            return chr_group.index[row_indices], chr_group.soft_labels[row_indices]
     
     def get_position( self, chr_name, coord ):
         '''
@@ -162,7 +165,7 @@ class ConanSnvMixFile:
         '''
         entries = {}
 
-        for cn_group in self._file_handle.iterNodes( where=self._file_handle.root ):
+        for cn_group in self._file_handle.iterNodes( where='/data' ):
             group_name = cn_group._v_name
             
             cn_tables = self._file_handle.listNodes( where=cn_group )
@@ -174,7 +177,7 @@ class ConanSnvMixFile:
         cn_groups = {}
 
         for cn_state in self.entries:
-            cn_groups[cn_state] = self._file_handle.getNode( self._file_handle.root, cn_state )
+            cn_groups[cn_state] = self._file_handle.getNode( '/data', cn_state )
 
         self._cn_groups = cn_groups
 
