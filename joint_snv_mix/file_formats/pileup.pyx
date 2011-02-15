@@ -46,7 +46,10 @@ cpdef list parse_call_string( char * ref_base, char * call_string ):
         elif call_char in ( b'A', b'C', b'T', b'G' ):
             bases.append( < bytes > call_char )
 
-        elif call_char in ( b"$", b'N', b'*' ):
+        elif call_char in ( b'N', b'*' ):
+            bases.append( b'N' )
+
+        elif call_char in ( b"$" ):
             pass
 
         # End of read skip it and next value which holds no call information.
