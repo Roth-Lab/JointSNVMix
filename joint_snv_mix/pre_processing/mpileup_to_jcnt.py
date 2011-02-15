@@ -120,8 +120,6 @@ def get_bases( ref_base, call_string, qual_string, min_qual ):
     
     bases = bases[quals >= min_qual]
     
-    bases = bases.tolist()
-    
     return bases
 
 def get_counts( ref_base, bases ):
