@@ -40,6 +40,14 @@ parser_jcnt.add_argument( '--min_depth', default=1, type=int,
                           help='''Minimum depth of coverage in both tumour and normal sample required to use a site in
                           the analysis.''' )
 
+parser_jcnt.add_argument( '--min_qual', default=13, type=int,
+                          help='''Remove bases with base qualities lower than this value. Note if samtools calmd is used
+                          to pre-process the bam then BAQ qualities may replace the base qualities in the 
+                          mpileup file.''' )
+
+parser_jcnt.add_argument( '--bzip2', action='store_true',
+                          help='''Set if file is in bzip2 format.''' )
+
 parser_jcnt.set_defaults( func=mpileup_to_jcnt )
 
 #===============================================================================
