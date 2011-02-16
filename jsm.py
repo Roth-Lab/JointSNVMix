@@ -138,17 +138,20 @@ train_group.set_defaults( func=run_classifier )
 #===============================================================================
 # Add conan sub-command
 #===============================================================================
-parser_classify = subparsers.add_parser( 'conan',
+parser_conan = subparsers.add_parser( 'conan',
                                         help='''Run a ConanSNVMix analysis. Requires that a cncnt file has been
                                         created''' )
 
-parser_classify.add_argument( 'cncnt_file_name',
+parser_conan.add_argument( 'cncnt_file_name',
                              help='Name of conan counts (cncnt) file to be used as input.' )
 
-parser_classify.add_argument( 'cnsm_file_name',
+parser_conan.add_argument( 'cnsm_file_name',
                              help='Name of ConanSNVMix (cnsm) output files to be created.' )
 
-train_group = parser_classify.add_argument_group( title='Training Parameters',
+parser_conan.add_argument( '--density', choices=['binomial', 'beta_binomial'], default='beta_binomial',
+                              help='Density to be used in model.' )
+
+train_group = parser_conan.add_argument_group( title='Training Parameters',
                                                  description='Options for training the model.' )
 
 train_group.add_argument( '--max_iters', default=1000, type=int,
