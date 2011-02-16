@@ -124,3 +124,55 @@ for i, g in enumerate( joint_extended_multinomial_genotypes ):
     
     matched_multinomial_genotypes_indices.append( i )
     
+#=======================================================================================================================
+# Conan
+#=======================================================================================================================
+cn_state_map = {
+                '1' : 3,
+                '2' : 3,
+                '3' : 3,
+                '4' : 4,
+                '5' : 5,
+                '6' : 6,
+                'unknown' : 3
+                }
+
+conan_somatic_indices = {}
+
+for cn_state in cn_state_map:
+    nclass = cn_state_map[cn_state]
+    
+    conan_somatic_indices[cn_state] = []
+    
+    for i in range( 1, nclass ):
+        conan_somatic_indices[cn_state].append( i )
+
+binomial_alleles = ['a', 'b']
+
+conan_genotypes = {}
+
+for cn_state in cn_state_map:
+    nclass = cn_state_map[cn_state]
+    
+    conan_genotypes[cn_state] = []
+    
+    for i in range( nclass + 1 ):
+        genotype = 'a' * ( nclass - i ) + 'b' * i
+        conan_genotypes[cn_state].append( genotype )
+        
+conan_joint_genotypes = {}        
+
+for cn_state in cn_state_map:
+    nclass = cn_state_map[cn_state]
+    
+    normal_genotypes = conan_genotypes['3']
+    tumour_genotypes = conan_genotypes[cn_state]
+    
+    conan_joint_genotypes[cn_state] = []
+    
+    for ng in normal_genotypes:
+        for tg in tumour_genotype:
+            conan_joint_genotypes[cn_state].append( ( ng, tg ) )
+        
+    
+    
