@@ -15,9 +15,10 @@ from joint_snv_mix.pre_processing.mpileup_to_mcnt import main as mpileup_to_mcnt
 
 from joint_snv_mix.pre_processing.varscan_to_jcnt import main as varscan_to_jcnt
 
-from joint_snv_mix.post_processing.call_joint_genotypes import main as call_genotypes
+from joint_snv_mix.post_processing.call_somatics import main as call_somatics
 
 from joint_snv_mix.post_processing.extract_jsm_positions import main as extract_jsm_positions
+from joint_snv_mix.classification.conan import run_conan
 
 parser = argparse.ArgumentParser( prog='JointSNVMix' )
 subparsers = parser.add_subparsers()
@@ -38,6 +39,14 @@ parser_jcnt.add_argument( 'jcnt_file_name',
 parser_jcnt.add_argument( '--min_depth', default=1, type=int,
                           help='''Minimum depth of coverage in both tumour and normal sample required to use a site in
                           the analysis.''' )
+
+parser_jcnt.add_argument( '--min_qual', default=13, type=int,
+                          help='''Remove bases with base qualities lower than this value. Note if samtools calmd is used
+                          to pre-process the bam then BAQ qualities may replace the base qualities in the 
+                          mpileup file.''' )
+
+parser_jcnt.add_argument( '--bzip2', action='store_true',
+                          help='''Set if file is in bzip2 format.''' )
 
 parser_jcnt.set_defaults( func=mpileup_to_jcnt )
 
@@ -115,7 +124,7 @@ train_group.add_argument( '--convergence_threshold', default=1e-6, type=float,
                           help='''Convergence threshold for EM training. Once the change in objective function is below
                           this value training will end. Defaul 1e-6''' )
 
-parser_classify.add_argument( '--model', choices=['independent', 'joint', 'chromosome', 'fisher'], default='joint',
+parser_classify.add_argument( '--model', choices=['independent', 'joint', 'chromosome'], default='joint',
                               help='Model type to use for classification.' )
 
 parser_classify.add_argument( '--density', choices=['binomial', 'beta_binomial', 'multinomial'], default='beta_binomial',
@@ -127,6 +136,38 @@ parser_classify.add_argument( '--inference_algorithm', choices=['em', 'vb'], def
 train_group.set_defaults( func=run_classifier )
 
 #===============================================================================
+# Add conan sub-command
+#===============================================================================
+parser_conan = subparsers.add_parser( 'conan',
+                                        help='''Run a ConanSNVMix analysis. Requires that a cncnt file has been
+                                        created''' )
+
+parser_conan.add_argument( 'cncnt_file_name',
+                             help='Name of conan counts (cncnt) file to be used as input.' )
+
+parser_conan.add_argument( 'cnsm_file_name',
+                             help='Name of ConanSNVMix (cnsm) output files to be created.' )
+
+parser_conan.add_argument( '--density', choices=['binomial', 'beta_binomial'], default='beta_binomial',
+                              help='Density to be used in model.' )
+
+train_group = parser_conan.add_argument_group( title='Training Parameters',
+                                                 description='Options for training the model.' )
+
+train_group.add_argument( '--max_iters', default=1000, type=int,
+                          help='''Maximum number of iterations to used for training model. Default 1000''' )
+
+train_group.add_argument( '--subsample_size', default=0, type=int,
+                          help='''Size of random subsample to use for training. If not set the whole data set will be
+                          used.''' )
+
+train_group.add_argument( '--convergence_threshold', default=1e-6, type=float,
+                          help='''Convergence threshold for EM training. Once the change in objective function is below
+                          this value training will end. Defaul 1e-6''' )
+
+train_group.set_defaults( func=run_conan )
+
+#===============================================================================
 # Add call sub-command
 #===============================================================================
 parser_call = subparsers.add_parser( 'call',
@@ -135,20 +176,10 @@ parser_call = subparsers.add_parser( 'call',
 parser_call.add_argument( 'jsm_file_name',
                           help='Input JSM file name.' )
 
-parser_call.add_argument( 'call_file_name',
+parser_call.add_argument( 'out_file_name',
                           help='Output file name.' )
 
-parser_call.add_argument( '--genotype_class', choices=['Somatic', 'Germline', 'LOH'], default='Somatic',
-                          help='Joint genotype call to call from file.' )
-
-method_group = parser_call.add_mutually_exclusive_group( required=True )
-method_group.add_argument( '-p', dest='prob_threshold', default=0.95,
-                           help='Minimum probability to call a site in the given class.' )
-
-method_group.add_argument( '-a', dest='argmax', default=False, action='store_true',
-                           help='If set call call a site to a given class by argmax rule.' )
-
-parser_call.set_defaults( func=call_genotypes )
+parser_call.set_defaults( func=call_somatics )
 
 #===============================================================================
 # Add extract sub-command

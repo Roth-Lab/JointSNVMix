@@ -1,12 +1,7 @@
-import matplotlib
+import bisect
 import csv
-matplotlib.use( 'agg' )
-
-import matplotlib.pyplot as plot
 
 from joint_snv_mix.file_formats.jsm import JointSnvMixReader
-
-import bisect
 
 excluded_chrom = ['Y', 'MT']
 
@@ -30,7 +25,10 @@ for g_1 in genotypes:
         prob_field = "_".join( ( 'p', g_1, g_2 ) )
         fields.append( prob_field )
 
-def main( jsm_file_name, out_file_name ):
+def main( args ):
+    jsm_file_name = args.jsm_file_name
+    out_file_name = args.out_file_name
+    
     rows = load_somatics( jsm_file_name )
     rows.reverse()
 
