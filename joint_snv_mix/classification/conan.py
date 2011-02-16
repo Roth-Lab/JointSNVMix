@@ -3,16 +3,18 @@ Created on 2011-02-11
 
 @author: Andrew Roth
 '''
+import math
+import random
 import multiprocessing
 
 import numpy as np
-
 from scipy.cluster.vq import kmeans2
+
 
 from joint_snv_mix import constants
 from joint_snv_mix.classification.data import JointData
 from joint_snv_mix.classification.latent_variables import EMLatentVariables
-from joint_snv_mix.classification.likelihoods import joint_beta_binomial_log_likelihood
+from joint_snv_mix.classification.likelihoods import joint_beta_binomial_log_likelihood, joint_binomial_log_likelihood
 from joint_snv_mix.classification.lower_bounds import EMLowerBound
 from joint_snv_mix.classification.model_runners import ModelRunner
 from joint_snv_mix.classification.models import EMModel, EMModelTrainer
@@ -21,11 +23,12 @@ from joint_snv_mix.classification.utils.beta_binomial_map_estimators import get_
 from joint_snv_mix.classification.utils.log_pdf import log_translated_gamma_pdf, log_beta_pdf
 from joint_snv_mix.file_formats.cncnt import ConanCountsReader
 from joint_snv_mix.file_formats.cnsm import ConanSnvMixWriter
-import math
-import random
 
 def run_conan( args ):
-    runner = ConanBetaBinomialRunner()
+    if args.density == 'binomial':
+        runner = ConanBinomialRunner()
+    elif args.density == 'beta_binomial':       
+        runner = ConanBetaBinomialRunner()
     
     args.train = True
     
@@ -62,8 +65,8 @@ class ConanModelRunner( ModelRunner ):
     
     def _train( self, args ):               
         cn_states = self.reader.get_cn_states()
-        
-        for cn_state in sorted( cn_states ): 
+                
+        for cn_state in sorted( cn_states ):             
             self._train_cn_state( cn_state, args )
         
         self._write_priors()
@@ -177,7 +180,27 @@ class ConanBetaBinomialRunner( ConanModelRunner ):
             priors[genome]['location']['beta'] = np.linspace( 1, 1000, nclass[genome] )
         
         return priors
+
+class ConanBinomialRunner( ConanModelRunner ):
+    def __init__( self ):
+        ConanModelRunner.__init__( self )
+        
+        self.model_class = ConanBinomialModel
+    
+    def _get_priors( self, nclass ):
+        ncomponents = nclass['normal'] * nclass['tumour']
+        
+        priors = {}                
+        priors['kappa'] = 10 * np.ones( ( ncomponents, ) )
+        
+        for genome in constants.genomes:
+            priors[genome] = {}
+            priors[genome]['mu'] = {}
             
+            priors[genome]['mu']['alpha'] = np.linspace( 1000, 2, nclass[genome] )
+            priors[genome]['mu']['beta'] = np.linspace( 2, 1000, nclass[genome] )
+        
+        return priors            
 
 #=======================================================================================================================
 # Model
@@ -203,7 +226,32 @@ class ConanBetaBinomialModel( EMModel ):
         trainer.responsibilities = []
                 
         return parameters
+    
+class ConanBinomialModel( EMModel ):
+    def __init__( self, nclass ):
+        self.trainer_class = ConanBinomialModelTrainer
+        
+        self.log_likelihood_func = joint_binomial_log_likelihood
+        
+        self.nclass = nclass
+        
+    def train( self, data, priors, max_iters, tolerance ):
+        '''
+        Train the model using EM.
+        
+        Input: JointData object
+        '''   
+        trainer = self.trainer_class( data, self.nclass, max_iters, tolerance, priors )
+        
+        parameters = trainer.run()
+        
+        trainer.responsibilities = []
+                
+        return parameters
 
+#=======================================================================================================================
+# Model Trainers
+#=======================================================================================================================
 class ConanBetaBinomialModelTrainer( EMModelTrainer ):
     def __init__( self, data, nclass, max_iters, tolerance, priors ):
         self.nclass = nclass
@@ -220,8 +268,24 @@ class ConanBetaBinomialModelTrainer( EMModelTrainer ):
         
         self.lower_bound = ConanBetaBinomialLowerBound( self.data, self.priors )
         
+class ConanBinomialModelTrainer( EMModelTrainer ):
+    def __init__( self, data, nclass, max_iters, tolerance, priors ):
+        self.nclass = nclass
+        
+        EMModelTrainer.__init__( self, data, max_iters, tolerance, priors )        
+        
+    def _init_components( self ):
+        self.latent_variables = ConanBinomialLatentVariables( self.data, self.nclass )
+        
+        self.responsibilities = self.latent_variables.responsibilities
+        
+        self.posterior = ConanBinomialPosterior( self.data, self.priors,
+                                                 self.responsibilities, self.nclass )
+        
+        self.lower_bound = ConanBinomialLowerBound( self.data, self.priors )
+        
 #=======================================================================================================================
-# Model Components
+# Latent Variables
 #=======================================================================================================================
 class ConanLatentVariables( EMLatentVariables ):
     def __init__( self, data, nclass ):
@@ -268,7 +332,33 @@ class ConanBetaBinomialLatentVariables( ConanLatentVariables ):
         
         self.likelihood_func = joint_beta_binomial_log_likelihood
         
-class ConanBetaBinomialPosterior( EMPosterior ):
+class ConanBinomialLatentVariables( ConanLatentVariables ):
+    def __init__( self, data, nclass ):
+        ConanLatentVariables.__init__( self, data, nclass )
+        
+        self.likelihood_func = joint_binomial_log_likelihood
+
+#=======================================================================================================================
+# Posteriors
+#=======================================================================================================================
+class ConanPosterior( EMPosterior ):
+    def _get_marginals( self ):        
+        nclass = self.nclass
+        nrows = self.data.nrows
+        responsibilities = self.responsibilities
+    
+        shape = ( nrows, nclass['normal'], nclass['tumour'] )
+        
+        responsibilities = responsibilities.reshape( shape )
+        
+        marginals = {}
+        
+        marginals['normal'] = responsibilities.sum( axis=2 )
+        marginals['tumour'] = responsibilities.sum( axis=1 )
+    
+        return marginals
+
+class ConanBetaBinomialPosterior( ConanPosterior ):
     def __init__( self, data, priors, responsibilities, nclass ):
         self.nclass = nclass
         self.ncomponents = self.nclass['normal'] * self.nclass['tumour']
@@ -295,7 +385,7 @@ class ConanBetaBinomialPosterior( EMPosterior ):
 
     
     def _update_density_parameters( self ):        
-        marginals = self._get_marginals( self.responsibilities, self.nclass )
+        marginals = self._get_marginals()
         
         print "Begining numerical optimisation of alpha and beta."
         
@@ -329,21 +419,58 @@ class ConanBetaBinomialPosterior( EMPosterior ):
                 self.parameters[genome]['beta'][component] = results[i][1]
                 
                 i += 1
-    
-    def _get_marginals( self, responsibilities, nclass ):
-        nrows = self.data.nrows
-    
-        shape = ( nrows, self.nclass['normal'], self.nclass['tumour'] )
+
+class ConanBinomialPosterior( ConanPosterior ):
+    def __init__( self, data, priors, responsibilities, nclass=3 ):
+        self.nclass = nclass
         
-        responsibilities = responsibilities.reshape( shape )
-        
-        marginals = {}
-        
-        marginals['normal'] = responsibilities.sum( axis=2 )
-        marginals['tumour'] = responsibilities.sum( axis=1 )
+        EMPosterior.__init__( self, data, priors, responsibilities )
     
-        return marginals
+    def _init_parameters( self ):
+        self.parameters = {}
+        self.parameters['normal'] = {}
+        self.parameters['tumour'] = {}
+        
+        self._update_mix_weights()
+        
+        self._update_density_parameters()
+           
+    def _update_density_parameters( self ):
+        marginals = self._get_marginals()
+        
+        for genome in constants.genomes:
+            a = self.data.a[genome]
+            b = self.data.b[genome]
+            
+            alpha = self.priors[genome]['mu']['alpha']
+            beta = self.priors[genome]['mu']['beta']
+            
+            tau = marginals[genome]
+            
+            self.parameters[genome]['mu'] = self._update_mu( a, b, alpha, beta, tau )
     
+    def _update_mu( self, a, b, alpha, beta, tau ):       
+        d = a + b
+        
+        n = self.data.nrows
+        shape = ( n, 1 )
+        
+        a = a.reshape( shape )
+        d = d.reshape( shape )
+        
+        ref_sum = np.sum( tau * a, axis=0 )
+        
+        depth_sum = np.sum( tau * d, axis=0 )
+        
+        numerator = ref_sum + alpha - 1.
+        
+        denominator = depth_sum + alpha + beta - 2.
+        
+        return np.exp( np.log( numerator ) - np.log( denominator ) )
+
+#===================================================================================================================
+# Lower Bounds
+#===================================================================================================================
 class ConanBetaBinomialLowerBound( EMLowerBound ):
     def __init__( self, data, priors ):  
         EMLowerBound.__init__( self, data, priors )
@@ -375,3 +502,22 @@ class ConanBetaBinomialLowerBound( EMLowerBound ):
                                                    location_priors['beta'] ) )
                 
         return precision_term + location_term
+
+class ConanBinomialLowerBound( EMLowerBound ):
+    def __init__( self, data, priors ):  
+        EMLowerBound.__init__( self, data, priors )
+        
+        self.log_likelihood_func = joint_binomial_log_likelihood
+    
+    def _get_log_density_parameters_prior( self ):
+        log_prior = 0.
+        
+        for genome in constants.genomes:
+            mu = self.parameters[genome]['mu']
+            
+            alpha = self.priors[genome]['mu']['alpha']
+            beta = self.priors[genome]['mu']['beta']
+            
+            log_prior += np.sum( log_beta_pdf( mu, alpha, beta ) )
+
+        return log_prior
