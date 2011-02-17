@@ -124,8 +124,9 @@ train_group.add_argument( '--convergence_threshold', default=1e-6, type=float,
                           help='''Convergence threshold for EM training. Once the change in objective function is below
                           this value training will end. Defaul 1e-6''' )
 
-parser_classify.add_argument( '--model', choices=['independent', 'joint', 'chromosome'], default='joint',
-                              help='Model type to use for classification.' )
+parser_classify.add_argument( '--model', choices=['independent', 'joint', 'chromosome',
+                                                  'joint_fisher', 'indep_fisher', 'naive'],
+                              default='joint', help='Model type to use for classification.' )
 
 parser_classify.add_argument( '--density', choices=['binomial', 'beta_binomial', 'multinomial'], default='beta_binomial',
                               help='Density to be used in model.' )

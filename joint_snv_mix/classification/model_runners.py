@@ -17,8 +17,9 @@ from joint_snv_mix.file_formats.jcnt import JointCountsReader
 from joint_snv_mix.file_formats.jmm import JointMultiMixWriter
 from joint_snv_mix.file_formats.jsm import JointSnvMixWriter
 from joint_snv_mix.file_formats.mcnt import MultinomialCountsReader
-from joint_snv_mix.classification.fisher_classifier import FisherModel
+from joint_snv_mix.classification.fisher_classifier import JointFisherModel, IndependentFisherModel
 import csv
+from joint_snv_mix.classification.threhsold_classifier import ThresholdModel
 
 
 def run_classifier( args ):
@@ -49,9 +50,15 @@ def run_classifier( args ):
         elif args.density == "multinomial":
             runner = ChromosomeMultinomialRunner()
             
-    elif args.model == "fisher":
-        runner = FisherTestRunner()
-
+    elif args.model == "joint_fisher":
+        runner = JointFisherRunner()
+        
+    elif args.model == "indep_fisher":
+        runner = IndependentFisherRunner()
+        
+    elif args.model == 'naive':
+        runner = ThresholdRunner()
+    
     runner.run( args )
 
 #=======================================================================================================================
@@ -418,9 +425,8 @@ class ChromosomeMultinomialRunner( ChromosomeModelRunner ):
 #=======================================================================================================================
 # Fisher
 #=======================================================================================================================
-class FisherTestRunner( object ):
+class FisherRunner( object ):
     def __init__( self ):
-        self.model = FisherModel()
         self.data_class = JointData
         
         self.classes = ( 'Reference', 'Germline', 'Somatic', 'LOH', 'Unknown' )
@@ -464,11 +470,35 @@ class FisherTestRunner( object ):
             out_row = [chr_name]
             out_row.extend( row )
             
-            label = int( labels[i] )                 
-            out_row.append( self.classes[label] )
+            label = int( labels[i] )
             
-            if label == 2:
+            class_name = self.classes[label]
+                        
+            out_row.append( class_name )
+            
+            if class_name == 'Somatic':
                 print out_row
             
             self.writer.writerow( out_row )
+
+class IndependentFisherRunner( FisherRunner ):
+    def __init__( self ):
+        self.model = IndependentFisherModel()
         
+        FisherRunner.__init__( self )
+        
+class JointFisherRunner( FisherRunner ):
+    def __init__( self ):
+        self.model = JointFisherModel()
+        
+        FisherRunner.__init__( self )
+        
+class ThresholdRunner( FisherRunner ):
+    def __init__( self ):
+        self.model = ThresholdModel()
+        
+        FisherRunner.__init__( self )   
+        
+        self.classes = ( 'Reference', 'Somatic', 'Somatic',
+                         'LOH', 'Germline', 'LOH',
+                         'Unknown', 'Unknown', 'Germline' ) 
