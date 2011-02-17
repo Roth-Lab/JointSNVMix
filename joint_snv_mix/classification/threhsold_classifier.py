@@ -8,7 +8,7 @@ import numpy as np
 from joint_snv_mix import constants
 
 class ThresholdModel( object ):
-    def __init__( self, normal_threshold=0.05, tumour_threshold=0.1, min_var_depth=2 ):        
+    def __init__( self, normal_threshold=0.05, tumour_threshold=0.1, min_var_depth=4 ):        
         self.threshold = {}
         self.threshold['normal'] = normal_threshold
         self.threshold['tumour'] = tumour_threshold
@@ -54,5 +54,10 @@ class ThresholdModel( object ):
         tumour = genotypes['tumour']
         
         joint_genotypes = 3 * normal + tumour
+        
+        b_T = data.b['tumour']
+        
+        # Set low coverage sites to reference.
+        joint_genotypes[b_T < self.min_var_depth] = 0
 
         return joint_genotypes
