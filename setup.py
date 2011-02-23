@@ -2,9 +2,9 @@ from distutils.core import setup
 from distutils.extension import Extension
 from Cython.Distutils import build_ext
 
-ext_modules = [Extension( "joint_snv_mix.file_formats.pileup", ["joint_snv_mix/file_formats/pileup.pyx"] )]
+ext_modules = [Extension("joint_snv_mix.file_formats.pileup", ["joint_snv_mix/file_formats/pileup.pyx"])]
 
-setup( 
+setup(
       name='JointSNVMix',
       version='0.5.0',
       description='Python SNV calling utility.',
