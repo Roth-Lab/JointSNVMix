@@ -3,7 +3,7 @@ import csv
 
 from joint_snv_mix.file_formats.jsm import JointSnvMixReader
 
-excluded_chrom = ['Y', 'MT']
+#excluded_chrom = ['Y', 'MT']
 
 fields = [
           'chrom',
@@ -22,63 +22,103 @@ genotypes = ['aa', 'ab', 'bb']
 
 for g_1 in genotypes:
     for g_2 in genotypes:
-        prob_field = "_".join( ( 'p', g_1, g_2 ) )
-        fields.append( prob_field )
+        prob_field = "_".join(('p', g_1, g_2))
+        fields.append(prob_field)
 
-def main( args ):
+def call_somatics_from_jsm(args):
+    '''
+    Call somatic mutations form jsm file and output to human readable tab separated file in sorted order descending by
+    somatic probability.
+    '''
     jsm_file_name = args.jsm_file_name
     out_file_name = args.out_file_name
     
-    rows = load_somatics( jsm_file_name )
+    if args.auto:
+        rows = load_auto_threshold_somatics(jsm_file_name)
+    else:
+        rows = load_manual_threshold_somatics(jsm_file_name, args.threshold)
+
     rows.reverse()
 
-    writer = csv.DictWriter( open( out_file_name, 'w' ), fields, delimiter='\t' )
+    writer = csv.DictWriter(open(out_file_name, 'w'), fields, delimiter='\t')
 
     writer.writeheader()
-    writer.writerows( rows )
+    writer.writerows(rows)
+    
+def load_manual_threshold_somatics(jsm_file_name, threshold):
+    '''
+    Load a list of rows containing somatics based on pre-specified probability threshold.
+    '''
+    reader = JointSnvMixReader(jsm_file_name)
+
+    chr_list = reader.get_chr_list()
+
+    rows = []
+    scores = []
+
+    for chr_name in sorted(chr_list):
+        print chr_name
+
+        chr_rows = reader.get_rows(chr_name)
+
+        for row in chr_rows:
+            score = row['p_aa_ab'] + row['p_aa_bb']            
+            
+            if score >= threshold:
+                row = format_rows(row, chr_name)
+                
+                insert_position = bisect.bisect(scores, score)
+                
+                scores.insert(insert_position, score)
+                rows.insert(insert_position, row)
+                
+    reader.close()
+
+    return rows
 
 
-def load_somatics( jsm_file_name ):
-    n = int( 1e5 )
+def load_auto_threshold_somatics(jsm_file_name):
+    '''
+    Load a list of rows containing somatics based on automatically determined probability threshold. Threshold is
+    determined based on inflection point method.
+    '''
+    n = int(1e5)
     threshold = 1e-6
 
-    reader = JointSnvMixReader( jsm_file_name )
+    reader = JointSnvMixReader(jsm_file_name)
 
     chr_list = reader.get_chr_list()
 
     scores = []
     rows = []
 
-    for chr_name in sorted( chr_list ):
-        if chr_name in excluded_chrom:
-            continue
-        
+    for chr_name in sorted(chr_list):
         print chr_name
 
-        chr_rows = reader.get_rows( chr_name )
+        chr_rows = reader.get_rows(chr_name)
 
         for row in chr_rows:
             score = row['p_aa_ab'] + row['p_aa_bb']
 
-            insert_position = bisect.bisect( scores, score )
+            insert_position = bisect.bisect(scores, score)
 
-            if insert_position > 0 or len( scores ) == 0:
-                scores.insert( insert_position, score )
+            if insert_position > 0 or len(scores) == 0:
+                scores.insert(insert_position, score)
                 
-                row = format_rows( row, chr_name )
+                row = format_rows(row, chr_name)
                 
-                rows.insert( insert_position, row )
+                rows.insert(insert_position, row)
             
-                if scores[0] <= threshold or len( scores ) > n:
-                    scores.pop( 0 )
-                    rows.pop( 0 )
+                if scores[0] <= threshold or len(scores) > n:
+                    scores.pop(0)
+                    rows.pop(0)
 
     reader.close()
     
     max_diff = 0
     index = 0
     
-    for i in range( len( scores ) - 1 ):
+    for i in range(len(scores) - 1):
         diff = scores[i + 1] - scores[i]
         
         if diff > max_diff:
@@ -89,8 +129,8 @@ def load_somatics( jsm_file_name ):
 
     return rows
 
-def format_rows( row, chrom ):
-    row = dict( zip( row.dtype.names, row.real ) )
+def format_rows(row, chrom):
+    row = dict(zip(row.dtype.names, row.real))
     row['somatic_prob'] = row['p_aa_ab'] + row['p_aa_bb']
     row['chrom'] = chrom
     
@@ -103,4 +143,4 @@ if __name__ == "__main__":
     
     out_file_name = sys.argv[2]
     
-    main( jsm_file_name, out_file_name )
+    call_somatics_from_jsm(jsm_file_name, out_file_name)

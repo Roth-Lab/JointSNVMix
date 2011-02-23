@@ -1,7 +1,7 @@
 from joint_snv_mix.file_formats.jsm import JointSnvMixReader
 
-def main( jsm_file_name ):
-    reader = JointSnvMixReader( jsm_file_name )    
+def extract_jsm_parameters( args ):
+    reader = JointSnvMixReader( args.jsm_file_name )    
     parameters = reader.get_parameters()    
     reader.close()
     
@@ -23,4 +23,4 @@ if __name__ == "__main__":
     
     jsm_file_name = sys.argv[1]
     
-    main( jsm_file_name )
+    extract_jsm_parameters( jsm_file_name )

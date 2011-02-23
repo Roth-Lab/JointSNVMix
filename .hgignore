@@ -5,3 +5,5 @@ syntax: regexp
 ^joint_snv_mix/classification/file_mover\.py$
 syntax: regexp
 ^dist$
+syntax: regexp
+^MANIFEST$
