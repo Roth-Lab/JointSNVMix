@@ -12,7 +12,7 @@ from joint_snv_mix.file_formats.cncnt import ConanCountsFile
 from argparse import Namespace
 
 
-def main( args ):
+def jcnt_to_cncnt( args ):
     reader = JointCountsReader( args.jcnt_file_name )
     
     chr_list = reader.get_chr_list()
@@ -68,8 +68,9 @@ if __name__ == "__main__":
     
     args = Namespace()
     
-    args.jcnt_file_name = sys.argv[1]    
-    args.segment_file_name = sys.argv[2]
-    args.cncnt_file_name = sys.argv[3]
+    args.jcnt_file_name = sys.argv[1]
+    args.cncnt_file_name = sys.argv[2]    
+    args.segment_file_name = sys.argv[3]
     
-    main( args )
+    
+    jcnt_to_cncnt( args )

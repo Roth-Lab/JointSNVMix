@@ -15,7 +15,9 @@ from joint_snv_mix.pre_processing.mpileup_to_mcnt import main as mpileup_to_mcnt
 
 from joint_snv_mix.pre_processing.varscan_to_jcnt import main as varscan_to_jcnt
 
-from joint_snv_mix.post_processing.call_somatics import main as call_somatics
+from joint_snv_mix.post_processing.call_somatics import call_somatics_from_jsm
+
+from joint_snv_mix.post_processing.call_conan_somatics import call_conan_somatics
 
 from joint_snv_mix.post_processing.extract_jsm_positions import main as extract_jsm_positions
 
@@ -26,6 +28,8 @@ from joint_snv_mix.classification.threhsold_classifier import run_threshold
 from joint_snv_mix.classification.fisher_classifier import run_fisher
 
 from joint_snv_mix.classification.multinomial import run_multimix
+from joint_snv_mix.pre_processing.jcnt_to_conan import jcnt_to_cncnt
+from joint_snv_mix.post_processing.extract_jsm_paramters import extract_jsm_parameters
 
 parser = argparse.ArgumentParser(prog='JointSNVMix')
 subparsers = parser.add_subparsers()
@@ -86,13 +90,29 @@ parser_mcnt = subparsers.add_parser('varscan',
                                     help='Convert varscan files to jcnt file format.')
 
 parser_mcnt.add_argument('varscan_file_name',
-                          help='''Samtools mpileup format file. When creating file with samtools the first bam file
-                          passed as arguments should be the normal and the second the tumour file.''')
+                          help='''Output of varscan using --validation flag.''')
 
 parser_mcnt.add_argument('jcnt_file_name',
                           help='Name of joint counts (jcnt) output files to be created.')
 
 parser_mcnt.set_defaults(func=varscan_to_jcnt)
+
+#===============================================================================
+# Add cncnt sub-command
+#===============================================================================
+parser_mcnt = subparsers.add_parser('cncnt',
+                                    help='Convert jcnt files to cncnt file format.')
+
+parser_mcnt.add_argument('jcnt_file_name',
+                          help='Input jcnt file name.')
+
+parser_mcnt.add_argument('cncnt_file_name',
+                          help='Name of file with segmentation details. Should be contiguous.')
+
+parser_mcnt.add_argument('segment_file_name',
+                          help='Name of file with segmentation details. Should be contiguous.')
+
+parser_mcnt.set_defaults(func=jcnt_to_cncnt)
 
 
 #===============================================================================
@@ -271,33 +291,67 @@ train_group.add_argument('--convergence_threshold', default=1e-6, type=float,
 train_group.set_defaults(func=run_conan)
 
 #===============================================================================
-# Add call sub-command
+# Add call_jsm sub-command
 #===============================================================================
-parser_call = subparsers.add_parser('call_jsm',
+parser_call_jsm = subparsers.add_parser('call_somatics',
                                      help="Call somatics from a jsm file.")
 
-parser_call.add_argument('jsm_file_name',
+parser_call_jsm.add_argument('jsm_file_name',
                           help='Input JSM file name.')
 
-parser_call.add_argument('out_file_prefix',
+parser_call_jsm.add_argument('out_file_name',
                           help='Output file name.')
 
-parser_call.set_defaults(func=call_somatics)
+parser_call_jsm.add_argument('--threshold', default=0.99, type=float,
+                          help='''Probability threshold for calling mutation somatics. Ignored if auto flag is set.''')
+
+parser_call_jsm.add_argument('--auto', action='store_true', default=False,
+                          help='''Automatically determine probability threshold to use for calling somatics.''')
+
+parser_call_jsm.set_defaults(func=call_somatics_from_jsm)
 
 #===============================================================================
-# Add extract sub-command
+# Add call_conan sub-command
 #===============================================================================
-parser_extract = subparsers.add_parser('extract_jsm',
+parser_call_conan = subparsers.add_parser('call_conan_somatics',
+                                     help="Call somatics from a cnsm file.")
+
+parser_call_conan.add_argument('cnsm_file_name',
+                          help='Input JSM file name.')
+
+parser_call_conan.add_argument('out_file_prefix',
+                          help='Prefix to be used for outfiles, one file will be generated for each state.')
+
+parser_call_conan.add_argument('--threshold', default=0.99, type=float,
+                          help='''Probability threshold for calling mutation somatics.''')
+
+parser_call_conan.set_defaults(func=call_conan_somatics)
+
+#===============================================================================
+# Add extract_positions sub-command
+#===============================================================================
+parser_extract_positions = subparsers.add_parser('extract_positions',
                                         help='Extract a set of positions from a jsm file and print to stdout.')
+
+parser_extract_positions.add_argument('jsm_file_name',
+                                      help='JSM file to extract positions from.')
+
+parser_extract_positions.add_argument('positions_file_name',
+                                      help='''List of positions to extract. Format is tab delimited with the chromosome
+                                      in the first column and second position in the second i.e. "X    12345" ''')
+
+parser_extract_positions.set_defaults(func=extract_jsm_positions)
+
+#=======================================================================================================================
+# Add extract_parameters sub_command
+#=======================================================================================================================
+parser_extract = subparsers.add_parser('extract_parameters',
+                                        help='Extract a parameters from jsm file and print to stdout.')
 
 parser_extract.add_argument('jsm_file_name',
                              help='JSM file to extract positions from.')
 
-parser_extract.add_argument('positions_file_name',
-                             help='''List of positions to extract. Format is tab delimited with the chromosome in the
-                             first column and second position in the second i.e. "X    12345" ''')
-
-parser_extract.set_defaults(func=extract_jsm_positions)
+parser_extract.set_defaults(func=extract_jsm_parameters)
 
 #===============================================================================
 # Run
