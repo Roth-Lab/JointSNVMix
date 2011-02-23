@@ -15,7 +15,7 @@ from joint_snv_mix.pre_processing.mpileup_to_mcnt import main as mpileup_to_mcnt
 
 from joint_snv_mix.pre_processing.varscan_to_jcnt import main as varscan_to_jcnt
 
-from joint_snv_mix.post_processing.call_somatics import call_somatics_from_jsm
+from joint_snv_mix.post_processing.call_jsm_somatics import call_somatics_from_jsm
 
 from joint_snv_mix.post_processing.call_conan_somatics import call_conan_somatics
 

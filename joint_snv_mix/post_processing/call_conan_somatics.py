@@ -79,6 +79,8 @@ def format_row(chr_name, index_row, resp, p_genotype_str):
     for i, p_genotype in enumerate(p_genotype_str):
         row[p_genotype] = resp[i]
         
+    row['chrom'] = chr_name
+        
     return row
                     
 if __name__ == "__main__":
