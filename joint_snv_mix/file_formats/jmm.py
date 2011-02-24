@@ -7,8 +7,9 @@ import time
 
 import numpy as np
 
-from tables import openFile, Filters, Float64Atom, StringCol, IsDescription, UInt32Col, Float64Col
+from tables import openFile, Filters, Float64Atom, StringCol, IsDescription, UInt32Col, Float64Col, Leaf
 from joint_snv_mix.constants import joint_multinomial_genotypes
+from joint_snv_mix import constants
    
 class JointMultiMixFile:
     def __init__( self, file_name, file_mode, compression_level=1, compression_lib='zlib' ):
@@ -42,33 +43,60 @@ class JointMultiMixFile:
         self._init_chr_tables()
         
     def write_priors( self, priors ):
-        fh = self._file_handle
         priors_group = self._priors_group
         
-        atom = Float64Atom( () )
+        self._write_tree( priors, priors_group )
         
-        for parameter_name, parameter_value in priors.items():
-            shape = parameter_value.shape
-            parameter_array = fh.createCArray( priors_group, parameter_name, atom, shape )
+    def write_parameters( self, parameters ):    
+        params_group = self._parameters_group
+        
+        self._write_tree( parameters, params_group )
+    
+    def _write_tree( self, params, group ):
+        for name, value in params.items():
+            if isinstance( value, dict ):
+                new_group = self._file_handle.createGroup( group, name )
+                self._write_tree( value, new_group )
+            else:
+                atom = Float64Atom( () )
+        
+                shape = np.array( value ).shape
+        
+                parameter_array = self._file_handle.createCArray( group, name, atom, shape )
+                
+                parameter_array[:] = value[:]
+                
+    def get_priors( self ):
+        priors = {}
+        
+        self._read_tree( priors, self._priors_group )
+        
+        return priors
+    
+    def get_parameters( self ):
+        parameters = {}
+        
+        self._read_tree( parameters, self._parameters_group )
+        
+        return parameters
+    
+    def _read_tree( self, params, group ):
+        for entry in self._file_handle.iterNodes( where=group ):
+            name = entry._v_name 
             
-            parameter_array[:] = parameter_value[:]
-        
-    def write_parameters( self, parameters ):
-        fh = self._file_handle
-        param_group = self._parameters_group
-        
-        atom = Float64Atom( () )
-        
-        for parameter_name, parameter_value in parameters.items():
-            shape = parameter_value.shape
-            parameter_array = fh.createCArray( param_group, parameter_name, atom, shape )
-            
-            parameter_array[:] = parameter_value[:]
+            if isinstance( entry, Leaf ):
+                params[name] = entry[:]
+            else:
+                params[name] = {}
+                self._read_tree( params[name], entry )
             
     def write_chr_table( self, chr_name, data ):
-        chr_table = self._file_handle.createTable( '/data', chr_name, JointSnvMixTable )
-        
-        self._chr_tables[chr_name] = chr_table
+        if chr_name not in self._chr_tables:
+            chr_table = self._file_handle.createTable( '/data', chr_name, JointSnvMixTable )
+            
+            self._chr_tables[chr_name] = chr_table
+        else:
+            chr_table = self._chr_tables[chr_name]
         
         chr_table.append( data )
         
@@ -87,11 +115,31 @@ class JointMultiMixFile:
         
         return responsibilities
     
+    def get_row_above_prob( self, chr_name, class_labels, prob_threshold ):
+        table = self._chr_tables[chr_name]
+        
+        probs = []
+        
+        for i in class_labels:
+            prob = "_".join( constants.joint_multinomial_genotypes[i] )
+            prob = "p" + "_" + prob
+            
+            probs.append( prob )
+            
+        
+        query_string = " + ".join( probs )
+        
+        query_string = "{0} >= {1}".format( query_string, prob_threshold )
+        
+        rows = table.readWhere( query_string )
+        
+        return rows
+    
     def get_rows( self, chr_name, row_indices=None ):
         table = self._chr_tables[chr_name]
         
         if row_indices is None:
-            return table[:]
+            return table
         else:
             return table[row_indices]
     
@@ -133,18 +181,18 @@ class JointMultiMixFile:
 
 class JointMultiMixReader:
     def __init__( self, file_name ):
-        self._file_handle = JointSnvMixFile( file_name, 'r' )
+        self._file_handle = JointMultiMixFile( file_name, 'r' )
 
     def get_chr_list( self ):
         return self._file_handle.entries
     
     def get_genotype_rows_by_argmax( self, chr_name, genotype_class ):
         if genotype_class == 'Somatic':
-            class_labels = [1, 2]
+            class_labels = constants.somatic_multinomial_genotypes_indices
         elif genotype_class == 'Germline':
-            class_labels = [4, 8]
+            class_labels = constants.matched_multinomial_genotypes_indices
         elif genotype_class == 'LOH':
-            class_labels = [3, 5]
+            class_labels = constants.loh_multinomial_genotypes_indices
         else:
             raise Exception( 'Class {0} not accepted.'.format( genotype_class ) )
         
@@ -154,15 +202,15 @@ class JointMultiMixReader:
     
     def get_genotype_rows_by_prob( self, chr_name, genotype_class, prob_threshold ):
         if genotype_class == 'Somatic':
-            class_labels = [1, 2]
+            class_labels = constants.somatic_multinomial_genotypes_indices
         elif genotype_class == 'Germline':
-            class_labels = [4, 8]
+            class_labels = constants.matched_multinomial_genotypes_indices
         elif genotype_class == 'LOH':
-            class_labels = [3, 5]
+            class_labels = constants.loh_multinomial_genotypes_indices
         else:
             raise Exception( 'Class {0} not accepted.'.format( genotype_class ) )
         
-        rows = self._get_rows_by_prob( chr_name, class_labels, prob_threshold )
+        rows = self._file_handle.get_row_above_prob( chr_name, class_labels, prob_threshold )
 
         return rows
     
@@ -211,7 +259,7 @@ class JointMultiMixReader:
                
 class JointMultiMixWriter:
     def __init__( self, file_name, ):
-        self._file_handle = JointSnvMixFile( file_name, 'w' )
+        self._file_handle = JointMultiMixFile( file_name, 'w' )
         
     def write_priors( self, priors ):
         self._file_handle.write_priors( priors )
