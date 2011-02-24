@@ -7,7 +7,7 @@ import time
 
 import numpy as np
 
-from tables import openFile, Filters, Float64Atom, StringCol, IsDescription, UInt32Col, Float64Col
+from tables import openFile, Filters, Float64Atom, StringCol, IsDescription, UInt32Col, Float64Col, Leaf
    
 class JointSnvMixFile:
     def __init__( self, file_name, file_mode, compression_level=1, compression_lib='zlib' ):
@@ -41,33 +41,74 @@ class JointSnvMixFile:
         self._init_chr_tables()
         
     def write_priors( self, priors ):
-        fh = self._file_handle
         priors_group = self._priors_group
         
-        atom = Float64Atom( () )
+        self._write_tree( priors, priors_group )
         
-        for parameter_name, parameter_value in priors.items():
-            shape = parameter_value.shape
-            parameter_array = fh.createCArray( priors_group, parameter_name, atom, shape )
+    def write_parameters( self, parameters ):    
+        params_group = self._parameters_group
+        
+        self._write_tree( parameters, params_group )
+    
+    def _write_tree( self, params, group ):
+        for name, value in params.items():
+            if isinstance( value, dict ):
+                new_group = self._file_handle.createGroup( group, name )
+                self._write_tree( value, new_group )
+            else:
+                atom = Float64Atom( () )
+        
+                shape = np.array( value ).shape
+        
+                parameter_array = self._file_handle.createCArray( group, name, atom, shape )
+                
+                parameter_array[:] = value[:]
+                
+    def get_priors( self ):
+        priors = {}
+        
+        self._read_tree( priors, self._priors_group )
+        
+        return priors
+    
+    def get_parameters( self ):
+        parameters = {}
+        
+        self._read_tree( parameters, self._parameters_group )
+        
+        return parameters
+    
+    def _read_tree( self, params, group ):
+        for entry in self._file_handle.iterNodes( where=group ):
+            name = entry._v_name 
             
-            parameter_array[:] = parameter_value[:]
-        
-    def write_parameters( self, parameters ):
-        fh = self._file_handle
-        param_group = self._parameters_group
-        
-        atom = Float64Atom( () )
-        
-        for parameter_name, parameter_value in parameters.items():
-            shape = parameter_value.shape
-            parameter_array = fh.createCArray( param_group, parameter_name, atom, shape )
+            if isinstance( entry, Leaf ):
+                params[name] = entry[:]
+            else:
+                params[name] = {}
+                self._read_tree( params[name], entry )
             
-            parameter_array[:] = parameter_value[:]
+            
+#    def get_parameters( self ):
+#        param_group = self._parameters_group
+#        
+#        params = {}
+#        
+#        for table in self._file_handle.iterNodes( where=param_group ):
+#            param_name = table._v_name
+#            param_value = table.read()
+#        
+#            params[param_name] = param_value
+#        
+#        return params
             
     def write_chr_table( self, chr_name, data ):
-        chr_table = self._file_handle.createTable( '/data', chr_name, JointSnvMixTable )
-        
-        self._chr_tables[chr_name] = chr_table
+        if chr_name not in self._chr_tables:
+            chr_table = self._file_handle.createTable( '/data', chr_name, JointSnvMixTable )
+            
+            self._chr_tables[chr_name] = chr_table
+        else:
+            chr_table = self._chr_tables[chr_name]        
         
         chr_table.append( data )
         
@@ -175,6 +216,9 @@ class JointSnvMixReader:
         
     def get_rows( self, chr_name ):
         return self._file_handle.get_rows( chr_name )
+    
+    def get_parameters( self ):
+        return self._file_handle.get_parameters()        
     
     def _get_rows_by_argmax( self, chr_name, class_labels ):
         responsibilities = self._file_handle.get_responsibilities( chr_name )
