@@ -48,7 +48,7 @@ class JointCountsFile:
     def get_rows( self, chr_name ):
         table = self._get_chr_table( chr_name )
         
-        rows = table.read()
+        rows = table.iterrows()
         
         return rows
     
