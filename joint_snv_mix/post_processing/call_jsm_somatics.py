@@ -130,6 +130,7 @@ def load_auto_threshold_somatics(jsm_file_name):
     return rows
 
 def format_rows(row, chrom):
+    row = row.fetch_all_fields()
     row = dict(zip(row.dtype.names, row.real))
     row['somatic_prob'] = row['p_aa_ab'] + row['p_aa_bb']
     row['chrom'] = chrom
