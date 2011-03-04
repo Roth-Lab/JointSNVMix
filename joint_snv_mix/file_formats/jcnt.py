@@ -46,11 +46,7 @@ class JointCountsFile:
         table.flush()
         
     def get_rows( self, chr_name ):
-        table = self._get_chr_table( chr_name )
-        
-        rows = table.iterrows()
-        
-        return rows
+        return self._get_chr_table( chr_name )
     
     def get_table_size( self, chr_name ):
         table = self._get_chr_table( chr_name )
