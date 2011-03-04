@@ -119,9 +119,9 @@ class JointSnvMixFile:
         table = self._chr_tables[chr_name]
         
         if row_indices is None:
-            return table.iterrows()
+            return table
         else:
-            return table.itersequence(row_indices)
+            return table[row_indices]
     
     def get_position(self, chr_name, coord):
         table = self._chr_tables[chr_name]
