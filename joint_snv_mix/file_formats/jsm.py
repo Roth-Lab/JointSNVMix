@@ -87,21 +87,7 @@ class JointSnvMixFile:
             else:
                 params[name] = {}
                 self._read_tree(params[name], entry)
-            
-            
-#    def get_parameters( self ):
-#        param_group = self._parameters_group
-#        
-#        params = {}
-#        
-#        for table in self._file_handle.iterNodes( where=param_group ):
-#            param_name = table._v_name
-#            param_value = table.read()
-#        
-#            params[param_name] = param_value
-#        
-#        return params
-            
+
     def write_chr_table(self, chr_name, data):
         if chr_name not in self._chr_tables:
             chr_table = self._file_handle.createTable('/data', chr_name, JointSnvMixTable)
