@@ -45,7 +45,7 @@ def main(args):
         i += 1
         
         if i >= 1e5:
-            print rows[-1]
+            print chr_name, rows[chr_name][-1]
             
             write_rows(jcnt_file, rows)
             
