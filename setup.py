@@ -6,7 +6,7 @@ ext_modules = [Extension("joint_snv_mix.file_formats.pileup", ["joint_snv_mix/fi
 
 setup(
       name='JointSNVMix',
-      version='0.5.1',
+      version='0.6.0',
       description='Python SNV calling utility.',
       
       author='Andrew Roth',
