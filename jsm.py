@@ -62,7 +62,7 @@ parser_jcnt.add_argument('--min_base_qual', default=10, type=int,
 parser_jcnt.add_argument('--min_map_qual', default=10, type=int,
                           help='''Remove bases with mapping quality lower than this. Default is 10.''')
 
-parser_jcnt.add_argument('--positions_file_name', default=None,
+parser_jcnt.add_argument('--positions_file', default=None,
                           help='''Path to list of positions to create jcnt on. Should be space separated chrom pos. Same
                           as samtools.''')
 
