@@ -4,6 +4,7 @@ from collections import Counter
 import pysam
 
 from joint_snv_mix.file_formats.jcnt import JointCountsFile
+import bisect
 
 ascii_offset = 33
 
@@ -50,6 +51,7 @@ class BamToJcntConverter:
     def convert(self, jcnt_file_name):
         self.writer = JointCountsFile(jcnt_file_name, 'w')
         
+        
         if self.regions is None:
             self._convert_by_chrom()
         else:
@@ -69,20 +71,17 @@ class BamToJcntConverter:
             self._convert_iter(ref, joint_iter)
         
     def _convert_by_region(self):
-        for region in self.regions:            
-            print region
-            
-            ref = region[0]
-            start = region[1]
-            stop = region[2] + 1
-            
-            if ref not in self.refs:
+        for ref in self.refs:
+            if ref not in self.regions:
                 continue
             
-            normal_iter = self.normal_bam.pileup(ref, start, stop)
-            tumour_iter = self.tumour_bam.pileup(ref, start, stop)
+            print "Parsing {0} with {1} regions.".format(ref, len(self.regions[ref]))
             
-            joint_iter = JointPileupIterator(normal_iter, tumour_iter)
+            joint_iter = JointPileupRegionIterator(
+                                                   self.normal_bam.pileup(ref),
+                                                   self.tumour_bam.pileup(ref),
+                                                   self.regions[ref]
+                                                   )
             
             self._convert_iter(ref, joint_iter)
         
@@ -207,6 +206,64 @@ class JointPileupIterator:
                 tumour_column = self.tumour_iter.next()
             else:
                 raise Exception("Error in joint pileup iterator.")
+            
+class JointPileupRegionIterator:
+    def __init__(self, normal_iter, tumour_iter, regions):
+        self.normal_iter = normal_iter
+        self.tumour_iter = tumour_iter
+        
+        self._init_index_lists(regions)
+    
+    def __iter__(self):
+        return self
+    
+    def _init_index_lists(self, regions):
+        starts = []
+        ends = []
+        
+        for region in regions:
+            start = region[0]
+            end = region[1]
+            
+            starts.append(start)
+            ends.append(end)
+        
+
+        self._starts = sorted(starts)
+        self._ends = sorted(ends)
+            
+    def _in_regions(self, pos):
+        # Before begining or after end of all regions.
+        if pos < self._starts[0] or pos > self._ends[-1]:
+            return False
+        
+        index = bisect.bisect_left(self._ends, pos)
+                
+        if self._starts[index] <= pos <= self._ends[index]:
+            return True
+        else:
+            return False
+    
+    def next(self):
+        normal_column = self.normal_iter.next()
+        tumour_column = self.tumour_iter.next()
+        
+        while True:                    
+            normal_pos = normal_column.pos
+            tumour_pos = tumour_column.pos
+                  
+            if normal_pos == tumour_pos:
+                if self._in_regions(normal_pos):                
+                    return normal_column, tumour_column
+                else:
+                    normal_column = self.normal_iter.next()
+                    tumour_column = self.tumour_iter.next()
+            elif normal_pos < tumour_pos:
+                normal_column = self.normal_iter.next()
+            elif normal_pos > tumour_pos:
+                tumour_column = self.tumour_iter.next()
+            else:
+                raise Exception("Error in joint pileup iterator.")
 
 #=======================================================================================================================
 # Functions
@@ -214,7 +271,7 @@ class JointPileupIterator:
 def convert_positions_to_regions(positions_file_name):
     reader = csv.reader(open(positions_file_name), delimiter=' ')
 
-    regions = []
+    regions = {}
     
     row = reader.next()
     
@@ -229,11 +286,14 @@ def convert_positions_to_regions(positions_file_name):
         pos = int(row[1])
         
         if (chrom != prev_chrom) or (pos != prev_pos + 1):
+            if region_chrom not in regions:
+                regions[region_chrom] = []
+            
             # Close current region and print
             region_end = prev_pos
             
             # Subtract 1 to make zero based.
-            regions.append([region_chrom, region_start - 1, region_end - 1])
+            regions[region_chrom].append((region_start - 1, region_end - 1))
             
             # Open a new region
             region_chrom = chrom
@@ -243,6 +303,6 @@ def convert_positions_to_regions(positions_file_name):
         prev_pos = pos
     
     region_end = prev_pos
-    regions.append([region_chrom, region_start - 1, region_end - 1])
+    regions[region_chrom].append((region_start - 1, region_end - 1))
 
     return regions
