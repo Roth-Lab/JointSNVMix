@@ -9,7 +9,7 @@ import argparse
 
 from joint_snv_mix.classification.model_runners import run_snvmix
 
-from joint_snv_mix.pre_processing.mpileup_to_jcnt import main as mpileup_to_jcnt
+from joint_snv_mix.pre_processing.bam_to_jcnt import bam_to_jcnt
 
 from joint_snv_mix.pre_processing.mpileup_to_mcnt import main as mpileup_to_mcnt
 
@@ -38,11 +38,16 @@ subparsers = parser.add_subparsers()
 # Add jcnt sub-command
 #===============================================================================
 parser_jcnt = subparsers.add_parser('jcnt',
-                                    help='Convert mpileup files to jcnt file format.')
+                                    help='Convert bam files to jcnt file format.')
 
-parser_jcnt.add_argument('mpileup_file_name',
-                          help='''Samtools mpileup format file. When creating file with samtools the first bam file
-                          passed as arguments should be the normal and the second the tumour file.''')
+parser_jcnt.add_argument('reference_genome_file_name',
+                          help='Path to reference genome fasta.')
+
+parser_jcnt.add_argument('normal_bam_file_name',
+                          help='''Normal BAM file.''')
+
+parser_jcnt.add_argument('tumour_bam_file_name',
+                          help='''Tumour BAM file.''')
 
 parser_jcnt.add_argument('jcnt_file_name',
                           help='Name of joint counts (jcnt) output files to be created.')
@@ -51,15 +56,17 @@ parser_jcnt.add_argument('--min_depth', default=1, type=int,
                           help='''Minimum depth of coverage in both tumour and normal sample required to use a site in
                           the analysis. Default is 1.''')
 
-parser_jcnt.add_argument('--min_qual', default=13, type=int,
-                          help='''Remove bases with base qualities lower than this value. Note if samtools calmd is used
-                          to pre-process the bam then BAQ qualities may replace the base qualities in the 
-                          mpileup file. Default is 13.''')
+parser_jcnt.add_argument('--min_base_qual', default=10, type=int,
+                          help='''Remove bases with base quality lower than this. Default is 10.''')
 
-parser_jcnt.add_argument('--bzip2', action='store_true',
-                          help='''Set if file is in bzip2 format.''')
+parser_jcnt.add_argument('--min_map_qual', default=10, type=int,
+                          help='''Remove bases with mapping quality lower than this. Default is 10.''')
 
-parser_jcnt.set_defaults(func=mpileup_to_jcnt)
+parser_jcnt.add_argument('--positions_file_name', default=None,
+                          help='''Path to list of positions to create jcnt on. Should be space separated chrom pos. Same
+                          as samtools.''')
+
+parser_jcnt.set_defaults(func=bam_to_jcnt)
 
 #===============================================================================
 # Add mcnt sub-command
