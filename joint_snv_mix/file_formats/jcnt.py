@@ -45,7 +45,7 @@ class JointCountsFile:
         table.append( rows )
         table.flush()
         
-    def get_rows( self, chr_name ):
+    def get_table( self, chr_name ):
         return self._get_chr_table( chr_name )
     
     def get_table_size( self, chr_name ):
@@ -121,7 +121,8 @@ class JointCountsReader:
             counts = []
             
             for chr_name in sorted( self.get_chr_list() ):
-                rows = self._file_handle.get_rows( chr_name )
+                table = self._file_handle.get_table( chr_name )
+                rows = table.read()
                 
                 counts_cols = np.column_stack( [
                                          rows['normal_counts_a'], rows['normal_counts_b'], rows['tumour_counts_a'], rows['tumour_counts_b']
@@ -131,7 +132,8 @@ class JointCountsReader:
                 
             counts = np.vstack( counts )
         else:
-            rows = self._file_handle.get_rows( chr_name )
+            table = self._file_handle.get_table( chr_name )
+            rows = table.read()
                 
             counts = np.column_stack( [
                                         rows['normal_counts_a'], rows['normal_counts_b'], rows['tumour_counts_a'], rows['tumour_counts_b']
@@ -150,8 +152,8 @@ class JointCountsReader:
             
         return data_set_size
     
-    def get_rows( self, chr_name ):
-        return self._file_handle.get_rows( chr_name )
+    def get_table( self, chr_name ):
+        return self._file_handle.get_table( chr_name )
 
 class JointCountsIndexTable( IsDescription ):
     position = UInt32Col( pos=0 )
