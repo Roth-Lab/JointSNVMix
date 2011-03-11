@@ -8,7 +8,7 @@ from joint_snv_mix.file_formats.jcnt import JointCountsFile
 ascii_offset = 33
 
 def bam_to_jcnt(args):
-    if args.positions_file_name is not None:
+    if args.positions_file is not None:
         regions = convert_positions_to_regions(args.positions_file)
     else:
         regions = None
@@ -18,7 +18,15 @@ def bam_to_jcnt(args):
     
     ref_genome_fasta = pysam.Fastafile(args.reference_genome_file_name)
                
-    converter = BamToJcntConverter(normal_bam, tumour_bam, ref_genome_fasta, regions=regions)
+    converter = BamToJcntConverter(
+                                   normal_bam,
+                                   tumour_bam,
+                                   ref_genome_fasta,
+                                   min_depth=args.min_depth,
+                                   min_bqual=args.min_base_qual,
+                                   min_mqual=args.min_base_qual,
+                                   regions=regions
+                                   )
     
     converter.convert(args.jcnt_file_name)
                        
@@ -61,13 +69,15 @@ class BamToJcntConverter:
             self._convert_iter(ref, joint_iter)
         
     def _convert_by_region(self):
-        for region in self.regions:
-            
+        for region in self.regions:            
             print region
             
             ref = region[0]
             start = region[1]
-            stop = region[2]
+            stop = region[2] + 1
+            
+            if ref not in self.refs:
+                continue
             
             normal_iter = self.normal_bam.pileup(ref, start, stop)
             tumour_iter = self.tumour_bam.pileup(ref, start, stop)
@@ -231,5 +241,8 @@ def convert_positions_to_regions(positions_file_name):
         
         prev_chrom = chrom
         prev_pos = pos
+    
+    region_end = prev_pos
+    regions.append([region_chrom, region_start - 1, region_end - 1])
 
     return regions
