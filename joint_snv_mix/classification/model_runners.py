@@ -75,6 +75,11 @@ class ModelRunner(object):
         for chr_name in sorted(chr_list):
             self._classify_chromosome(chr_name)
             
+    def _load_parameters(self, args):
+        self.parameter_parser.load_from_file(args.params_file)
+        
+        self.parameters = self.parameters.to_dict()
+            
     def _write_parameters(self):
         self.writer.write_parameters(self.parameters)
         
@@ -140,7 +145,7 @@ class IndependentModelRunner(ModelRunner):
                                     
     def _classify_chromosome(self, chr_name):
         counts = self.reader.get_counts(chr_name)
-        jcnt_rows = self.reader.get_rows(chr_name)
+        jcnt_table = self.reader.get_table(chr_name)
         
         end = self.reader.get_chr_size(chr_name)
 
@@ -151,7 +156,7 @@ class IndependentModelRunner(ModelRunner):
 
         while start < end:
             sub_counts = counts[start:stop]
-            sub_rows = jcnt_rows[start:stop]
+            sub_rows = jcnt_table[start:stop]
             
             indep_resp = {}
             
@@ -228,7 +233,7 @@ class JointModelRunner(ModelRunner):
 
     def _classify_chromosome(self, chr_name):
         counts = self.reader.get_counts(chr_name)
-        jcnt_rows = self.reader.get_rows(chr_name)
+        jcnt_table = self.reader.get_table(chr_name)
         
         end = self.reader.get_chr_size(chr_name)
 
@@ -239,7 +244,7 @@ class JointModelRunner(ModelRunner):
 
         while start < end:
             sub_counts = counts[start:stop]
-            sub_rows = jcnt_rows[start:stop]
+            sub_rows = jcnt_table[start:stop]
                               
             data = JointData(sub_counts)            
                 
@@ -297,7 +302,7 @@ class ChromosomeModelRunner(ModelRunner):
                         
     def _classify_chromosome(self, chr_name):
         counts = self.reader.get_counts(chr_name)
-        jcnt_rows = self.reader.get_rows(chr_name)
+        jcnt_rows = self.reader.get_table(chr_name)
         
         end = self.reader.get_chr_size(chr_name)
 
