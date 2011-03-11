@@ -45,7 +45,7 @@ class FisherRunner(object):
         
     def _classify_chromosome(self, chr_name):
         counts = self.reader.get_counts(chr_name)
-        jcnt_rows = self.reader.get_rows(chr_name)
+        jcnt_table = self.reader.get_table(chr_name)
         
         end = self.reader.get_chr_size(chr_name)
 
@@ -55,7 +55,7 @@ class FisherRunner(object):
         
         while start < end:
             sub_counts = counts[start:stop]
-            sub_rows = jcnt_rows[start:stop]
+            sub_rows = jcnt_table[start:stop]
                               
             data = self.data_class(sub_counts)            
                 

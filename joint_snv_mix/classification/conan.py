@@ -104,7 +104,7 @@ class ConanModelRunner( ModelRunner ):
                 
         counts = self.reader.get_counts( cn_state, chr_name )
        
-        jcnt_rows = self.reader.get_rows( cn_state, chr_name )
+        jcnt_table = self.reader.get_table( cn_state, chr_name )
         
         end = self.reader.get_chr_size( cn_state, chr_name )
 
@@ -115,7 +115,7 @@ class ConanModelRunner( ModelRunner ):
 
         while start < end:
             sub_counts = counts[start:stop]
-            sub_rows = jcnt_rows[start:stop]
+            sub_rows = jcnt_table[start:stop]
                               
             data = self.data_class( sub_counts )            
                 
