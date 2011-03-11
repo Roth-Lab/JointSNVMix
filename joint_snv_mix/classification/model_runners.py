@@ -78,7 +78,7 @@ class ModelRunner(object):
     def _load_parameters(self, args):
         self.parameter_parser.load_from_file(args.params_file)
         
-        self.parameters = self.parameters.to_dict()
+        self.parameters = self.parameter_parser.to_dict()
             
     def _write_parameters(self):
         self.writer.write_parameters(self.parameters)
