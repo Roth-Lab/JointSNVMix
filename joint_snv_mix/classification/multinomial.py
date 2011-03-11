@@ -52,7 +52,7 @@ class MultinomialModelRunner(ModelRunner):
 
     def _classify_chromosome(self, chr_name):
         counts = self.reader.get_counts(chr_name)
-        jcnt_rows = self.reader.get_rows(chr_name)
+        jcnt_rows = self.reader.get_table(chr_name)
         
         end = self.reader.get_chr_size(chr_name)
 
