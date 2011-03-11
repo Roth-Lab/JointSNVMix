@@ -122,21 +122,25 @@ class JointCountsReader:
             
             for chr_name in sorted( self.get_chr_list() ):
                 table = self._file_handle.get_table( chr_name )
-                rows = table.read()
                 
                 counts_cols = np.column_stack( [
-                                         rows['normal_counts_a'], rows['normal_counts_b'], rows['tumour_counts_a'], rows['tumour_counts_b']
-                                         ] )
-                
+                                                table.col('normal_counts_a'), 
+                                                table.col('normal_counts_b'), 
+                                                table.col('tumour_counts_a'), 
+                                                table.col('tumour_counts_b')
+                                                ] )
+                    
                 counts.append( counts_cols )
                 
             counts = np.vstack( counts )
         else:
             table = self._file_handle.get_table( chr_name )
-            rows = table.read()
                 
             counts = np.column_stack( [
-                                        rows['normal_counts_a'], rows['normal_counts_b'], rows['tumour_counts_a'], rows['tumour_counts_b']
+                                        table.col('normal_counts_a'), 
+                                        table.col('normal_counts_b'), 
+                                        table.col('tumour_counts_a'), 
+                                        table.col('tumour_counts_b')
                                         ] )
         
         return counts
