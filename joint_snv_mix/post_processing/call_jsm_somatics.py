@@ -59,7 +59,7 @@ def load_manual_threshold_somatics(jsm_file_name, threshold):
     for chr_name in sorted(chr_list):
         print chr_name
 
-        chr_rows = reader.get_rows(chr_name)
+        chr_rows = reader.get_table(chr_name)
 
         for row in chr_rows:
             score = row['p_aa_ab'] + row['p_aa_bb']            
@@ -95,7 +95,7 @@ def load_auto_threshold_somatics(jsm_file_name):
     for chr_name in sorted(chr_list):
         print chr_name
 
-        chr_rows = reader.get_rows(chr_name)
+        chr_rows = reader.get_table(chr_name)
 
         for row in chr_rows:
             score = row['p_aa_ab'] + row['p_aa_bb']

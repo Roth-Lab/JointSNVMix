@@ -51,7 +51,7 @@ def jcnt_to_cncnt(args):
         
         # Load new table if chromosome has changed.
         if chr_name != old_chr_name:
-            rows = reader.get_rows(chr_name)
+            rows = reader.get_table(chr_name)
         
         old_chr_name = chr_name        
         

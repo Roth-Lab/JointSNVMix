@@ -39,7 +39,7 @@ def load_somatics( jsm_file_name ):
         
         print chr_name
 
-        chr_rows = reader.get_rows( chr_name )
+        chr_rows = reader.get_table( chr_name )
 
         for row in chr_rows:
             score = row['p_aa_ab'] + row['p_aa_bb']

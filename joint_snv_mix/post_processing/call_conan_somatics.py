@@ -36,7 +36,7 @@ def call_conan_somatics(args):
         for chr_name in chr_list:
             print cn_state, chr_name
             
-            index_rows, soft_labels = reader.get_rows(cn_state, chr_name)
+            index_rows, soft_labels = reader.get_table(cn_state, chr_name)
             
             for i, index_row in enumerate(index_rows):
                 resp = soft_labels[i]

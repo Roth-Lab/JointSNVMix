@@ -7,3 +7,15 @@ syntax: regexp
 ^dist$
 syntax: regexp
 ^MANIFEST$
+syntax: regexp
+^tests/data/normal\.bam$
+syntax: regexp
+^tests/data/normal\.bam$
+syntax: regexp
+^tests/data/normal\.bam\.bai$
+syntax: regexp
+^tests/data/test\.22\.pos$
+syntax: regexp
+^tests/data/tumour\.bam$
+syntax: regexp
+^tests/data/tumour\.bam\.bai$
