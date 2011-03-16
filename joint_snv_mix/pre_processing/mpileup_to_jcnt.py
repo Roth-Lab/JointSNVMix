@@ -12,7 +12,7 @@ warnings.filterwarnings('ignore', category=tables.NaturalNameWarning)
 
 from joint_snv_mix.file_formats.pileup import parse_call_string
 
-from joint_snv_mix.file_formats.jcnt import JointCountsFile
+from joint_snv_mix.file_formats.jcnt import _JointCountsFile
 
 ascii_offset = 33
 
@@ -24,7 +24,7 @@ def main(args):
     
     reader = get_reader(mpileup_file)
     
-    jcnt_file = JointCountsFile(args.jcnt_file_name, 'w')
+    jcnt_file = _JointCountsFile(args.jcnt_file_name, 'w')
     
     rows = {}
     i = 0
@@ -159,4 +159,4 @@ def parse_counts(ref_base, counter, non_ref_base=None):
 
 def write_rows(jcnt_file, rows):
     for chr_name, chr_rows in rows.items():
-        jcnt_file.add_rows(chr_name, chr_rows)
+        jcnt_file.add_rows_to_table(chr_name, chr_rows)

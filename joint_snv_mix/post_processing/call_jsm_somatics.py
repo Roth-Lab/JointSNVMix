@@ -51,7 +51,7 @@ def load_manual_threshold_somatics(jsm_file_name, threshold):
     '''
     reader = JointSnvMixReader(jsm_file_name)
 
-    chr_list = reader.get_chr_list()
+    chr_list = reader.get_table_list()
 
     rows = []
     scores = []
@@ -87,7 +87,7 @@ def load_auto_threshold_somatics(jsm_file_name):
 
     reader = JointSnvMixReader(jsm_file_name)
 
-    chr_list = reader.get_chr_list()
+    chr_list = reader.get_table_list()
 
     scores = []
     rows = []

@@ -9,11 +9,50 @@ import numpy as np
 
 from tables import openFile, Filters, Float64Atom, StringCol, IsDescription, UInt32Col, Float64Col, Leaf
    
-class JointSnvMixFile:
+class JointSnvMixReader:
+    def __init__(self, file_name):
+        self._file_handle = _JointSnvMixFile(file_name, 'r')
+
+    def get_table_list(self):
+        return self._file_handle.entries
+    
+    def close(self):
+        self._file_handle.close()
+        
+    def get_rows(self, chr_name):
+        return self._file_handle.get_rows(chr_name)
+    
+    def get_parameters(self):
+        return self._file_handle.get_parameters()        
+               
+class JointSnvMixWriter:
+    def __init__(self, file_name,):
+        self._file_handle = _JointSnvMixFile(file_name, 'w')
+        
+    def write_priors(self, priors):
+        self._file_handle.write_priors(priors)
+        
+    def write_parameters(self, parameters):
+        self._file_handle.write_parameters(parameters)
+        
+    def add_row(self, chr_name, jcnt_row):
+        data = []
+        
+        for jcnt_row, resp in zip(jcnt_rows.tolist(), responsibilities):
+            row = []
+            row.extend(jcnt_row)
+            row.extend(resp)
+            data.append(row)
+        
+        self._file_handle.write_chr_table(chr_name, data)
+
+    def close(self):
+        self._file_handle.close()
+        
+class _JointSnvMixFile:
     def __init__(self, file_name, file_mode, compression_level=1, compression_lib='zlib'):
-        '''Constructor
-                    
-        For compatibility it is reccomeded the compression values are left at defaults.
+        '''                    
+        For compatibility it is recommended the compression values are left at defaults.
         
         Arguments:
         file_name -- Path to file
@@ -89,17 +128,17 @@ class JointSnvMixFile:
                 self._read_tree(params[name], entry)
 
     def write_chr_table(self, chr_name, data):
-        if chr_name not in self._chr_tables:
+        if chr_name not in self._chrom_tables:
             chr_table = self._file_handle.createTable('/data', chr_name, JointSnvMixTable)
             
-            self._chr_tables[chr_name] = chr_table
+            self._chrom_tables[chr_name] = chr_table
         else:
-            chr_table = self._chr_tables[chr_name]        
+            chr_table = self._chrom_tables[chr_name]        
         
         chr_table.append(data)
         
     def get_responsibilities(self, chr_name):
-        table = self._chr_tables[chr_name]
+        table = self._chrom_tables[chr_name]
         
         responsibilities = np.column_stack((
                                             table.col('p_aa_aa'),
@@ -116,7 +155,7 @@ class JointSnvMixFile:
         return responsibilities
     
     def get_rows(self, chr_name, row_indices=None):
-        table = self._chr_tables[chr_name]
+        table = self._chrom_tables[chr_name]
         
         if row_indices is None:
             return table
@@ -124,7 +163,7 @@ class JointSnvMixFile:
             return table[row_indices]
     
     def get_position(self, chr_name, coord):
-        table = self._chr_tables[chr_name]
+        table = self._chrom_tables[chr_name]
         
         search_string = "position == {0}".format(coord)
         row = table.readWhere(search_string)
@@ -157,112 +196,7 @@ class JointSnvMixFile:
         for chr_name in self.entries:
             chr_tables[chr_name] = self._file_handle.getNode(self._data_group, chr_name)
 
-        self._chr_tables = chr_tables
-
-class JointSnvMixReader:
-    def __init__(self, file_name):
-        self._file_handle = JointSnvMixFile(file_name, 'r')
-
-    def get_chr_list(self):
-        return self._file_handle.entries
-    
-    def get_genotype_rows_by_argmax(self, chr_name, genotype_class):
-        if genotype_class == 'Somatic':
-            class_labels = [1, 2]
-        elif genotype_class == 'Germline':
-            class_labels = [4, 8]
-        elif genotype_class == 'LOH':
-            class_labels = [3, 5]
-        else:
-            raise Exception('Class {0} not accepted.'.format(genotype_class))
-        
-        rows = self._get_rows_by_argmax(chr_name, class_labels)
-        
-        return rows
-    
-    def get_genotype_rows_by_prob(self, chr_name, genotype_class, prob_threshold):
-        if genotype_class == 'Somatic':
-            class_labels = [1, 2]
-        elif genotype_class == 'Germline':
-            class_labels = [4, 8]
-        elif genotype_class == 'LOH':
-            class_labels = [3, 5]
-        else:
-            raise Exception('Class {0} not accepted.'.format(genotype_class))
-        
-        rows = self._get_rows_by_prob(chr_name, class_labels, prob_threshold)
-
-        return rows
-    
-    def get_position(self, chr_name, coord):
-        return self._file_handle.get_position(chr_name, coord)
-    
-    def close(self):
-        self._file_handle.close()
-        
-    def get_rows(self, chr_name):
-        return self._file_handle.get_rows(chr_name)
-    
-    def get_parameters(self):
-        return self._file_handle.get_parameters()        
-    
-    def _get_rows_by_argmax(self, chr_name, class_labels):
-        responsibilities = self._file_handle.get_responsibilities(chr_name)
-        
-        labels = np.argmax(responsibilities, axis=1)
-        
-        row_indices = []
-        for class_label in class_labels:
-            row_indices.extend(np.where(labels == class_label)[0])
-        
-        row_indices = sorted(row_indices)
-        
-        rows = self._file_handle.get_rows(chr_name, row_indices)
-        
-        return rows
-    
-    def _get_rows_by_prob(self, chr_name, class_labels, prob_threshold):
-        responsibilities = self._file_handle.get_responsibilities(chr_name)
-        
-        shape = (responsibilities.shape[0],)
-        class_prob = np.zeros(shape)
-        
-        for class_label in class_labels:
-            class_prob += responsibilities[:, class_label]
-        
-        row_indices = np.where(class_prob >= prob_threshold)
-        
-        if len(row_indices) > 0:
-            row_indices = row_indices[0]
-            rows = self._file_handle.get_rows(chr_name, row_indices)
-            
-            return rows
-        else:
-            return []
-               
-class JointSnvMixWriter:
-    def __init__(self, file_name,):
-        self._file_handle = JointSnvMixFile(file_name, 'w')
-        
-    def write_priors(self, priors):
-        self._file_handle.write_priors(priors)
-        
-    def write_parameters(self, parameters):
-        self._file_handle.write_parameters(parameters)
-        
-    def write_data(self, chr_name, jcnt_rows, responsibilities):
-        data = []
-        
-        for jcnt_row, resp in zip(jcnt_rows.tolist(), responsibilities):
-            row = []
-            row.extend(jcnt_row)
-            row.extend(resp)
-            data.append(row)
-        
-        self._file_handle.write_chr_table(chr_name, data)
-
-    def close(self):
-        self._file_handle.close()
+        self._chrom_tables = chr_tables
     
 class JointSnvMixTable(IsDescription):
     position = UInt32Col(pos=0)

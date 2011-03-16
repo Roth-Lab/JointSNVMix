@@ -17,7 +17,7 @@ def main( args ):
     header = get_header()
     writer.writerow( header )
 
-    chr_list = sorted( reader.get_chr_list() )
+    chr_list = sorted( reader.get_table_list() )
 
     for chr_name in sorted( chr_list ):
         if args.argmax:

@@ -27,7 +27,7 @@ def call_conan_somatics(args):
     cn_states = sorted(reader.get_cn_states())
     
     for cn_state in  cn_states:
-        chr_list = sorted(reader.get_chr_list(cn_state))
+        chr_list = sorted(reader.get_table_list(cn_state))
         
         writer, p_genotype_str = get_writer(args, cn_state)
         
