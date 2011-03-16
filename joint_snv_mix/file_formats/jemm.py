@@ -91,17 +91,17 @@ class JointExtendedMultiMixFile:
                 self._read_tree( params[name], entry )
             
     def write_chr_table( self, chr_name, data ):
-        if chr_name not in self._chr_tables:
+        if chr_name not in self._chrom_tables:
             chr_table = self._file_handle.createTable( '/data', chr_name, JointSnvMixTable )
             
-            self._chr_tables[chr_name] = chr_table
+            self._chrom_tables[chr_name] = chr_table
         else:
-            chr_table = self._chr_tables[chr_name]
+            chr_table = self._chrom_tables[chr_name]
         
         chr_table.append( data )
         
     def get_responsibilities( self, chr_name ):
-        table = self._chr_tables[chr_name]
+        table = self._chrom_tables[chr_name]
         
         probs = []
         
@@ -116,7 +116,7 @@ class JointExtendedMultiMixFile:
         return responsibilities
     
     def get_row_above_prob( self, chr_name, class_labels, prob_threshold ):
-        table = self._chr_tables[chr_name]
+        table = self._chrom_tables[chr_name]
         
         probs = []
         
@@ -136,7 +136,7 @@ class JointExtendedMultiMixFile:
         return rows
     
     def get_rows( self, chr_name, row_indices=None ):
-        table = self._chr_tables[chr_name]
+        table = self._chrom_tables[chr_name]
         
         if row_indices is None:
             return table[:]
@@ -144,7 +144,7 @@ class JointExtendedMultiMixFile:
             return table[row_indices]
     
     def get_position( self, chr_name, coord ):
-        table = self._chr_tables[chr_name]
+        table = self._chrom_tables[chr_name]
         
         search_string = "position == {0}".format( coord )
         row = table.readWhere( search_string )
@@ -177,7 +177,7 @@ class JointExtendedMultiMixFile:
         for chr_name in self.entries:
             chr_tables[chr_name] = self._file_handle.getNode( self._data_group, chr_name )
 
-        self._chr_tables = chr_tables
+        self._chrom_tables = chr_tables
 
 class JointExtendedMultiMixReader:
     def __init__( self, file_name ):

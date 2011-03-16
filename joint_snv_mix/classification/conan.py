@@ -58,7 +58,7 @@ class ConanModelRunner( ModelRunner ):
             self._classify_cn_state( cn_state )
                 
     def _classify_cn_state( self, cn_state ):        
-        chr_list = self.reader.get_chr_list( cn_state )
+        chr_list = self.reader.get_table_list( cn_state )
 
         for chr_name in sorted( chr_list ):            
             self._classify_chromosome( cn_state, chr_name )    
@@ -106,7 +106,7 @@ class ConanModelRunner( ModelRunner ):
        
         jcnt_table = self.reader.get_table( cn_state, chr_name )
         
-        end = self.reader.get_chr_size( cn_state, chr_name )
+        end = self.reader.get_number_of_table_rows( cn_state, chr_name )
 
         n = int( 1e5 )
         start = 0
@@ -127,14 +127,14 @@ class ConanModelRunner( ModelRunner ):
             stop = min( stop + n, end )
             
     def _subsample( self, cn_state, sample_size ):
-        chr_list = self.reader.get_chr_list( cn_state )
+        chr_list = self.reader.get_table_list( cn_state )
         
         sample = []
         
         nrows = self.reader.get_data_set_size( cn_state )
         
         for chr_name in chr_list:
-            chr_size = self.reader.get_chr_size( cn_state, chr_name )
+            chr_size = self.reader.get_number_of_table_rows( cn_state, chr_name )
             
             chr_sample_size = math.floor( float( chr_size ) / nrows * sample_size )
             

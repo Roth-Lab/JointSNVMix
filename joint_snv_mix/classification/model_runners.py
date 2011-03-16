@@ -55,7 +55,10 @@ def run_snvmix(args):
 # Classes
 #=======================================================================================================================
 class ModelRunner(object):
-    def run(self, args):        
+    def run(self, args):
+        self.reader = JointCountsReader(args.jcnt_file_name)
+        self.writer = JointSnvMixWriter(args.jsm_file_name)
+          
         # Load parameters by training or from file.
         if args.train:
             self._train(args)
@@ -70,7 +73,7 @@ class ModelRunner(object):
         self.writer.close()
     
     def _classify(self, args):
-        chr_list = self.reader.get_chr_list()
+        chr_list = self.reader.get_table_list()
         
         for chr_name in sorted(chr_list):
             self._classify_chromosome(chr_name)
@@ -87,28 +90,28 @@ class ModelRunner(object):
         self.writer.write_priors(self.priors)
             
     def _subsample(self, sample_size):
-        chr_list = self.reader.get_chr_list()
+        table_list = self.reader.get_table_list()
         
         sample = []
         
         nrows = self.reader.get_data_set_size()
         
-        for chr_name in chr_list:
-            chr_size = self.reader.get_chr_size(chr_name=chr_name)
+        for chrom in table_list:
+            table_nrows = self.reader.get_number_of_table_rows(chrom=chrom)
             
-            chr_sample_size = math.ceil(float(chr_size) / nrows * sample_size)
+            chrom_sample_size = math.ceil(float(table_nrows) / nrows * sample_size)
             
-            chr_sample_size = int(chr_sample_size)
+            chrom_sample_size = int(chrom_sample_size)
             
-            chr_sample_size = min(chr_size, chr_sample_size)
+            chrom_sample_size = min(table_nrows, chrom_sample_size)
             
-            chr_sample_indices = random.sample(xrange(chr_size), chr_sample_size)
+            table_sample_indices = random.sample(xrange(table_nrows), chrom_sample_size)
             
-            chr_counts = self.reader.get_counts(chr_name)
+            chrom_counts = self.reader.get_counts(chrom)
             
-            chr_sample = chr_counts[chr_sample_indices]
+            chrom_sample = chrom_counts[table_sample_indices]
             
-            sample.append(chr_sample)
+            sample.append(chrom_sample)
             
         sample = np.vstack(sample)
         
@@ -118,12 +121,6 @@ class ModelRunner(object):
 # Independent Models
 #=======================================================================================================================
 class IndependentModelRunner(ModelRunner):
-    def run(self, args):
-        self.reader = JointCountsReader(args.jcnt_file_name)
-        self.writer = JointSnvMixWriter(args.jsm_file_name)
-        
-        ModelRunner.run(self, args)
-                 
     def _train(self, args):
         if args.subsample_size > 0:
             counts = self._subsample(args.subsample_size)
@@ -140,14 +137,16 @@ class IndependentModelRunner(ModelRunner):
         for genome in constants.genomes:
             data = IndependentData(counts, genome)
             
-            self.parameters[genome] = self.model.train(data, self.priors[genome],
-                                                        args.max_iters, args.convergence_threshold)
+            self.parameters[genome] = self.model.train(data,
+                                                       self.priors[genome],
+                                                       args.max_iters,
+                                                       args.convergence_threshold)
                                     
     def _classify_chromosome(self, chr_name):
         counts = self.reader.get_counts(chr_name)
         jcnt_table = self.reader.get_table(chr_name)
         
-        end = self.reader.get_chr_size(chr_name)
+        end = self.reader.get_number_of_table_rows(chr_name)
 
         n = int(1e5)
         start = 0
@@ -209,12 +208,6 @@ class IndependentBetaBinomialRunner(IndependentModelRunner):
 # Joint Models
 #=======================================================================================================================
 class JointModelRunner(ModelRunner):
-    def run(self, args):
-        self.reader = JointCountsReader(args.jcnt_file_name)
-        self.writer = JointSnvMixWriter(args.jsm_file_name)
-        
-        ModelRunner.run(self, args)
-                    
     def _train(self, args):        
         if args.subsample_size > 0:
             counts = self._subsample(args.subsample_size)
@@ -228,14 +221,16 @@ class JointModelRunner(ModelRunner):
         
         data = JointData(counts)
         
-        self.parameters = self.model.train(data, self.priors,
-                                            args.max_iters, args.convergence_threshold)
+        self.parameters = self.model.train(data,
+                                           self.priors,
+                                           args.max_iters,
+                                           args.convergence_threshold)
 
     def _classify_chromosome(self, chr_name):
         counts = self.reader.get_counts(chr_name)
         jcnt_table = self.reader.get_table(chr_name)
         
-        end = self.reader.get_chr_size(chr_name)
+        end = self.reader.get_number_of_table_rows(chr_name)
 
         n = int(1e5)
         start = 0
@@ -270,20 +265,14 @@ class JointBetaBinomialRunner(JointModelRunner):
 #=======================================================================================================================
 # Chromosome Models
 #=======================================================================================================================
-class ChromosomeModelRunner(ModelRunner):
-    def run(self, args):
-        self.reader = JointCountsReader(args.jcnt_file_name)
-        self.writer = JointSnvMixWriter(args.jsm_file_name)
-        
-        ModelRunner.run(self, args)
-    
+class ChromosomeModelRunner(ModelRunner):    
     def _train(self, args):                   
         self.priors_parser.load_from_file(args.priors_file)
         self.priors = self.priors_parser.to_dict()
         
         self._write_priors()
         
-        chr_list = self.reader.get_chr_list()
+        chr_list = self.reader.get_table_list()
         
         self.parameters = {}
         
@@ -304,7 +293,7 @@ class ChromosomeModelRunner(ModelRunner):
         counts = self.reader.get_counts(chr_name)
         jcnt_rows = self.reader.get_table(chr_name)
         
-        end = self.reader.get_chr_size(chr_name)
+        end = self.reader.get_number_of_table_rows(chr_name)
 
         n = int(1e5)
         start = 0
@@ -325,7 +314,7 @@ class ChromosomeModelRunner(ModelRunner):
             stop = min(stop + n, end)
 
     def _chrom_subsample(self, chr_name, sample_size):
-        chr_size = self.reader.get_chr_size(chr_name=chr_name)
+        chr_size = self.reader.get_number_of_table_rows(chrom=chr_name)
         
         sample_size = min(chr_size, sample_size)
         

@@ -14,7 +14,7 @@ from argparse import Namespace
 def jcnt_to_cncnt(args):
     reader = JointCountsReader(args.jcnt_file_name)
     
-    chr_list = reader.get_chr_list()
+    chr_list = reader.get_table_list()
     
     cncnt_file = ConanCountsFile(args.cncnt_file_name, 'w')
     
@@ -62,7 +62,7 @@ def jcnt_to_cncnt(args):
         if len(segment_rows) == 0:
             continue
         
-        cncnt_file.add_rows(cn_status, chr_name, segment_rows)
+        cncnt_file.add_rows_to_table(cn_status, chr_name, segment_rows)
     
     reader.close()
     cncnt_file.close()

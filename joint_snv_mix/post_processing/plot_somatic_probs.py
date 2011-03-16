@@ -29,7 +29,7 @@ def load_somatics( jsm_file_name ):
 
     reader = JointSnvMixReader( jsm_file_name )
 
-    chr_list = reader.get_chr_list()
+    chr_list = reader.get_table_list()
 
     scores = []
 

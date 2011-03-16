@@ -113,4 +113,4 @@ def get_reader( mpileup_file ):
 
 def write_rows( mcnt_file, rows ):
     for chr_name, chr_rows in rows.items():
-        mcnt_file.add_rows( chr_name, chr_rows )
+        mcnt_file.add_rows_to_table( chr_name, chr_rows )

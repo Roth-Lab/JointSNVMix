@@ -3,7 +3,7 @@ from collections import Counter
 
 import pysam
 
-from joint_snv_mix.file_formats.jcnt import JointCountsFile
+from joint_snv_mix.file_formats.jcnt import _JointCountsFile, JointCountsWriter
 import bisect
 
 ascii_offset = 33
@@ -48,16 +48,16 @@ class BamToJcntConverter:
         
         self.regions = regions
         
-    def convert(self, jcnt_file_name):
-        self.writer = JointCountsFile(jcnt_file_name, 'w')
-        
-        
-        if self.regions is None:
-            self._convert_by_chrom()
-        else:
-            self._convert_by_region()
-        
-        self.writer.close()
+    def convert(self, jcnt_file_name):        
+        with JointCountsWriter(jcnt_file_name) as writer:
+            self.writer = writer
+                                 
+            if self.regions is None:
+                self._convert_by_chrom()
+            else:
+                self._convert_by_region()
+            
+            self.writer.close()
         
     def _convert_by_chrom(self):
         for ref in self.refs:
@@ -86,8 +86,6 @@ class BamToJcntConverter:
             self._convert_iter(ref, joint_iter)
         
     def _convert_iter(self, ref, iter):        
-        jcnt_entries = []
-        
         for normal_column, tumour_column in iter:
             if normal_column.n < self.min_depth or tumour_column.n < self.min_depth:
                 continue
@@ -100,16 +98,7 @@ class BamToJcntConverter:
             if jcnt_entry is None:
                 continue
             
-            jcnt_entries.append(jcnt_entry)
-            
-            if len(jcnt_entries) >= self.max_buffer:
-                print ref, jcnt_entry
-                
-                self.writer.add_rows(ref, jcnt_entries)                
-                jcnt_entries = []
-        
-        if jcnt_entries:
-            self.writer.add_rows(ref, jcnt_entries)        
+            self.writer.add_row(ref, jcnt_entry)      
         
     def _get_jcnt_entry(self, normal_column, tumour_column, pos, ref_base):
         normal_bases = self._parse_pileup_column(normal_column)
@@ -119,10 +108,10 @@ class BamToJcntConverter:
         normal_non_ref_base, normal_counts = self._get_counts(ref_base, normal_bases, non_ref_base=tumour_non_ref_base)        
     
         # Check again for lines below read depth. The first check above speeds things up, though redundant.
-        d_N = normal_counts[0] + normal_counts[1]
-        d_T = tumour_counts[0] + tumour_counts[1]
+        normal_depth = normal_counts[0] + normal_counts[1]
+        tumour_depth = tumour_counts[0] + tumour_counts[1]
     
-        if d_N < self.min_depth or d_T < self.min_depth:
+        if normal_depth < self.min_depth or tumour_depth < self.min_depth:
             return None
     
         # Shift index to one based position.

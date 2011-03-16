@@ -9,14 +9,131 @@ import numpy as np
 
 from tables import openFile, Filters, UInt32Col, StringCol
 from tables.description import IsDescription
-
-class JointCountsFile:
-    '''
-    Class representing a joint counts formated file.
     
-    Any acess to the underlying HDF5 file hierachy should be placed here.
+class JointCountsReader(object):
     '''
-    def __init__( self, file_name, file_mode, compression_level=1, compression_lib='zlib' ):
+    Class for reading jcnt files.
+    '''
+    def __init__(self, jcnt_file_name):
+        self._file_handle = _JointCountsFile(jcnt_file_name, 'r')
+    
+    def __enter__(self):
+        return self
+    
+    def __exit__(self, type, value, traceback):
+        self.close()
+    
+    def get_table_list(self):
+        return self._file_handle.entries
+    
+    def get_counts(self, chrom=None):
+        if chrom is None:
+            counts = []
+            
+            for chrom in sorted(self.get_table_list()):
+                counts.append(self._get_chrom_counts(chrom))
+                
+            counts = np.vstack(counts)
+        else:
+            counts = self._get_chrom_counts(chrom)
+
+        
+        return counts    
+    
+    def get_number_of_table_rows(self, chrom):
+        table = self._file_handle.get_table(chrom)
+        n = table.nrows
+        
+        return n
+    
+    def get_data_set_size(self):
+        data_set_size = 0
+        
+        for chrom in self.get_table_list():
+            data_set_size += self.get_number_of_table_rows(chrom)
+            
+        return data_set_size
+    
+    def get_table(self, chrom):
+        return self._file_handle.get_table(chrom)
+    
+    def close(self):
+        '''
+        Should be called when done reading the file.
+        '''
+        self._file_handle.close()
+    
+    def _get_chrom_counts(self, chrom):
+        table = self._file_handle.get_table(chrom)
+            
+        counts = np.column_stack([
+                                    table.col('normal_counts_a'),
+                                    table.col('normal_counts_b'),
+                                    table.col('tumour_counts_a'),
+                                    table.col('tumour_counts_b')
+                                    ])
+        
+        return counts
+    
+class JointCountsWriter(object):
+    '''
+    Class for writing jcnt files.
+    '''
+    def __init__(self, jcnt_file_name):
+        self._file_handle = _JointCountsFile(jcnt_file_name, 'w')
+        
+        self._row_buffer = {}
+        self._buffer_size = 0
+        
+        # Max number of rows to buffer before writing to disk.
+        self._max_buffer_size = 100000
+    
+    def __enter__(self):
+        return self
+    
+    def __exit__(self, type, value, traceback):
+        self.close()
+        
+    def add_row(self, chrom, row):
+        '''
+        Add row to jcnt file under the chrom table. Row should be compatible with storage in _JointCountsIndexTable.
+        
+        For example
+        
+        [12345, 'A', 'C', 'C', 100, 0, 100, 100]
+        '''        
+        if chrom not in self._row_buffer:
+            self._row_buffer[chrom] = []
+        
+        self._row_buffer[chrom].append(row)
+        self._buffer_size += 1
+        
+        if self._buffer_size >= self._max_buffer_size:
+            self._write_buffer()
+            
+    def close(self):
+        '''
+        Must be called when done if the class not used as context manager in with block.
+        ''' 
+        self._write_buffer()
+        self._file_handle.close()
+        
+    def _write_buffer(self):
+        for chrom in self._row_buffer:
+            rows = self._row_buffer[chrom]
+            self._file_handle.add_rows_to_table(chrom, rows)
+            
+        self._row_buffer = {}
+        self._buffer_size = 0
+    
+class _JointCountsFile:
+    '''
+    Class representing a joint counts (jcnt) formated file. Should only be accessed using JointCountsReader and
+    JointCountsWriter classes.
+    
+    Any access to the underlying HDF5 file hierachy should be placed here.
+    '''
+    def __init__(self, file_name, file_mode, compression_level=1, compression_lib='zlib'):
         '''
         For compatibility it is recommended the compression values are left at defaults.
         
@@ -26,152 +143,76 @@ class JointCountsFile:
         compression_level -- Level of compression to use from 1 to 9
         compression_lib -- Compression library to use see PyTables docs for option.
         '''
-        compression_filters = Filters( complevel=compression_level, complib=compression_lib )
+        compression_filters = Filters(complevel=compression_level, complib=compression_lib)
 
         if file_mode == "w":
-            self._file_handle = openFile( file_name, file_mode, filters=compression_filters )
+            self._file_handle = openFile(file_name, file_mode, filters=compression_filters)
             
-            self._file_handle.setNodeAttr( '/', 'creation_date', time.ctime() )
+            self._file_handle.setNodeAttr('/', 'creation_date', time.ctime())
         else:
-            self._file_handle = openFile( file_name, file_mode )
+            self._file_handle = openFile(file_name, file_mode)
 
-        self.entries = self._init_entries()
+        self._init_entries()
 
-        self._chr_tables = self._init_chr_tables()
+        self._init_chrom_tables()
+                   
+    def add_rows_to_table(self, chrom, rows):
+        '''
+        Add rows to table chrom.
+        '''
+        table = self._get_chrom_table(chrom)
     
-    def add_rows( self, chr_name, rows ):
-        table = self._get_chr_table( chr_name )
-        
-        table.append( rows )
+        table.append(rows)
         table.flush()
-        
-    def get_table( self, chr_name ):
-        return self._get_chr_table( chr_name )
-    
-    def get_table_size( self, chr_name ):
-        table = self._get_chr_table( chr_name )
-        
-        return table.nrows
-    
-    def close( self ):
-        self._file_handle.close()
 
-    def _get_chr_table( self, chr_name ):
+    def get_table(self, chrom):
         '''
-        Get a counts table for a chromosome.
-        
-        Fetch the table if it exists otherwise create it.
-        
-        Arguments:
-        chr_name -- Name of table to fetch.
-        
-        Return:
-        chr_table -- A counts table object. See BinomialCountsTable for columns.
+        Get table chrom.
         '''
-        if chr_name in self._chr_tables:
-            chr_table = self._chr_tables[chr_name]
+        return self._get_chrom_table(chrom)
+        
+    def close(self):
+        self._file_handle.close()        
+
+    def _get_chrom_table(self, chr_name):
+        if chr_name in self._chrom_tables:
+            chrom_table = self._chrom_tables[chr_name]
         else:
-            chr_table = self._file_handle.createTable( self._file_handle.root, chr_name, JointCountsIndexTable )
+            chrom_table = self._file_handle.createTable(self._file_handle.root, chr_name, _JointCountsIndexTable)
 
-            self._chr_tables[chr_name] = chr_table
+            self._chrom_tables[chr_name] = chrom_table
 
-        return chr_table
+        return chrom_table
 
-    def _init_entries( self ):
-        '''
-        Build the initial list of chromosomes in table.
-        '''
+    def _init_entries(self):
         entries = set()
 
-        for table in self._file_handle.iterNodes( where=self._file_handle.root ):
-            entries.add( table._v_name )
+        for table in self._file_handle.iterNodes(where=self._file_handle.root):
+            entries.add(table._v_name)
 
-        return entries
+        self.entries = entries
 
-    def _init_chr_tables( self ):
-        chr_tables = {}
+    def _init_chrom_tables(self):
+        chrom_tables = {}
 
         for chr_name in self.entries:
-            chr_tables[chr_name] = self._file_handle.getNode( self._file_handle.root, chr_name )
+            chrom_tables[chr_name] = self._file_handle.getNode(self._file_handle.root, chr_name)
 
-        return chr_tables
+        self._chrom_tables = chrom_tables
 
-class JointCountsReader:
-    '''
-    Helper class to simpilfy reading jcnt files.
-    '''
-    def __init__( self, file_name ):
-        '''
-        Arguments:
-        file_name -- Path to joint counts file to be read.
-        '''
-        self._file_handle = JointCountsFile( file_name, 'r' )
-        
-    def close( self ):
-        '''
-        Should be called when reading the file.
-        '''
-        self._file_handle.close()
-    
-    def get_chr_list( self ):
-        return self._file_handle.entries
-    
-    def get_counts( self, chr_name=None ):
-        if chr_name is None:
-            counts = []
-            
-            for chr_name in sorted( self.get_chr_list() ):
-                table = self._file_handle.get_table( chr_name )
-                
-                counts_cols = np.column_stack( [
-                                                table.col('normal_counts_a'), 
-                                                table.col('normal_counts_b'), 
-                                                table.col('tumour_counts_a'), 
-                                                table.col('tumour_counts_b')
-                                                ] )
-                    
-                counts.append( counts_cols )
-                
-            counts = np.vstack( counts )
-        else:
-            table = self._file_handle.get_table( chr_name )
-                
-            counts = np.column_stack( [
-                                        table.col('normal_counts_a'), 
-                                        table.col('normal_counts_b'), 
-                                        table.col('tumour_counts_a'), 
-                                        table.col('tumour_counts_b')
-                                        ] )
-        
-        return counts
-    
-    def get_chr_size( self, chr_name ):
-        return self._file_handle.get_table_size( chr_name )
-    
-    def get_data_set_size( self ):
-        data_set_size = 0
-        
-        for chr_name in self.get_chr_list():
-            data_set_size += self._file_handle.get_table_size( chr_name )
-            
-        return data_set_size
-    
-    def get_table( self, chr_name ):
-        return self._file_handle.get_table( chr_name )
+class _JointCountsIndexTable(IsDescription):
+    position = UInt32Col(pos=0)
 
-class JointCountsIndexTable( IsDescription ):
-    position = UInt32Col( pos=0 )
+    ref_base = StringCol(itemsize=1, pos=1)
 
-    ref_base = StringCol( itemsize=1, pos=1 )
+    normal_base = StringCol(itemsize=1, pos=2)
 
-    normal_base = StringCol( itemsize=1, pos=2 )
+    tumour_base = StringCol(itemsize=1, pos=3)
 
-    tumour_base = StringCol( itemsize=1, pos=3 )
-
-    normal_counts_a = UInt32Col( pos=4 )
+    normal_counts_a = UInt32Col(pos=4)
     
-    normal_counts_b = UInt32Col( pos=5 )
+    normal_counts_b = UInt32Col(pos=5)
     
-    tumour_counts_a = UInt32Col( pos=6 )
+    tumour_counts_a = UInt32Col(pos=6)
     
-    tumour_counts_b = UInt32Col( pos=7 )
+    tumour_counts_b = UInt32Col(pos=7)

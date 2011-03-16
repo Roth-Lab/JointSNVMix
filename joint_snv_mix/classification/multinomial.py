@@ -54,7 +54,7 @@ class MultinomialModelRunner(ModelRunner):
         counts = self.reader.get_counts(chr_name)
         jcnt_rows = self.reader.get_table(chr_name)
         
-        end = self.reader.get_chr_size(chr_name)
+        end = self.reader.get_number_of_table_rows(chr_name)
 
         n = int(1e5)
         start = 0

@@ -37,7 +37,7 @@ class MultinomialCountsFile:
 
         self.entries = self._init_entries()
 
-        self._chr_tables = self._init_chr_tables()
+        self._chrom_tables = self._init_chr_tables()
     
     def add_rows( self, chr_name, rows ):
         table = self._get_chr_table( chr_name )
@@ -75,12 +75,12 @@ class MultinomialCountsFile:
         Return:
         chr_table -- A counts table object. See BinomialCountsTable for columns.
         '''
-        if chr_name in self._chr_tables:
-            chr_table = self._chr_tables[chr_name]
+        if chr_name in self._chrom_tables:
+            chr_table = self._chrom_tables[chr_name]
         else:
             chr_table = self._file_handle.createTable( self._file_handle.root, chr_name, MultinomialCountsIndexTable )
 
-            self._chr_tables[chr_name] = chr_table
+            self._chrom_tables[chr_name] = chr_table
 
         return chr_table
 
