@@ -81,6 +81,14 @@ class BinaryTable(object):
         ''' 
         pass
     
+    def read(self):
+        '''
+        Should return the entire table read into memory.
+        '''
+        pass
+
+class BinaryTableRow(object):
+    
 class BinaryFile(object):
     '''
     Class representing a HDF5 file.
