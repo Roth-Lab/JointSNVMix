@@ -10,9 +10,10 @@ import numpy as np
 from fisher import pvalue_npy
 
 from joint_snv_mix import constants
-from joint_snv_mix.classification.data import JointData
+
 from joint_snv_mix.file_formats.jcnt import JointCountsReader
 
+from joint_snv_mix.classification.utils.data import JointData
 
 def run_fisher(args):            
     if args.model == "joint":
@@ -98,15 +99,16 @@ class JointFisherRunner(FisherRunner):
 # Models
 #=======================================================================================================================
 class FisherModel(object):
-    def __init__(self, args):
+    def __init__(self, p_value_threshold=0.05, base_line_error=0.001,
+                 min_var_freq=0.1, min_hom_freq=0.9, min_var_depth=4):
         
-        self.p_value_threshold = args.p_value_threshold
+        self.p_value_threshold = p_value_threshold
         
-        self.base_line_error = args.base_line_error
+        self.base_line_error = base_line_error
         
-        self.min_var_freq = args.min_var_freq
-        self.min_hom_freq = args.min_hom_freq
-        self.min_var_depth = args.min_var_depth
+        self.min_var_freq = min_var_freq
+        self.min_hom_freq = min_hom_freq
+        self.min_var_depth = min_var_depth
         
     def classify(self, data):
         genotypes = self._call_genotypes(data)
@@ -134,10 +136,12 @@ class FisherModel(object):
         expected_a = np.asarray(expected_a, dtype=np.uint)
         expected_b = np.asarray(expected_b, dtype=np.uint)
         
-        left_tail, right_tail, two_tail = pvalue_npy(expected_a,
-                                                      expected_b,
-                                                      a,
-                                                      b)
+        left_tail, right_tail, two_tail = pvalue_npy(
+                                                     expected_a,
+                                                     expected_b,
+                                                     a,
+                                                     b
+                                                     )
         
         return right_tail
 

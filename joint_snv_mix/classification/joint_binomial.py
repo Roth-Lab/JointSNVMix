@@ -1,9 +1,7 @@
-from joint_snv_mix.classification.base import EMModel, EMModelTrainer, EMPosterior, EMLowerBound
-from joint_snv_mix.classification.joint import JointLatentVariables, JointModelPriorParser, JointParameterParser
-from joint_snv_mix.classification.subtractive import get_joint_log_likelihoods
-from joint_snv_mix.classification.utils.log_pdf import log_beta_pdf, log_binomial_likelihood
-import joint_snv_mix.constants as constants
-import numpy as np
+from joint_snv_mix.classification.base import *
+from joint_snv_mix.classification.joint import *
+
+from joint_snv_mix.classification.utils.log_pdf import log_beta_pdf, log_binomial_likelihood, get_joint_log_likelihoods
 
 class JointBinomialRunner(JointModelRunner):
     def __init__(self):
