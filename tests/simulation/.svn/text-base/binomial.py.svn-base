@@ -1,0 +1,71 @@
+'''
+Created on 2010-11-18
+
+@author: Andrew Roth
+'''
+import math
+import random
+
+import numpy as np
+
+from scipy.stats import binom, poisson
+
+def draw_noisy_joint_sample( parameters, n, mean_depth, noise_freq ):
+    sample, labels = draw_joint_sample( parameters, n, mean_depth )
+    
+    n_noise = int( math.floor( noise_freq * n ) )
+    
+    indices = random.sample( range( n ), n_noise )
+    
+    sample[indices] = draw_noise( n_noise, mean_depth/2 )
+    labels[indices] = -1
+    
+    return sample, labels
+
+def draw_noise( n, mean_depth ):
+    x = np.random.randint( 1, mean_depth, size=( n, 4 ) )
+    
+    return x
+    
+def draw_joint_sample( parameters, n, mean_depth ):    
+    class_params = []
+    
+    for i in range( 3 ):
+        for j in range( 3 ):
+            class_params.append( [ 
+                                 parameters['normal']['mu'][i], parameters['tumour']['mu'][j] 
+                                 ] )
+    
+    multinomial_draw = np.random.multinomial( 1, parameters['pi'], n )
+
+    labels = np.argmax( multinomial_draw == 1, axis=1 )
+    
+    a_b = []
+
+    for label in labels:
+        a_b.append( class_params[label] )
+    
+    a_b = np.array( a_b )
+
+    x_N = draw_binomial_sample( a_b[:, 0], mean_depth, n )
+    x_T = draw_binomial_sample( a_b[:, 1], mean_depth, n )
+        
+    x = np.hstack( ( x_N, x_T ) )
+    
+    return x, labels
+
+def draw_binomial_sample( mu, mean_depth, n ):
+    d = poisson.rvs( mean_depth, size=n )
+    
+    while np.any( d == 0 ):
+        n = np.where( d == 0 )[0].size
+        
+        d[d == 0] = poisson.rvs( mean_depth, size=n )
+    
+    a = binom.rvs( d, mu )
+    
+    b = d - a
+    
+    x = np.column_stack( ( a, b ) )
+    
+    return x

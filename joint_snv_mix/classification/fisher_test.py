@@ -197,33 +197,9 @@ class IndependentFisherModel(FisherModel):
     def _call_joint_genotypes(self, data, genotypes):
         normal = genotypes['normal']
         tumour = genotypes['tumour']
-                
-        normal_aa = (normal == 0)
-        normal_ab = (normal == 1)
-        normal_bb = (normal == 2)
-            
-        normal_var = np.logical_or(normal_ab, normal_bb)
-        
-        tumour_aa = (tumour == 0)
-        tumour_ab = (tumour == 1)
-        tumour_bb = (tumour == 2)
-        
-        tumour_var = np.logical_or(tumour_ab, tumour_bb)
-        tumour_hom = np.logical_and(tumour_aa, tumour_bb)
-        
-        reference = np.logical_and(normal_aa, tumour_aa)
-        germline = np.logical_and(normal_var, tumour_var)
-        somatic = np.logical_and(normal_aa, tumour_var)
-        loh = np.logical_and(normal_ab, tumour_hom)
-        
-        
-        n = normal_aa.size
-        joint_genotypes = 4 * np.ones((n,))
-        
-        joint_genotypes[reference] = 0
-        joint_genotypes[germline] = 1
-        joint_genotypes[somatic] = 2
-        joint_genotypes[loh] = 3
+
+        joint_genotypes = 3 * normal + tumour
+        joint_genotypes = np.asarray(joint_genotypes, dtype=np.int)
         
         return joint_genotypes
 
@@ -264,7 +240,7 @@ class JointFisherModel(FisherModel):
         somatic = np.logical_and(normal_aa, significant_non_match)
         loh = np.logical_and(normal_ab, significant_non_match)
         
-        uknown = np.logical_and(normal_bb, significant_non_match)
+        unknown = np.logical_and(normal_bb, significant_non_match)
         
         non_significant_p_values = np.logical_not(significant_p_values)
         non_significant_non_match = np.logical_and(non_match, non_significant_p_values)        
@@ -277,6 +253,6 @@ class JointFisherModel(FisherModel):
         joint_genotypes[germline] = 1
         joint_genotypes[somatic] = 2
         joint_genotypes[loh] = 3
-        joint_genotypes[uknown] = 4
+        joint_genotypes[unknown] = 4
         
         return joint_genotypes
