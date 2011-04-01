@@ -3,6 +3,14 @@ Created on 2011-03-31
 
 @author: Andrew Roth
 '''
+import numpy as np
+
+from scipy.cluster.vq import kmeans2
+
+from joint_snv_mix.classification.base import *
+
+from joint_snv_mix.classification.utils.data import JointData
+
 class JointModelRunner(ModelRunner):
     def _train(self, args):        
         if args.subsample_size > 0:

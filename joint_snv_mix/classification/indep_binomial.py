@@ -2,11 +2,15 @@
 The independent binomial paired data classifier. This is equivalent to using the SNVMix1 model on the tumour normal pair
 and then multiplying the probabilities to get the joint genotype probabilities.
 
-
 Created on 2011-03-31
 
 @author: Andrew Roth
 '''
+from joint_snv_mix.classification.base import *
+from joint_snv_mix.classification.indep import *
+
+from joint_snv_mix.classification.utils.log_pdf import log_beta_pdf, log_binomial_likelihood
+
 class IndependentBinomialRunner(IndependentModelRunner):
     def __init__(self):
         self.model = IndependentBinomialModel()

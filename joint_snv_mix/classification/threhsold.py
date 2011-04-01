@@ -7,7 +7,7 @@ import csv
 import numpy as np
 
 from joint_snv_mix import constants
-from joint_snv_mix.classification.data import JointData
+from joint_snv_mix.classification.utils.data import JointData
 from joint_snv_mix.file_formats.jcnt import JointCountsReader
 
 def run_threshold(args):
