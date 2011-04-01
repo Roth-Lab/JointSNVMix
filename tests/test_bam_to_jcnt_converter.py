@@ -120,10 +120,7 @@ class Test(unittest.TestCase):
                 self.assertEqual(entry[4], 3)
                 self.assertEqual(entry[5], 0)
                 self.assertEqual(entry[6], 2)
-                self.assertEqual(entry[7], 0)
-                
-            
-        
+                self.assertEqual(entry[7], 0)        
 
 class BamFileFake:
     def __init__(self):

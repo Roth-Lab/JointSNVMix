@@ -15,14 +15,14 @@ from joint_snv_mix import constants
 #=======================================================================================================================
 # Abstract Models
 #=======================================================================================================================
-class EMLowerBound( object ):
-    def __init__( self, data, priors ):                
+class EMLowerBound(object):
+    def __init__(self, data, priors):                
         self.priors = priors
         self.data = data
         
         self.log_likelihood_func = None
 
-    def get_lower_bound( self, parameters ):
+    def get_lower_bound(self, parameters):
         self.parameters = parameters
         
         log_likelihood = self._get_log_likelihood()
@@ -35,35 +35,35 @@ class EMLowerBound( object ):
 
         return lower_bound
     
-    def _get_log_likelihood( self ):
-        log_likelihoods = self.log_likelihood_func( self.data, self.parameters )
+    def _get_log_likelihood(self):
+        log_likelihoods = self.log_likelihood_func(self.data, self.parameters)
         
-        log_likelihood = np.logaddexp.reduce( log_likelihoods, axis=1 ).sum()
+        log_likelihood = np.logaddexp.reduce(log_likelihoods, axis=1).sum()
 
         return log_likelihood
 
-    def _get_log_mix_weight_prior( self ):
+    def _get_log_mix_weight_prior(self):
         pi = self.parameters['pi']
         kappa = self.priors['kappa']
         
-        log_prior = log_dirichlet_pdf( pi, kappa )
+        log_prior = log_dirichlet_pdf(pi, kappa)
         log_prior = log_prior.sum()
 
         return log_prior
 
-    def _get_log_density_parameters_prior( self ):
+    def _get_log_density_parameters_prior(self):
         raise NotImplemented
     
 #=======================================================================================================================
 # Independent Models
 #=======================================================================================================================
-class IndependentBetaBinomialLowerBound( EMLowerBound ):
-    def __init__( self, data, priors ):  
-        EMLowerBound.__init__( self, data, priors )
+class IndependentBetaBinomialLowerBound(EMLowerBound):
+    def __init__(self, data, priors):  
+        EMLowerBound.__init__(self, data, priors)
         
         self.log_likelihood_func = independent_beta_binomial_log_likelihood
     
-    def _get_log_density_parameters_prior( self ):
+    def _get_log_density_parameters_prior(self):
         alpha = self.parameters['alpha']
         beta = self.parameters['beta']
             
@@ -73,18 +73,18 @@ class IndependentBetaBinomialLowerBound( EMLowerBound ):
         precision_priors = self.priors['precision']
         location_priors = self.priors['location']
             
-        precision_term = np.sum( log_gamma_pdf( s, precision_priors['shape'], precision_priors['scale'] ) )
-        location_term = np.sum( log_beta_pdf( mu, location_priors['alpha'], location_priors['beta'] ) )
+        precision_term = np.sum(log_gamma_pdf(s, precision_priors['shape'], precision_priors['scale']))
+        location_term = np.sum(log_beta_pdf(mu, location_priors['alpha'], location_priors['beta']))
                 
         return precision_term + location_term
     
-class IndependenBinomialLowerBound( EMLowerBound ):
-    def __init__( self, data, priors ):  
-        EMLowerBound.__init__( self, data, priors )
+class IndependenBinomialLowerBound(EMLowerBound):
+    def __init__(self, data, priors):  
+        EMLowerBound.__init__(self, data, priors)
         
         self.log_likelihood_func = independent_binomial_log_likelihood
     
-    def _get_log_density_parameters_prior( self ):
+    def _get_log_density_parameters_prior(self):
         log_prior = 0.
             
         mu = self.parameters['mu']
@@ -92,7 +92,7 @@ class IndependenBinomialLowerBound( EMLowerBound ):
         alpha = self.priors['mu']['alpha']
         beta = self.priors['mu']['beta']
         
-        log_prior += log_beta_pdf( mu, alpha, beta )
+        log_prior += log_beta_pdf(mu, alpha, beta)
     
         log_prior = log_prior.sum()
 
@@ -101,13 +101,13 @@ class IndependenBinomialLowerBound( EMLowerBound ):
 #=======================================================================================================================
 # Joint Models
 #=======================================================================================================================
-class JointBetaBinomialLowerBound( EMLowerBound ):
-    def __init__( self, data, priors ):  
-        EMLowerBound.__init__( self, data, priors )
+class JointBetaBinomialLowerBound(EMLowerBound):
+    def __init__(self, data, priors):  
+        EMLowerBound.__init__(self, data, priors)
         
         self.log_likelihood_func = joint_beta_binomial_log_likelihood
     
-    def _get_log_density_parameters_prior( self ):
+    def _get_log_density_parameters_prior(self):
         precision_term = 0
         location_term = 0
                 
@@ -121,25 +121,25 @@ class JointBetaBinomialLowerBound( EMLowerBound ):
             precision_priors = self.priors[genome]['precision']
             location_priors = self.priors[genome]['location']
             
-            precision_term += np.sum( log_translated_gamma_pdf( s,
+            precision_term += np.sum(log_translated_gamma_pdf(s,
                                                                 precision_priors['shape'],
                                                                 precision_priors['scale'],
                                                                 precision_priors['min'] 
-                                                                ) )
+                                                                ))
             
-            location_term += np.sum( log_beta_pdf( mu,
+            location_term += np.sum(log_beta_pdf(mu,
                                                    location_priors['alpha'],
-                                                   location_priors['beta'] ) )
+                                                   location_priors['beta']))
                 
         return precision_term + location_term
 
-class JointBinomialLowerBound( EMLowerBound ):
-    def __init__( self, data, priors ):  
-        EMLowerBound.__init__( self, data, priors )
+class JointBinomialLowerBound(EMLowerBound):
+    def __init__(self, data, priors):  
+        EMLowerBound.__init__(self, data, priors)
         
         self.log_likelihood_func = joint_binomial_log_likelihood
     
-    def _get_log_density_parameters_prior( self ):
+    def _get_log_density_parameters_prior(self):
         log_prior = 0.
         
         for genome in constants.genomes:
@@ -148,7 +148,7 @@ class JointBinomialLowerBound( EMLowerBound ):
             alpha = self.priors[genome]['mu']['alpha']
             beta = self.priors[genome]['mu']['beta']
             
-            log_prior += log_beta_pdf( mu, alpha, beta )
+            log_prior += log_beta_pdf(mu, alpha, beta)
         
         log_prior = log_prior.sum()
 
@@ -157,20 +157,20 @@ class JointBinomialLowerBound( EMLowerBound ):
 #=======================================================================================================================
 # Multinomial
 #=======================================================================================================================
-class JointMultinomialLowerBound( EMLowerBound ):
-    def __init__( self, data, priors ):  
-        EMLowerBound.__init__( self, data, priors )
+class JointMultinomialLowerBound(EMLowerBound):
+    def __init__(self, data, priors):  
+        EMLowerBound.__init__(self, data, priors)
         
         self.log_likelihood_func = joint_multinomial_log_likelihood
     
-    def _get_log_density_parameters_prior( self ):
+    def _get_log_density_parameters_prior(self):
         log_prior = 0.
         
         for genome in constants.genomes:
             rho = self.parameters[genome]['rho']
             delta = self.priors[genome]['rho']['delta']
             
-            log_prior += log_dirichlet_pdf( rho, delta )
+            log_prior += log_dirichlet_pdf(rho, delta)
         
         log_prior = log_prior.sum()
 
