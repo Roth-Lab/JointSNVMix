@@ -1,0 +1,82 @@
+'''
+Created on 2010-11-18
+
+@author: Andrew Roth
+'''
+import numpy as np
+
+from scipy.stats import beta, binom, poisson
+import math
+import random
+
+def draw_noisy_joint_sample( parameters, n, noise_freq, noise_depth ):   
+    sample, labels = draw_joint_bb_sample( parameters, n )
+    
+    n_noise = int( math.floor( noise_freq * n ) )
+    
+    indices = random.sample( range( n ), n_noise )
+    
+    sample[indices] = draw_noise( n_noise, noise_depth/2 )
+    labels[indices] = -1
+    
+    return sample, labels
+
+def draw_noise( n, mean_depth ):
+    x = np.random.randint( 1, mean_depth, size=( n, 4 ) )
+    
+    return x
+
+def draw_joint_bb_sample( parameters, n ):
+    alpha = parameters['alpha']
+    beta = parameters['beta']
+    pi = parameters['pi']
+    
+    depth = parameters['depth']
+        
+    class_params = []
+    
+    for i in range( 3 ):
+        for j in range( 3 ):
+            
+            
+            class_params.append( [ 
+                                 alpha['normal'][i], beta['normal'][i],
+                                 alpha['tumour'][j], beta['tumour'][j]
+                                 ] )
+            
+    multinomial_draw = np.random.multinomial( 1, pi, n )
+
+    labels = np.argmax( multinomial_draw == 1, axis=1 )
+    
+    a_b = []
+
+    for label in labels:
+        a_b.append( class_params[label] )
+    
+    a_b = np.array( a_b )
+
+    x_N = draw_bb_sample( a_b[:, 0], a_b[:, 1], depth['normal'], n )
+    x_T = draw_bb_sample( a_b[:, 2], a_b[:, 3], depth['tumour'], n )
+        
+    x = np.hstack( ( x_N, x_T ) )
+    
+    return x, labels
+
+def draw_bb_sample( a, b, mean_depth, n ):
+    mu = beta.rvs( a, b )
+    
+    # Do this to avoid zero depth and still keep mean depth.
+    d = poisson.rvs( mean_depth, size=n )
+    
+    while np.any( d == 0 ):
+        n = np.where( d == 0 )[0].size
+        
+        d[d == 0] = poisson.rvs( mean_depth, size=n )
+    
+    a = binom.rvs( d, mu )
+    
+    b = d - a
+    
+    x = np.column_stack( ( a, b ) )
+    
+    return x

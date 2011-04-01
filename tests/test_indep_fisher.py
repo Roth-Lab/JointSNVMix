@@ -7,42 +7,61 @@ import unittest
 
 import numpy as np
 
-from simulation.binomial import draw_easy_sample
+from joint_snv_mix import constants
 from joint_snv_mix.classification.utils.data import JointData
-from joint_snv_mix.classification.fisher import IndependentFisherModel
+from joint_snv_mix.classification.fisher_test import IndependentFisherModel
 
 class Test(unittest.TestCase):
-    def test_classification_error_is_sane(self):
-        sample, labels = draw_easy_sample()
+    def setUp(self):
+        self.counts = np.array([
+                               [   1000, 0, 1000, 0],
+                               [   1000, 0, 500, 500],
+                               [   1000, 0, 0, 1000],
+                               [   500, 500, 1000, 0],
+                               [   500, 500, 500, 500],
+                               [   500, 500, 0, 1000],
+                               [   0, 1000, 1000, 0],
+                               [   0, 1000, 500, 500],
+                               [   0, 1000, 0, 1000],
+                              ])
         
-        marg_labels = self.convert_joint_genotypes_to_marginal_genotypes(labels)
+        self.data = JointData(self.counts)
         
-        data = JointData(sample)
+        self.labels = np.arange(9)
         
-        model = IndependentFisherModel()
-
-        predicted_labels = model.classify(data)
+        self.model = IndependentFisherModel()
+    
+    def test_easy_classification(self):
+        '''
+        Test simple calls that all methods should make correctly.
+        '''
+        predicted_labels = self.model.classify(self.data)
+                
+        for pred_label, label in zip(predicted_labels, self.labels):
+            err_str = "Genotype {0} is predicted as {1}.".format(constants.joint_genotypes[label],
+                                                                 constants.joint_genotypes[pred_label])
+            
+            self.assertEqual(pred_label, label, err_str)
+            
+    def test_noisy_classification(self):
+        '''
+        Test simple calls with a small amount of noise added.
+        '''
+        min_noise = 0
+        max_noise = 30
         
+        noise = np.random.randint(min_noise, max_noise, size=(9, 4))
         
-        self.assertEqual(predicted_labels == 2, marg_labels == 2)
+        counts = self.counts + noise
+        data = JointData(counts)
         
-    def convert_joint_genotypes_to_marginal_genotypes(self, labels):
-        marginal_labels = np.zeros(labels.shape)
-        
-        ref_indices = (labels == 0)
-        som_indices = np.logical_or(labels == 1, labels == 2)
-        ger_indices = np.logical_or(labels == 4, labels == 8)
-        loh_indices = np.logical_or(labels == 3, labels == 5)
-        unk_indices = np.logical_or(labels == 6, labels == 7)
-        
-        marginal_labels[ref_indices] = 0
-        marginal_labels[ger_indices] = 1
-        marginal_labels[som_indices] = 2
-        marginal_labels[loh_indices] = 3
-        marginal_labels[unk_indices] = 4
-        
-        return marginal_labels
-
+        predicted_labels = self.model.classify(data)
+                
+        for pred_label, label in zip(predicted_labels, self.labels):
+            err_str = "Genotype {0} is predicted as {1}.".format(constants.joint_genotypes[label],
+                                                                 constants.joint_genotypes[pred_label])
+            
+            self.assertEqual(pred_label, label, err_str)
 
 if __name__ == "__main__":
     #import sys;sys.argv = ['', 'Test.testName']
