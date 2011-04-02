@@ -82,17 +82,18 @@ class ThresholdRunner(object):
 # Model
 #=======================================================================================================================
 class ThresholdModel(object):
-    def __init__(self, args):        
+    def __init__(self, normal_threshold=0.1, tumour_threshold=0.1, min_var_depth=4):        
         self.threshold = {}
-        self.threshold['normal'] = args.normal_threshold
-        self.threshold['tumour'] = args.tumour_threshold
+        self.threshold['normal'] = normal_threshold
+        self.threshold['tumour'] = tumour_threshold
 
-        self.min_var_depth = args.min_var_depth
+        self.min_var_depth = min_var_depth
     
     def classify(self, data):
         genotypes = self._call_genotypes(data)
         
         joint_genotypes = self._call_joint_genotypes(data, genotypes)
+        joint_genotypes = np.asarray(joint_genotypes, dtype=np.int)
         
         return joint_genotypes
     
