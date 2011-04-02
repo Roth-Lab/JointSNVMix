@@ -11,9 +11,9 @@ from joint_snv_mix.classification.indep import *
 
 from joint_snv_mix.classification.utils.log_pdf import log_beta_pdf, log_binomial_likelihood
 
-class IndependentBinomialRunner(IndependentModelRunner):
+class IndependentBinomialRunner(ModelRunner):
     def __init__(self):
-        self.model = IndependentBinomialModel()
+        self.model = PairedIndependentModel(IndependentBinomialModel)
         self.priors_parser = IndependentBinomialPriorParser()
         self.parameter_parser = IndependentBinomialParameterParser()
 

@@ -11,49 +11,6 @@ from joint_snv_mix.classification.base import *
 
 from joint_snv_mix.classification.utils.data import JointData
 
-class JointModelRunner(ModelRunner):
-    def _train(self, args):        
-        if args.subsample_size > 0:
-            counts = self._subsample(args.subsample_size)
-        else:
-            counts = self.reader.get_counts()
-                   
-        self.priors_parser.load_from_file(args.priors_file)
-        self.priors = self.priors_parser.to_dict()
-        
-        self._write_priors()
-        
-        data = JointData(counts)
-        
-        self.parameters = self.model.train(data,
-                                           self.priors,
-                                           args.max_iters,
-                                           args.convergence_threshold)
-
-    def _classify_chromosome(self, chr_name):
-        counts = self.reader.get_counts(chr_name)
-        jcnt_table = self.reader.get_table(chr_name)
-        
-        end = self.reader.get_number_of_table_rows(chr_name)
-
-        n = int(1e5)
-        start = 0
-        stop = min(n, end)
-        
-
-        while start < end:
-            sub_counts = counts[start:stop]
-            sub_rows = jcnt_table[start:stop]
-                              
-            data = JointData(sub_counts)            
-                
-            resp = self.model.classify(data, self.parameters)
-        
-            self.writer.write_data(chr_name, sub_rows, resp)
-            
-            start = stop
-            stop = min(stop + n, end)
-
 class JointLatentVariables(EMLatentVariables):
     def _init_responsibilities(self, data):
         '''

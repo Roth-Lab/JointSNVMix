@@ -117,12 +117,9 @@ class FisherModel(object):
         
         return joint_genotypes
     
-    def _get_significance(self, a, b, expected_freq):
+    def _get_right_tail_significance(self, a, b, expected_freq):
         '''
-        Compute the p-value where the null hypothesis is that b was obtained due to error.
-        
-        a, b : numpy array of counts
-        base_line_error : expected error rate.
+        Compute p-value of a and b given null hypothesis b is due to random error with expected_freq as error rate.
         '''
         d = a + b
         
@@ -132,18 +129,33 @@ class FisherModel(object):
         
         # Downcast to uint to work with fisher exact test function.
         a = np.asarray(a, dtype=np.uint)
-        b = np.asarray(b, dtype=np.uint)
+        b = np.asarray(b, dtype=np.uint)        
         expected_a = np.asarray(expected_a, dtype=np.uint)
         expected_b = np.asarray(expected_b, dtype=np.uint)
         
-        left_tail, right_tail, two_tail = pvalue_npy(
-                                                     expected_a,
-                                                     expected_b,
-                                                     a,
-                                                     b
-                                                     )
+        left_tail, right_tail, two_tail = self._get_pvalues(expected_a, expected_b, a, b)
         
         return right_tail
+    
+    def _get_two_tail_significance(self, a_N, b_N, a_T, b_T):
+        left_tail, right_tail, two_tail = self._get_pvalues(a_N, b_N, a_T, b_T)
+        
+        return two_tail
+        
+    def _get_pvalues(self, a_1, b_1, a_2, b_2):
+        a_1 = np.asarray(a_1, dtype=np.uint)
+        b_1 = np.asarray(b_1, dtype=np.uint)        
+        a_2 = np.asarray(a_2, dtype=np.uint)
+        b_2 = np.asarray(b_2, dtype=np.uint)
+        
+        left_tail, right_tail, two_tail = pvalue_npy(
+                                                     a_1,
+                                                     b_1,
+                                                     a_2,
+                                                     b_2
+                                                     )
+        
+        return left_tail, right_tail, two_tail
 
     def _call_joint_genotypes(self, data, genotypes):
         '''
@@ -161,7 +173,7 @@ class FisherModel(object):
             b = data.b[genome]
             d = np.asanyarray(a + b, dtype=np.float)
                         
-            p_values = self._get_significance(a, b, self.base_line_error)
+            p_values = self._get_right_tail_significance(a, b, self.base_line_error)
                         
             below_threshold = (p_values <= self.p_value_threshold)
             
@@ -208,51 +220,25 @@ class JointFisherModel(FisherModel):
         normal = genotypes['normal']
         tumour = genotypes['tumour']
         
-        normal_aa = (normal == 0)
-        normal_ab = (normal == 1)
-        normal_bb = (normal == 2)
-            
-        normal_var = np.logical_or(normal_ab, normal_bb)
-        
-        tumour_aa = (tumour == 0)
-        tumour_ab = (tumour == 1)
-        tumour_bb = (tumour == 2)
-        
-        tumour_var = np.logical_or(tumour_ab, tumour_bb)
-                
-        reference = np.logical_and(normal_aa, tumour_aa)
-        germline = np.logical_and(normal_var, tumour_var)
+        joint_genotypes = 3 * normal + tumour
+        joint_genotypes = np.asarray(joint_genotypes, dtype=np.int)
         
         a_N = data.a['normal']
         b_N = data.b['normal']
-        d_N = np.asanyarray(a_N + b_N, dtype=np.float)      
-        normal_freq = b_N / d_N
-        
         a_T = data.a['tumour']
         b_T = data.b['tumour']
         
-        p_values = self._get_significance(a_T, b_T, normal_freq)
+        # Check if the counts in the tumour are significantly different from normal using two tailed fisher.
+        p_values = self._get_two_tail_significance(a_N, b_N, a_T, b_T)
         
+        # Find places where the called genotypes do not agree in tumour normal and check significance.
         non_match = (normal != tumour)
-        significant_p_values = (p_values <= self.p_value_threshold)        
-        significant_non_match = np.logical_and(non_match, significant_p_values)
+        significant_p_values = (p_values <= self.p_value_threshold)                
+        non_significant_p_values = np.logical_not(significant_p_values)        
+        non_significant_non_match = np.logical_and(non_match, non_significant_p_values)
         
-        somatic = np.logical_and(normal_aa, significant_non_match)
-        loh = np.logical_and(normal_ab, significant_non_match)
-        
-        unknown = np.logical_and(normal_bb, significant_non_match)
-        
-        non_significant_p_values = np.logical_not(significant_p_values)
-        non_significant_non_match = np.logical_and(non_match, non_significant_p_values)        
-        germline = np.logical_or(germline, non_significant_non_match)
-               
-        n = a_N.size
-        joint_genotypes = -1 * np.ones((n,))
-        
-        joint_genotypes[reference] = 0
-        joint_genotypes[germline] = 1
-        joint_genotypes[somatic] = 2
-        joint_genotypes[loh] = 3
-        joint_genotypes[unknown] = 4
+        # Change all calls where genotypes in tumour/normal differ based on independent calls, but whose counts do not
+        # differ significantly to the genotype (AB,AB) i.e. het germline.
+        joint_genotypes[non_significant_non_match] = 4
         
         return joint_genotypes

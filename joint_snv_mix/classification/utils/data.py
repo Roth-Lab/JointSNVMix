@@ -15,19 +15,17 @@ class JointData(object):
         self.b['tumour'] = X[:, 3]
         
         self.nrows = X.shape[0]
+        
+    def get_independent_data(self, genome):
+        return IndependentData(self.a[genome], self.b[genome])
+        
 
 class IndependentData(object):
-    def __init__(self, X, type):
-        if type == 'normal':
-            self.a = X[:, 0]
-            self.b = X[:, 1]
-        elif type == 'tumour':
-            self.a = X[:, 2] 
-            self.b = X[:, 3]
-        else:
-            raise SampleTypeException
+    def __init__(self, a, b):
+        self.a = a
+        self.b = b
         
-        self.nrows = X.shape[0]
+        self.nrows = a.shape[0]
     
 class SampleTypeException(Exception):
     pass

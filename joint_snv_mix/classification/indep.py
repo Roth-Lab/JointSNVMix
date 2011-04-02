@@ -7,82 +7,51 @@ import numpy as np
 
 from scipy.cluster.vq import kmeans2
 
+from joint_snv_mix import constants
+
 from joint_snv_mix.classification.base import *
 
 from joint_snv_mix.classification.utils.data import IndependentData
 
-class IndependentModelRunner(ModelRunner):
-    def _train(self, args):
-        if args.subsample_size > 0:
-            counts = self._subsample(args.subsample_size)
-        else:
-            counts = self.reader.get_counts()
-                   
-        self.priors_parser.load_from_file(args.priors_file)
-        self.priors = self.priors_parser.to_dict()
+class PairedIndependentModel(object):
+    def __init__(self, model):
+        self.model = model
         
-        self._write_priors()
+    def train(self, joint_data, priors, max_iters, tolerance):
+        parameters = {}
+                
+        for genome in constants.genomes:
+            data = joint_data.get_independent_data(genome)
+            
+            parameters[genome] = self.model.train(data, priors[genome], max_iters, tolerance)
         
-        self.parameters = {}
+        return parameters
+            
+    def classify(self, joint_data, parameters):
+        self.resp = {}
         
         for genome in constants.genomes:
-            data = IndependentData(counts, genome)
+            data = joint_data.get_independent_data(genome)
             
-            self.parameters[genome] = self.model.train(data,
-                                                       self.priors[genome],
-                                                       args.max_iters,
-                                                       args.convergence_threshold)
-                                    
-    def _classify_chromosome(self, chr_name):
-        counts = self.reader.get_counts(chr_name)
-        jcnt_table = self.reader.get_table(chr_name)
+            self.resp[genome] = self.model.classify(data, parameters[genome])
         
-        end = self.reader.get_number_of_table_rows(chr_name)
-
-        n = int(1e5)
-        start = 0
-        stop = min(n, end)
+        return self._get_joint_resp()
         
-
-        while start < end:
-            sub_counts = counts[start:stop]
-            sub_rows = jcnt_table[start:stop]
+    def _get_joint_resp(self):
+        joint_resp = []
+        
+        nrows = self.resp['normal'].shape[0]
+        nclass = self.resp['normal'].shape[1]
+        
+        col_shape = (nrows, 1)
+        
+        for i in range(nclass):
+            joint_resp.append(self.resp['normal'][:, i].reshape(col_shape) + self.resp['tumour'])
+        
+        joint_resp = np.hstack(joint_resp)
+        
+        return joint_resp
             
-            indep_resp = {}
-            
-            for genome in constants.genomes:                          
-                data = IndependentData(sub_counts, genome)            
-                
-                indep_resp[genome] = self.model.classify(data, self.parameters[genome])
-            
-            joint_resp = self._get_joint_responsibilities(indep_resp)
-        
-            self.writer.write_data(chr_name, sub_rows, joint_resp)
-            
-            start = stop
-            stop = min(stop + n, end)
-            
-    def _get_joint_responsibilities(self, resp):
-        normal_resp = np.log(resp['normal'])
-        tumour_resp = np.log(resp['tumour'])
-        
-        n = normal_resp.shape[0]
-        
-        nclass_normal = normal_resp.shape[1] 
-        
-        column_shape = (n, 1)
-        
-        log_resp = []
-        
-        for i in range(nclass_normal): 
-            log_resp.append(normal_resp[:, i].reshape(column_shape) + tumour_resp)
-        
-        log_resp = np.hstack(log_resp)
-        
-        resp = np.exp(log_resp)
-        
-        return resp
-
 class IndependentLatenVariables(EMLatentVariables):        
     def _init_responsibilities(self, data):
         a = np.asarray(data.a, dtype=np.float64)

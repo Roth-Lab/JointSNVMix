@@ -3,7 +3,7 @@ from joint_snv_mix.classification.joint import *
 
 from joint_snv_mix.classification.utils.log_pdf import log_beta_pdf, log_binomial_likelihood, get_joint_log_likelihoods
 
-class JointBinomialRunner(JointModelRunner):
+class JointBinomialRunner(ModelRunner):
     def __init__(self):
         self.model = JointBinomialModel()
         self.priors_parser = JointBinomialPriorParser()
