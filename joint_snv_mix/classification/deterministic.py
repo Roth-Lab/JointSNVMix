@@ -1,41 +1,68 @@
 '''
-Created on 2011-02-09
+Created on 2011-02-10
 
 @author: Andrew Roth
 '''
 import csv
-
 import numpy as np
 
 from fisher import pvalue_npy
 
 from joint_snv_mix import constants
-
+from joint_snv_mix.classification.utils.data import JointData
 from joint_snv_mix.file_formats.jcnt import JointCountsReader
 
-from joint_snv_mix.classification.utils.data import JointData
+def run_threshold(args):
+    model = ThresholdModel(
+                           args.normal_threshold,
+                           args.tumour_threshold,
+                           args.min_var_depth
+                           )
 
-def run_fisher(args):            
-    if args.model == "joint":
-        runner = JointFisherRunner(args)
+    runner = DeterministicRunner(model)    
+    runner.run(args.jcnt_file_name, args.tsv_file_name)
+
+def run_fisher(args):
+    if args.model == "independent":
+        model_class = IndependentFisherModel
+    elif args.model == "joint":
+        model_class = JointFisherModel
         
-    elif args.model == "independent":
-        runner = IndependentFisherRunner(args)
-        
-    runner.run(args)
- 
+    model = model_class(
+                        args.p_value_threshold,
+                        args.base_line_error,
+                        args.min_var_freq,
+                        args.min_hom_freq,
+                        args.min_var_depth
+                        ) 
+    
+    runner = DeterministicRunner(model)
+    runner.run(args.jcnt_file_name, args.tsv_file_name)
+
 #=======================================================================================================================
-# Runner Code
+# Runner
 #=======================================================================================================================
-class FisherRunner(object):
-    def __init__(self):
+class DeterministicRunner(object):
+    def __init__(self, model):
+        self.model = model
+                
         self.data_class = JointData
         
-        self.classes = ('Reference', 'Germline', 'Somatic', 'LOH', 'Unknown')
+        self.classes = (
+                        'Reference',
+                        'Somatic',
+                        'Somatic',
+                        'LOH',
+                        'Germline',
+                        'LOH',
+                        'Unknown',
+                        'Unknown',
+                        'Germline'
+                        ) 
     
-    def run(self, args):
-        self.reader = JointCountsReader(args.jcnt_file_name)
-        self.writer = csv.writer(open(args.tsv_file_name, 'w'), delimiter='\t')
+    def run(self, jcnt_file_name, tsv_file_name):
+        self.reader = JointCountsReader(jcnt_file_name)
+        self.writer = csv.writer(open(tsv_file_name, 'w'), delimiter='\t')
         
         chr_list = self.reader.get_table_list()
         
@@ -83,20 +110,67 @@ class FisherRunner(object):
             
             self.writer.writerow(out_row)
 
-class IndependentFisherRunner(FisherRunner):
-    def __init__(self, args):
-        self.model = IndependentFisherModel(args)
-        
-        FisherRunner.__init__(self)
-        
-class JointFisherRunner(FisherRunner):
-    def __init__(self, args):
-        self.model = JointFisherModel(args)
-        
-        FisherRunner.__init__(self)
-
 #=======================================================================================================================
 # Models
+#=======================================================================================================================
+class ThresholdModel(object):
+    def __init__(self, normal_threshold=0.1, tumour_threshold=0.1, min_var_depth=4):        
+        self.threshold = {}
+        self.threshold['normal'] = normal_threshold
+        self.threshold['tumour'] = tumour_threshold
+
+        self.min_var_depth = min_var_depth
+    
+    def classify(self, data):
+        genotypes = self._call_genotypes(data)
+        
+        joint_genotypes = self._call_joint_genotypes(data, genotypes)
+        joint_genotypes = np.asarray(joint_genotypes, dtype=np.int)
+        
+        return joint_genotypes
+    
+    def _call_genotypes(self, data):
+        genotypes = {}
+
+        n = data.a['normal'].size
+        
+        for genome in constants.genomes:
+            a = data.a[genome]
+            b = data.b[genome]
+            d = np.asanyarray(a + b, dtype=np.float)
+            
+            freq = b / d
+            t = self.threshold[genome]
+            
+            ref = (freq < t)
+            
+            het = np.logical_and(t <= freq, freq <= (1 - t))
+            
+            hom = ((1 - t) < freq)
+            
+            genotypes[genome] = -1 * np.ones((n,))
+            
+            genotypes[genome][ref] = 0
+            genotypes[genome][het] = 1
+            genotypes[genome][hom] = 2
+                    
+        return genotypes
+                    
+    def _call_joint_genotypes(self, data, genotypes):
+        normal = genotypes['normal']
+        tumour = genotypes['tumour']
+        
+        joint_genotypes = 3 * normal + tumour
+        
+        b_T = data.b['tumour']
+        
+        # Set low coverage sites to reference.
+        joint_genotypes[b_T < self.min_var_depth] = 0
+
+        return joint_genotypes
+
+#=======================================================================================================================
+# Fisher Models
 #=======================================================================================================================
 class FisherModel(object):
     def __init__(self, p_value_threshold=0.05, base_line_error=0.001,
@@ -142,7 +216,7 @@ class FisherModel(object):
         
         return two_tail
         
-    def _get_pvalues(self, a_1, b_1, a_2, b_2):
+    def _get_pvalues(self, a_1, b_1, a_2, b_2):        
         a_1 = np.asarray(a_1, dtype=np.uint)
         b_1 = np.asarray(b_1, dtype=np.uint)        
         a_2 = np.asarray(a_2, dtype=np.uint)
@@ -158,9 +232,6 @@ class FisherModel(object):
         return left_tail, right_tail, two_tail
 
     def _call_joint_genotypes(self, data, genotypes):
-        '''
-        Return 0 = ref, 1 = germline, 2 = somatic, 3 = loh, 4 = unkown
-        '''
         raise NotImplemented
     
     def _call_genotypes(self, data):
