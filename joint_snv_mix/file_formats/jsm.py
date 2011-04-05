@@ -19,15 +19,30 @@ class JointSnvMixReader:
     def close(self):
         self._file_handle.close()
         
-    def get_rows(self, chr_name):
-        return self._file_handle.get_rows(chr_name)
+    def get_table(self, chr_name):
+        return self._file_handle.get_table(chr_name)
     
     def get_parameters(self):
         return self._file_handle.get_parameters()        
                
 class JointSnvMixWriter:
-    def __init__(self, file_name,):
-        self._file_handle = _JointSnvMixFile(file_name, 'w')
+    '''
+    Class for writing jcnt files.
+    '''
+    def __init__(self, jcnt_file_name):
+        self._file_handle = _JointSnvMixFile(jcnt_file_name, 'w')
+        
+        self._row_buffer = {}
+        self._buffer_size = 0
+        
+        # Max number of rows to buffer before writing to disk.
+        self._max_buffer_size = 100000
+    
+    def __enter__(self):
+        return self
+    
+    def __exit__(self, type, value, traceback):
+        self.close()
         
     def write_priors(self, priors):
         self._file_handle.write_priors(priors)
@@ -35,19 +50,31 @@ class JointSnvMixWriter:
     def write_parameters(self, parameters):
         self._file_handle.write_parameters(parameters)
         
-    def add_row(self, chr_name, jcnt_row):
-        data = []
+    def add_row(self, chrom, row):
+        if chrom not in self._row_buffer:
+            self._row_buffer[chrom] = []
         
-        for jcnt_row, resp in zip(jcnt_rows.tolist(), responsibilities):
-            row = []
-            row.extend(jcnt_row)
-            row.extend(resp)
-            data.append(row)
+        self._row_buffer[chrom].append(row)
+        self._buffer_size += 1
         
-        self._file_handle.write_chr_table(chr_name, data)
+        if self._buffer_size >= self._max_buffer_size:
+            self._write_buffer()
 
     def close(self):
+        '''
+        Must be called when done if the class not used as context manager in with block.
+        ''' 
+        
+        self._write_buffer()
         self._file_handle.close()
+
+    def _write_buffer(self):
+        for chrom in self._row_buffer:
+            rows = self._row_buffer[chrom]
+            self._file_handle.add_rows_to_table(chrom, rows)
+            
+        self._row_buffer = {}
+        self._buffer_size = 0
         
 class _JointSnvMixFile:
     def __init__(self, file_name, file_mode, compression_level=1, compression_lib='zlib'):
@@ -154,7 +181,7 @@ class _JointSnvMixFile:
         
         return responsibilities
     
-    def get_rows(self, chr_name, row_indices=None):
+    def get_table(self, chr_name, row_indices=None):
         table = self._chrom_tables[chr_name]
         
         if row_indices is None:

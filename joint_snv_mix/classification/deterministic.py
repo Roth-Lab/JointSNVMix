@@ -12,33 +12,6 @@ from joint_snv_mix import constants
 from joint_snv_mix.classification.utils.data import JointData
 from joint_snv_mix.file_formats.jcnt import JointCountsReader
 
-def run_threshold(args):
-    model = ThresholdModel(
-                           args.normal_threshold,
-                           args.tumour_threshold,
-                           args.min_var_depth
-                           )
-
-    runner = DeterministicRunner(model)    
-    runner.run(args.jcnt_file_name, args.tsv_file_name)
-
-def run_fisher(args):
-    if args.model == "independent":
-        model_class = IndependentFisherModel
-    elif args.model == "joint":
-        model_class = JointFisherModel
-        
-    model = model_class(
-                        args.p_value_threshold,
-                        args.base_line_error,
-                        args.min_var_freq,
-                        args.min_hom_freq,
-                        args.min_var_depth
-                        ) 
-    
-    runner = DeterministicRunner(model)
-    runner.run(args.jcnt_file_name, args.tsv_file_name)
-
 #=======================================================================================================================
 # Runner
 #=======================================================================================================================
@@ -62,7 +35,7 @@ class DeterministicRunner(object):
     
     def run(self, jcnt_file_name, tsv_file_name):
         self.reader = JointCountsReader(jcnt_file_name)
-        self.writer = csv.writer(open(tsv_file_name, 'w'), delimiter='\t')
+        self._init_writer(tsv_file_name)        
         
         chr_list = self.reader.get_table_list()
         
@@ -94,21 +67,43 @@ class DeterministicRunner(object):
             start = stop
             stop = min(stop + n, end)
 
-    def _write_rows(self, chr_name, rows, labels):
+    def _write_rows(self, chr_name, rows, labels):       
         for i, row in enumerate(rows):
             out_row = [chr_name]
+                        
             out_row.extend(row)
             
             label = int(labels[i])
             
-            class_name = self.classes[label]
-                        
-            out_row.append(class_name)
+            marginal_genotype = self.classes[label]                                    
+            out_row.append(marginal_genotype)
             
-            if class_name == 'Somatic':
+            joint_genotype = "_".join(constants.joint_genotypes[label])
+            out_row.append(joint_genotype)
+            
+            if marginal_genotype == 'Somatic':
                 print out_row
             
             self.writer.writerow(out_row)
+    
+    def _init_writer(self, tsv_file_name):
+        fields = [
+                  'chrom',
+                  'position',
+                  'ref_base',
+                  'normal_var_base',
+                  'tumour_var_base',
+                  'normal_counts_a',
+                  'normal_counts_b',
+                  'tumour_counts_a',
+                  'tumour_counts_b',
+                  'marginal_genotype',
+                  'joint_genotype'
+                  ]
+        
+        self.writer = csv.writer(open(tsv_file_name, 'w'), delimiter='\t')
+        
+        self.writer.writerow(fields)
 
 #=======================================================================================================================
 # Models

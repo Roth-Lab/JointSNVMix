@@ -5,7 +5,7 @@ Created on 2011-03-31
 
 @author: Andrew Roth
 '''
-import ConfigParser
+from ConfigParser import ConfigParser
 import math
 import random
 
@@ -20,10 +20,15 @@ from joint_snv_mix.classification.utils.normalise import log_space_normalise_row
 from joint_snv_mix.classification.utils.log_pdf import log_dirichlet_pdf
 from joint_snv_mix.classification.utils.data import JointData
 
-class ModelRunner(object):
+class ProbabilisticModelRunner(object):
     '''
-    Class for running a model for paired data analysis.
+    Class for running a probabilistic model for paired data analysis.
     '''
+    def __init__(self, model, priors_parser, parameters_parser):
+        self.model = model
+        self.priors_parser = priors_parser
+        self.parameter_parser = parameters_parser
+    
     def run(self, args):
         '''
         Run a full analysis from arguments.
@@ -141,8 +146,7 @@ class EMModel(object):
     def __init__(self):
         self.trainer_class = None
         self.log_likelihood_func = None
-        
-    
+            
     def train(self, data, priors, max_iters, tolerance):
         '''
         Train the model using EM to find the MAP estimate for parameters.
@@ -158,8 +162,7 @@ class EMModel(object):
     def classify(self, data, parameters):
         '''
         Classify the given data based on the parameters passed in.
-        '''
-        
+        '''        
         log_responsibilities = self.log_likelihood_func(data, parameters)
         
         responsibilities = log_space_normalise_rows(log_responsibilities)
