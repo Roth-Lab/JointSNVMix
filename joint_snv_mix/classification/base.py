@@ -7,7 +7,6 @@ Created on 2011-03-31
 '''
 from ConfigParser import ConfigParser
 import math
-import random
 
 import numpy as np
 
@@ -79,23 +78,31 @@ class ProbabilisticModelRunner(object):
         
         end = self.reader.get_number_of_table_rows(chrom)
 
-        n = int(1e5)
+        n = int(1e6)
         start = 0
         stop = min(n, end)
         
         # Classify using blocking for speedup.
         while start < end:
             sub_counts = counts[start:stop]
-            sub_jsm_rows = jcnt_table[start:stop]
+            sub_jcnt_rows = jcnt_table[start:stop]
                               
             data = JointData(sub_counts)            
                 
             resp = self.model.classify(data, self.parameters)
             
-            jsm_rows = np.hstack((sub_jsm_rows, resp))
-            
-            for jsm_row in jsm_rows:
+            sub_jcnt_rows = sub_jcnt_rows.tolist()
+            resp = resp.tolist()
+
+            for jcnt_row, probs in zip(sub_jcnt_rows, resp):
+                jsm_row = []
+                jsm_row.extend(jcnt_row)
+                jsm_row.extend(probs)
+                
                 self.writer.add_row(chrom, jsm_row)
+            
+            print "Classifying row {0} out of {1} for chromosome {2}".format(stop, end, chrom)
+            print "\t".join([str(x) for x in jsm_row])
             
             start = stop
             stop = min(stop + n, end)
