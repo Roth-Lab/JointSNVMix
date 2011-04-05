@@ -210,7 +210,7 @@ class _JointSnvMixFile:
         if chrom in self._chrom_tables:
             chrom_table = self._chrom_tables[chrom]
         else:
-            chrom_table = self._file_handle.createTable(self._file_handle.root, chrom, _JointSnvMixTable)
+            chrom_table = self._file_handle.createTable(self._data_group, chrom, _JointSnvMixTable)
 
             self._chrom_tables[chrom] = chrom_table
 
