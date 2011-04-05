@@ -6,6 +6,11 @@
 #=======================================================================================================================
 import argparse
 
+# This turns off the warning raised by jcnt and jsm files about natural naming.
+import warnings
+import tables
+warnings.filterwarnings('ignore', category=tables.NaturalNameWarning)
+
 from joint_snv_mix.pre_processing.bam_to_jcnt import bam_to_jcnt
 
 from joint_snv_mix.classification.run_classification import run_binomial, run_fisher, run_threshold
