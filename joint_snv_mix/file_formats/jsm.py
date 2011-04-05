@@ -115,20 +115,6 @@ class _JointSnvMixFile:
         params_group = self._parameters_group
         
         self._write_tree(parameters, params_group)
-    
-    def _write_tree(self, params, group):
-        for name, value in params.items():
-            if isinstance(value, dict):
-                new_group = self._file_handle.createGroup(group, name)
-                self._write_tree(value, new_group)
-            else:
-                atom = Float64Atom(())
-        
-                shape = np.array(value).shape
-        
-                parameter_array = self._file_handle.createCArray(group, name, atom, shape)
-                
-                parameter_array[:] = value[:]
                 
     def get_priors(self):
         priors = {}
@@ -143,29 +129,18 @@ class _JointSnvMixFile:
         self._read_tree(parameters, self._parameters_group)
         
         return parameters
-    
-    def _read_tree(self, params, group):
-        for entry in self._file_handle.iterNodes(where=group):
-            name = entry._v_name 
-            
-            if isinstance(entry, Leaf):
-                params[name] = entry[:]
-            else:
-                params[name] = {}
-                self._read_tree(params[name], entry)
 
-    def write_chr_table(self, chr_name, data):
-        if chr_name not in self._chrom_tables:
-            chr_table = self._file_handle.createTable('/data', chr_name, JointSnvMixTable)
-            
-            self._chrom_tables[chr_name] = chr_table
-        else:
-            chr_table = self._chrom_tables[chr_name]        
+    def add_rows_to_table(self, chrom, rows):
+        '''
+        Add rows to table chrom.
+        '''
+        table = self._get_chrom_table(chrom)
+    
+        table.append(rows)
+        table.flush()
         
-        chr_table.append(data)
-        
-    def get_responsibilities(self, chr_name):
-        table = self._chrom_tables[chr_name]
+    def get_responsibilities(self, chrom):
+        table = self._chrom_tables[chrom]
         
         responsibilities = np.column_stack((
                                             table.col('p_aa_aa'),
@@ -181,16 +156,16 @@ class _JointSnvMixFile:
         
         return responsibilities
     
-    def get_table(self, chr_name, row_indices=None):
-        table = self._chrom_tables[chr_name]
+    def get_table(self, chrom, row_indices=None):
+        table = self._chrom_tables[chrom]
         
         if row_indices is None:
             return table
         else:
             return table[row_indices]
     
-    def get_position(self, chr_name, coord):
-        table = self._chrom_tables[chr_name]
+    def get_position(self, chrom, coord):
+        table = self._chrom_tables[chrom]
         
         search_string = "position == {0}".format(coord)
         row = table.readWhere(search_string)
@@ -205,6 +180,41 @@ class _JointSnvMixFile:
         
     def close(self):
         self._file_handle.close()
+
+    def _write_tree(self, params, group):
+        for name, value in params.items():
+            if isinstance(value, dict):
+                new_group = self._file_handle.createGroup(group, name)
+                self._write_tree(value, new_group)
+            else:
+                atom = Float64Atom(())
+        
+                shape = np.array(value).shape
+        
+                parameter_array = self._file_handle.createCArray(group, name, atom, shape)
+                
+                parameter_array[:] = value[:]
+    
+    def _read_tree(self, params, group):
+        for entry in self._file_handle.iterNodes(where=group):
+            name = entry._v_name 
+            
+            if isinstance(entry, Leaf):
+                params[name] = entry[:]
+            else:
+                params[name] = {}
+                self._read_tree(params[name], entry)
+                
+    
+    def _get_chrom_table(self, chrom):
+        if chrom in self._chrom_tables:
+            chrom_table = self._chrom_tables[chrom]
+        else:
+            chrom_table = self._file_handle.createTable(self._file_handle.root, chrom, _JointSnvMixTable)
+
+            self._chrom_tables[chrom] = chrom_table
+
+        return chrom_table
 
     def _init_entries(self):
         '''
@@ -225,7 +235,7 @@ class _JointSnvMixFile:
 
         self._chrom_tables = chr_tables
     
-class JointSnvMixTable(IsDescription):
+class _JointSnvMixTable(IsDescription):
     position = UInt32Col(pos=0)
 
     ref_base = StringCol(itemsize=1, pos=1)

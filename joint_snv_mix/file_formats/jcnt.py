@@ -3,6 +3,7 @@ Created on 2010-08-06
 
 @author: Andrew Roth
 '''
+import random
 import time
 
 import numpy as np
@@ -38,7 +39,24 @@ class JointCountsReader(object):
             counts = self._get_chrom_counts(chrom)
 
         
-        return counts    
+        return counts
+    
+    def get_random_counts_subsample(self, chrom, sample_size):
+        table = self._file_handle.get_table(chrom)
+        n = table.nrows
+        
+        table_sample_indices = random.sample(xrange(n), sample_size)
+        
+        sub_sample = table[table_sample_indices]
+        
+        return np.column_stack((
+                              sub_sample['normal_counts_a'],
+                              sub_sample['normal_counts_b'],
+                              sub_sample['tumour_counts_a'],
+                              sub_sample['tumour_counts_b']
+                              ))
+        
+        
     
     def get_number_of_table_rows(self, chrom):
         table = self._file_handle.get_table(chrom)
