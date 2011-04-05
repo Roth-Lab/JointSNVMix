@@ -10,7 +10,6 @@ import numpy.testing as npt
 
 from scipy.stats import binom, poisson
 
-from simulation.binomial import get_easy_parameters, draw_easy_sample
 from joint_snv_mix.classification.utils.data import JointData
 from joint_snv_mix.classification.joint_binomial import JointBinomialModel
 
@@ -62,7 +61,7 @@ class JointBinomialTrainingTest(unittest.TestCase):
     def _get_priors(self):
         priors = {}
         
-        priors['kappa'] = np.array([1.] * 9)
+        priors['kappa'] = np.array([10.] * 9)
         
         priors['normal'] = {}
         priors['tumour'] = {}
@@ -70,11 +69,11 @@ class JointBinomialTrainingTest(unittest.TestCase):
         priors['normal']['mu'] = {}
         priors['tumour']['mu'] = {}
         
-        priors['normal']['mu']['alpha'] = np.array([1, 1, 1])
-        priors['tumour']['mu']['alpha'] = np.array([1, 1, 1])
+        priors['normal']['mu']['alpha'] = np.array([1000., 500., 1.])
+        priors['tumour']['mu']['alpha'] = np.array([1000., 500., 1.])
         
-        priors['normal']['mu']['beta'] = np.array([1, 1, 1])
-        priors['tumour']['mu']['beta'] = np.array([1, 1, 1])
+        priors['normal']['mu']['beta'] = np.array([1., 500., 1000.])
+        priors['tumour']['mu']['beta'] = np.array([1., 500., 1000.])
         
         return priors
     
@@ -102,7 +101,7 @@ class JointBinomialTrainingTest(unittest.TestCase):
         parameters['normal']['mu'] = np.array([0.999, 0.5, 0.001], dtype=np.float)
         parameters['tumour']['mu'] = np.array([0.999, 0.8, 0.001], dtype=np.float)
     
-        parameters['pi'] = np.array((10000, 100, 100, 100, 1000, 100, 10, 10, 1000))
+        parameters['pi'] = np.array((10000, 100, 100, 100, 1000, 100, 10, 10, 1000), dtype=np.float)
         parameters['pi'] = parameters['pi'] / parameters['pi'].sum()
         
         return parameters

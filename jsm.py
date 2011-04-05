@@ -6,13 +6,11 @@
 #=======================================================================================================================
 import argparse
 
-from joint_snv_mix.classification.model_runners import run_snvmix
-
 from joint_snv_mix.pre_processing.bam_to_jcnt import bam_to_jcnt
 
-from joint_snv_mix.classification.threhsold_classifier import run_threshold
-
-from joint_snv_mix.classification.fisher_classifier import run_fisher
+from joint_snv_mix.classification.run_classification import run_binomial, run_fisher, run_threshold
+from joint_snv_mix.post_processing.call_jsm_somatics import call_somatics_from_jsm, jsm_to_tsv
+from joint_snv_mix.post_processing.extract_jsm_paramters import extract_jsm_parameters 
 
 parser = argparse.ArgumentParser(prog='JointSNVMix')
 subparsers = parser.add_subparsers()
@@ -55,17 +53,17 @@ parser_jcnt.set_defaults(func=bam_to_jcnt)
 #===============================================================================
 # Add snvmix model sub-command
 #===============================================================================
-parser_snvmix = subparsers.add_parser('snvmix',
-                                        help='''Run a JointSNVMix or paired independent SNVMix analysis. Requires that a
-                                        jcnt file has been created.''')
+parser_binomial = subparsers.add_parser('binomial',
+                                      help='''Run a binomial mixture model based analysis. Requires that a
+                                            jcnt file has been created.''')
 
-parser_snvmix.add_argument('jcnt_file_name',
-                             help='Name of joint counts (jcnt) file to be used as input.')
+parser_binomial.add_argument('jcnt_file_name',
+                            help='Name of joint counts (jcnt) file to be used as input.')
 
-parser_snvmix.add_argument('jsm_file_name',
+parser_binomial.add_argument('jsm_file_name',
                              help='Name of JointSNVMix (jsm) output files to be created.')
 
-file_group = parser_snvmix.add_mutually_exclusive_group(required=True)
+file_group = parser_binomial.add_mutually_exclusive_group(required=True)
 
 file_group.add_argument('--params_file', default=None,
                          help='''File containing model parameters to use for classification.
@@ -75,7 +73,7 @@ file_group.add_argument('--priors_file', default=None,
                          help='File containing prior distribution parameters to use for training. \
                          If set the model will be trained.')
 
-train_group = parser_snvmix.add_argument_group(title='Training Parameters',
+train_group = parser_binomial.add_argument_group(title='Training Parameters',
                                                  description='Options for training the model.')
 
 train_group.add_argument('--max_iters', default=1000, type=int,
@@ -89,13 +87,10 @@ train_group.add_argument('--convergence_threshold', default=1e-6, type=float,
                           help='''Convergence threshold for EM training. Once the change in objective function is below
                           this value training will end. Defaul 1e-6''')
 
-parser_snvmix.add_argument('--model', choices=['independent', 'joint', 'chromosome'],
-                              default='joint', help='Model type to use for classification.')
+parser_binomial.add_argument('--model', choices=['independent', 'joint'],
+                              default='joint', help='Model type to use for classification. Default is joint.')
 
-parser_snvmix.add_argument('--density', choices=['binomial', 'beta_binomial'], default='beta_binomial',
-                              help='Density to be used in model.')
-
-parser_snvmix.set_defaults(func=run_snvmix)
+parser_binomial.set_defaults(func=run_binomial)
 
 #===============================================================================
 # Add fisher model sub-command
@@ -114,7 +109,7 @@ parser_fisher.add_argument('--model', choices=['independent', 'joint'],
                               default='joint', help='Model type to use for classification.')
 
 parser_fisher.add_argument('--p_value_threshold', default=0.05, type=float,
-                              help='''Threshold for declaring a site homozygous in tumour.''')
+                              help='''Significance threshold for declaring a site heterozygous in tumour.''')
 
 parser_fisher.add_argument('--base_line_error', default=0.001, type=float,
                               help='''Expected error rate.''')
@@ -135,7 +130,7 @@ parser_fisher.set_defaults(func=run_fisher)
 # Add threshold model sub-command
 #===============================================================================
 parser_threshold = subparsers.add_parser('threshold',
-                                        help='''Run a naive threshold based classifier. Requires that a jcnt file has
+                                        help='''Run a simple threshold based classifier. Requires that a jcnt file has
                                         been created.''')
 
 parser_threshold.add_argument('jcnt_file_name',
@@ -160,10 +155,10 @@ parser_threshold.set_defaults(func=run_threshold)
 # Add call_jsm sub-command
 #===============================================================================
 parser_call_jsm = subparsers.add_parser('call_somatics',
-                                     help="Call somatics from a jsm file.")
+                                        help="Call somatics from a jsm file. Output is sorted by somatic probability.")
 
 parser_call_jsm.add_argument('jsm_file_name',
-                          help='Input JSM file name.')
+                             help='Input JSM file name.')
 
 parser_call_jsm.add_argument('out_file_name',
                           help='Output file name.')
@@ -177,19 +172,18 @@ parser_call_jsm.add_argument('--auto', action='store_true', default=False,
 parser_call_jsm.set_defaults(func=call_somatics_from_jsm)
 
 #===============================================================================
-# Add extract_positions sub-command
+# Add jsm_to_tsv sub-command
 #===============================================================================
-parser_extract_positions = subparsers.add_parser('extract_positions',
-                                        help='Extract a set of positions from a jsm file and print to stdout.')
+parser_jsm_to_tsv = subparsers.add_parser('jsm_to_tsv',
+                                        help="Output binary jsm file as text tsv file.")
 
-parser_extract_positions.add_argument('jsm_file_name',
-                                      help='JSM file to extract positions from.')
+parser_jsm_to_tsv.add_argument('jsm_file_name',
+                             help='Input JSM file name.')
 
-parser_extract_positions.add_argument('positions_file_name',
-                                      help='''List of positions to extract. Format is tab delimited with the chromosome
-                                      in the first column and second position in the second i.e. "X    12345" ''')
+parser_jsm_to_tsv.add_argument('out_file_name',
+                          help='Output file name.')
 
-parser_extract_positions.set_defaults(func=extract_jsm_positions)
+parser_jsm_to_tsv.set_defaults(func=jsm_to_tsv)
 
 #=======================================================================================================================
 # Add extract_parameters sub_command

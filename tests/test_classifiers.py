@@ -11,8 +11,7 @@ import numpy as np
 
 from joint_snv_mix import constants
 from joint_snv_mix.classification.utils.data import JointData
-from joint_snv_mix.classification.fisher_test import IndependentFisherModel, JointFisherModel
-from joint_snv_mix.classification.threhsold import ThresholdModel
+from joint_snv_mix.classification.deterministic import IndependentFisherModel, JointFisherModel, ThresholdModel
 from joint_snv_mix.classification.indep_binomial import IndependentBinomialModel
 from joint_snv_mix.classification.indep import PairedIndependentModel
 from joint_snv_mix.classification.joint_binomial import JointBinomialModel

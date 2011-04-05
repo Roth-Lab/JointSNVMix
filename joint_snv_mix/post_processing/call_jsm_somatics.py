@@ -3,14 +3,12 @@ import csv
 
 from joint_snv_mix.file_formats.jsm import JointSnvMixReader
 
-#excluded_chrom = ['Y', 'MT']
-
 fields = [
           'chrom',
           'position',
           'ref_base',
-          'normal_base',
-          'tumour_base',
+          'normal_var_base',
+          'tumour_var_base',
           'normal_counts_a',
           'normal_counts_b',
           'tumour_counts_a',
@@ -21,9 +19,32 @@ fields = [
 genotypes = ['aa', 'ab', 'bb']
 
 for g_1 in genotypes:
-    for g_2 in genotypes:
+    for g_2 in genotypes:        
         prob_field = "_".join(('p', g_1, g_2))
         fields.append(prob_field)
+
+def jsm_to_tsv(args):
+    '''
+    Call somatic mutations form jsm file and output to human readable tab separated file in sorted order descending by
+    somatic probability.
+    '''
+    jsm_file_name = args.jsm_file_name
+    out_file_name = args.out_file_name    
+
+    reader = JointSnvMixReader(jsm_file_name)
+    writer = csv.DictWriter(open(out_file_name, 'w'), fields, delimiter='\t')
+    writer.writeheader()
+    
+    table_list = reader.get_table_list()
+    
+    for chr_name in sorted(table_list):
+        table = reader.get_table(chr_name)
+        
+        for row in table:
+            row = format_rows(row, chr_name)            
+            writer.writerow(row)
+            
+    reader.close()
 
 def call_somatics_from_jsm(args):
     '''
@@ -134,6 +155,12 @@ def format_rows(row, chrom):
     row = dict(zip(row.dtype.names, row.real))
     row['somatic_prob'] = row['p_aa_ab'] + row['p_aa_bb']
     row['chrom'] = chrom
+    
+    row['normal_var_base'] = row['normal_base']
+    row['tumour_var_base'] = row['tumour_base']
+    
+    del row['normal_base']
+    del row['tumour_base']
     
     return row
 
