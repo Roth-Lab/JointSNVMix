@@ -73,26 +73,29 @@ class ProbabilisticModelRunner(object):
         for chr_name in sorted(chr_list):
             self._classify_chromosome(chr_name)
             
-    def _classify_chromosome(self, chr_name):
-        counts = self.reader.get_counts(chr_name)
-        jcnt_table = self.reader.get_table(chr_name)
+    def _classify_chromosome(self, chrom):
+        counts = self.reader.get_counts(chrom)
+        jcnt_table = self.reader.get_table(chrom)
         
-        end = self.reader.get_number_of_table_rows(chr_name)
+        end = self.reader.get_number_of_table_rows(chrom)
 
         n = int(1e5)
         start = 0
         stop = min(n, end)
         
-
+        # Classify using blocking for speedup.
         while start < end:
             sub_counts = counts[start:stop]
-            sub_rows = jcnt_table[start:stop]
+            sub_jsm_rows = jcnt_table[start:stop]
                               
             data = JointData(sub_counts)            
                 
             resp = self.model.classify(data, self.parameters)
-        
-            self.writer.write_data(chr_name, sub_rows, resp)
+            
+            jsm_rows = np.hstack((sub_jsm_rows, resp))
+            
+            for jsm_row in jsm_rows:
+                self.writer.add_row(chrom, jsm_row)
             
             start = stop
             stop = min(stop + n, end)
@@ -124,11 +127,7 @@ class ProbabilisticModelRunner(object):
             
             chrom_sample_size = min(table_nrows, chrom_sample_size)
             
-            table_sample_indices = random.sample(xrange(table_nrows), chrom_sample_size)
-            
-            chrom_counts = self.reader.get_counts(chrom)
-            
-            chrom_sample = chrom_counts[table_sample_indices]
+            chrom_sample = self.reader.get_random_counts_subsample(chrom, chrom_sample_size)
             
             sample.append(chrom_sample)
             
