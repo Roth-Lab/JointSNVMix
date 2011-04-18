@@ -37,18 +37,23 @@ class PairedIndependentModel(object):
         
         return self._get_joint_resp()
         
-    def _get_joint_resp(self):
-        joint_resp = []
-        
+    def _get_joint_resp(self):               
         nrows = self.resp['normal'].shape[0]
         nclass = self.resp['normal'].shape[1]
         
         col_shape = (nrows, 1)
         
-        for i in range(nclass):
-            joint_resp.append(self.resp['normal'][:, i].reshape(col_shape) + self.resp['tumour'])
+        log_normal_resp = np.log(self.resp['normal'])
+        log_tumour_resp = np.log(self.resp['tumour'])
         
-        joint_resp = np.hstack(joint_resp)
+        log_joint_resp = []
+        
+        for i in range(nclass):
+            log_joint_resp.append(log_normal_resp[:, i].reshape(col_shape) + log_tumour_resp)
+        
+        log_joint_resp = np.hstack(log_joint_resp)
+        
+        joint_resp = log_space_normalise_rows(log_joint_resp)
         
         return joint_resp
             
