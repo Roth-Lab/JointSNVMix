@@ -127,6 +127,9 @@ class BamToJcntConverter:
         bases = []
         
         for read in pileup_column.pileups:
+            if read.is_del:
+                continue
+            
             qpos = read.qpos
                  
             mqual = read.alignment.mapq
