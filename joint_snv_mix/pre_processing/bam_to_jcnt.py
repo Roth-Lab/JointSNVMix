@@ -3,7 +3,7 @@ from collections import Counter
 
 import pysam
 
-from joint_snv_mix.file_formats.jcnt import _JointCountsFile, JointCountsWriter
+from joint_snv_mix.file_formats.jcnt import JointCountsWriter
 import bisect
 
 ascii_offset = 33
