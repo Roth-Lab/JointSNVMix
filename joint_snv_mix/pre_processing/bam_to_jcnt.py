@@ -8,12 +8,6 @@ import bisect
 
 ascii_offset = 33
 
-# Build a bqual_lookup of quality values.
-bqual_lookup = {}
-for i in range(94):
-    symbol = chr(i + 33)
-    bqual_lookup[symbol] = i
-
 def bam_to_jcnt(args):
     if args.positions_file is not None:
         regions = convert_positions_to_regions(args.positions_file)
@@ -143,8 +137,7 @@ class BamToJcntConverter:
             if mqual < self.min_mqual:
                 continue            
             
-            bqual_symbol = read.alignment.qual[qpos]
-            bqual = bqual_lookup[bqual_symbol]
+            bqual = ord(read.alignment.qual[qpos]) - ascii_offset            
             
             if bqual < self.min_bqual:
                 continue
