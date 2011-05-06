@@ -2,7 +2,7 @@ from distutils.core import setup
 
 setup(
       name='JointSNVMix',
-      version='0.6.2_b1',
+      version='0.6.2',
       description='Paired sample SNV calling utility.',
       
       author='Andrew Roth',
