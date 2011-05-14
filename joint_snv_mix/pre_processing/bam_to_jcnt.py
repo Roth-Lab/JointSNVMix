@@ -48,8 +48,6 @@ class BamToJcntConverter:
         
         self.regions = regions
         
-        self._init_qual_map()
-        
     def convert(self, jcnt_file_name):        
         with JointCountsWriter(jcnt_file_name) as writer:
             self.writer = writer
@@ -131,18 +129,15 @@ class BamToJcntConverter:
         for read in pileup_column.pileups:
             if read.is_del:
                 continue
-            
-            qpos = read.qpos
                  
             mqual = read.alignment.mapq
             
             if mqual < self.min_mqual:
                 continue            
             
-#            bqual = ord(read.alignment.qual[qpos]) - ascii_offset
+            qpos = read.qpos
             
-            bqual_char = read.alignment.qual[qpos]
-            bqual = self._qual_map[bqual_char]
+            bqual = ord(read.alignment.qual[qpos]) - ascii_offset            
             
             if bqual < self.min_bqual:
                 continue
@@ -178,15 +173,6 @@ class BamToJcntConverter:
         counts = (ref_counts, non_ref_counts)
         
         return non_ref_base, counts
-    
-    def _init_qual_map(self):
-        qual_map = {}
-    
-        for i in range(94):
-            c = chr(i + 33)
-            qual_map[c] = i
-            
-        self._qual_map = qual_map
     
 class JointPileupIterator:
     def __init__(self, normal_iter, tumour_iter):
