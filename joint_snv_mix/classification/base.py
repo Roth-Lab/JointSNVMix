@@ -50,7 +50,11 @@ class ProbabilisticModelRunner(object):
     
     def _train(self, args):        
         if args.subsample_size > 0:
-            counts = self._subsample(args.subsample_size)
+            counts = self._subsample(
+                                     args.subsample_size, 
+                                     args.min_train_depth, 
+                                     args.max_train_depth
+                                     )
         else:
             counts = self.reader.get_counts()
                    
@@ -118,7 +122,7 @@ class ProbabilisticModelRunner(object):
     def _write_priors(self):
         self.writer.write_priors(self.priors)
             
-    def _subsample(self, sample_size):
+    def _subsample(self, sample_size, min_depth, max_depth):
         table_list = self.reader.get_table_list()
         
         sample = []
@@ -132,9 +136,15 @@ class ProbabilisticModelRunner(object):
             
             chrom_sample_size = int(chrom_sample_size)
             
-            chrom_sample_size = min(table_nrows, chrom_sample_size)
+            chrom_sample = self.reader.get_random_counts_subsample(
+                                                                   chrom, 
+                                                                   chrom_sample_size, 
+                                                                   min_depth=min_depth,
+                                                                   max_depth=max_depth
+                                                                   )
             
-            chrom_sample = self.reader.get_random_counts_subsample(chrom, chrom_sample_size)
+            print np.min(chrom_sample.sum(axis=1))
+            print np.max(chrom_sample.sum(axis=1))
             
             sample.append(chrom_sample)
             

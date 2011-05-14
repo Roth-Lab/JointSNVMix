@@ -88,6 +88,13 @@ train_group.add_argument('--subsample_size', default=0, type=int,
                           help='''Size of random subsample to use for training. If not set the whole data set will be
                           used.''')
 
+train_group.add_argument('--min_train_depth', default=0, type=int,
+                          help='''Minimum depth required in normal and tumour for a site to be used for training.''')
+
+train_group.add_argument('--max_train_depth', default=int(1e6), type=int,
+                          help='''Maximum depth allowed in normal or tumour for a site to be used for training.''')
+
+
 train_group.add_argument('--convergence_threshold', default=1e-6, type=float,
                           help='''Convergence threshold for EM training. Once the change in objective function is below
                           this value training will end. Defaul 1e-6''')

@@ -41,11 +41,17 @@ class JointCountsReader(object):
         
         return counts
     
-    def get_random_counts_subsample(self, chrom, sample_size):
+    def get_random_counts_subsample(self, chrom, sample_size, min_depth=0, max_depth=int(1e6)):
         table = self._file_handle.get_table(chrom)
-        n = table.nrows
+
+        depth_threhsold_indices = self._get_depth_threhsold_indices(table, min_depth, max_depth)
         
-        table_sample_indices = random.sample(xrange(n), sample_size)
+        n = len(depth_threhsold_indices)        
+        sample_size = min(n, sample_size)
+        
+        print n, table.nrows
+        
+        table_sample_indices = random.sample(depth_threhsold_indices, sample_size)
         
         sub_sample = table[table_sample_indices]
         
@@ -55,9 +61,7 @@ class JointCountsReader(object):
                               sub_sample['tumour_counts_a'],
                               sub_sample['tumour_counts_b']
                               ))
-        
-        
-    
+            
     def get_number_of_table_rows(self, chrom):
         table = self._file_handle.get_table(chrom)
         n = table.nrows
@@ -93,6 +97,24 @@ class JointCountsReader(object):
         
         return counts
     
+    def _get_depth_threhsold_indices(self, table, min_depth, max_depth):
+        '''
+        Find the index of all positions where 
+        1) normal and tumour have depth above min_depth
+        2) normal and tumour do not exceed max depth
+        ''' 
+        
+        min_depth_condition = "((normal_counts_a + normal_counts_b) >= {0}) & \
+                               ((tumour_counts_a + tumour_counts_b) >= {0})".format(min_depth)
+        
+        max_depth_condition = "((normal_counts_a + normal_counts_b) <= {0}) & \
+                               ((tumour_counts_a + tumour_counts_b) <= {0})".format(max_depth)                          
+        
+        condition = min_depth_condition + " & " + max_depth_condition
+        
+        depth_threshold_indices = table.getWhereList(condition)
+        
+        return depth_threshold_indices
 class JointCountsWriter(object):
     '''
     Class for writing jcnt files.
