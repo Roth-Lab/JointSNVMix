@@ -22,3 +22,11 @@ syntax: regexp
 ^tests/data/tumour\.bam$
 syntax: regexp
 ^tests/data/tumour\.bam\.bai$
+syntax: regexp
+^\.project$
+syntax: regexp
+^\.pydevproject$
+syntax: regexp
+^joint_snv_mix/pre_processing/base_counter\.c$
+syntax: regexp
+^joint_snv_mix/pre_processing/base_counter\.so$
