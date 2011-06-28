@@ -7,3 +7,11 @@ syntax: regexp
 ^dist$
 syntax: regexp
 ^MANIFEST$
+syntax: regexp
+^\.project$
+syntax: regexp
+^\.pydevproject$
+syntax: regexp
+^\.hgignore$
+syntax: regexp
+^MANIFEST\.in$
