@@ -1,4 +1,10 @@
 from distutils.core import setup
+from distutils.extension import Extension
+from Cython.Distutils import build_ext
+
+ext_modules = [
+               Extension("joint_snv_mix.pre_processing.base_counter", ["joint_snv_mix/pre_processing/base_counter.pyx"], include_dirs=['include/pysam', 'include/samtools'])
+               ]
 
 setup(
       name='JointSNVMix',
@@ -19,5 +25,7 @@ setup(
                 'joint_snv_mix.file_formats'            
                 ],
       
-      scripts=['jsm.py']
+      scripts=['jsm.py'],
+      cmdclass={'build_ext': build_ext},
+      ext_modules=ext_modules
      )
