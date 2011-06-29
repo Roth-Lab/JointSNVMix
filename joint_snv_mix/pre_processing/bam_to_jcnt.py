@@ -1,10 +1,11 @@
 import csv
+import bisect
 from collections import Counter
 
 import pysam
 
 from joint_snv_mix.file_formats.jcnt import JointCountsWriter
-import bisect
+from joint_snv_mix.pre_processing.base_counter import BaseCounter
 
 ascii_offset = 33
 
@@ -17,32 +18,31 @@ def bam_to_jcnt(args):
     normal_bam = pysam.Samfile(args.normal_bam_file_name, 'rb')
     tumour_bam = pysam.Samfile(args.tumour_bam_file_name, 'rb')
     
+    normal_counter = BaseCounter(normal_bam, min_base_qual=args.min_base_qual, min_map_qual=args.min_base_qual)
+    tumour_counter = BaseCounter(tumour_bam, min_base_qual=args.min_base_qual, min_map_qual=args.min_base_qual)
+    
     ref_genome_fasta = pysam.Fastafile(args.reference_genome_file_name)
                
     converter = BamToJcntConverter(
-                                   normal_bam,
-                                   tumour_bam,
+                                   normal_counter,
+                                   tumour_counter,
                                    ref_genome_fasta,
                                    min_depth=args.min_depth,
-                                   min_bqual=args.min_base_qual,
-                                   min_mqual=args.min_base_qual,
                                    regions=regions
                                    )
     
     converter.convert(args.jcnt_file_name)
                        
 class BamToJcntConverter:
-    def __init__(self, normal_bam, tumour_bam, ref_genome_fasta, min_depth=4, min_bqual=10, min_mqual=10, regions=None):
-        self.normal_bam = normal_bam
-        self.tumour_bam = tumour_bam
+    def __init__(self, normal_counter, tumour_counter, ref_genome_fasta, min_depth=4, regions=None):
+        self.normal_counter = normal_counter
+        self.tumour_counter = tumour_counter
     
         self.ref_genome_fasta = ref_genome_fasta
         
-        self.refs = sorted(set(self.normal_bam.references) & set(self.tumour_bam.references))
+        self.refs = sorted(set(self.normal_counter.refs) & set(self.tumour_counter.refs))
         
         self.min_depth = min_depth
-        self.min_bqual = min_bqual
-        self.min_mqual = min_mqual
         
         self.max_buffer = int(1e5)
         
@@ -64,8 +64,8 @@ class BamToJcntConverter:
             print ref
             
             joint_iter = JointPileupIterator(
-                                       self.normal_bam.pileup(ref),
-                                       self.tumour_bam.pileup(ref)
+                                       self.normal_counter.iter_ref(ref),
+                                       self.tumour_counter.iter_ref(ref)
                                        )
             
             self._convert_iter(ref, joint_iter)
@@ -78,34 +78,31 @@ class BamToJcntConverter:
             print "Parsing {0} with {1} regions.".format(ref, len(self.regions[ref]))
             
             joint_iter = JointPileupRegionIterator(
-                                                   self.normal_bam.pileup(ref),
-                                                   self.tumour_bam.pileup(ref),
+                                                   self.normal_counter.iter_ref(ref),
+                                                   self.tumour_counter.iter_ref(ref),
                                                    self.regions[ref]
                                                    )
             
             self._convert_iter(ref, joint_iter)
         
     def _convert_iter(self, ref, iter):        
-        for normal_column, tumour_column in iter:
-            if normal_column.n < self.min_depth or tumour_column.n < self.min_depth:
+        for normal_row, tumour_row in iter:
+            if normal_row.depth < self.min_depth or tumour_row.depth < self.min_depth:
                 continue
             
-            pos = normal_column.pos
+            pos = normal_row.position
             ref_base = self.ref_genome_fasta.fetch(ref, pos, pos + 1)        
             
-            jcnt_entry = self._get_jcnt_entry(normal_column, tumour_column, pos, ref_base)
+            jcnt_entry = self._get_jcnt_entry(normal_row, tumour_row, pos, ref_base)
 
             if jcnt_entry is None:
                 continue
             
             self.writer.add_row(ref, jcnt_entry)      
         
-    def _get_jcnt_entry(self, normal_column, tumour_column, pos, ref_base):
-        normal_bases = self._parse_pileup_column(normal_column)
-        tumour_bases = self._parse_pileup_column(tumour_column)
-        
-        tumour_non_ref_base, tumour_counts = self._get_counts(ref_base, tumour_bases)        
-        normal_non_ref_base, normal_counts = self._get_counts(ref_base, normal_bases, non_ref_base=tumour_non_ref_base)        
+    def _get_jcnt_entry(self, normal_row, tumour_row, pos, ref_base):
+        tumour_non_ref_base, tumour_counts = self._get_counts(ref_base, tumour_row.counts)        
+        normal_non_ref_base, normal_counts = self._get_counts(ref_base, normal_row.counts, non_ref_base=tumour_non_ref_base)        
     
         # Check again for lines below read depth. The first check above speeds things up, though redundant.
         normal_depth = normal_counts[0] + normal_counts[1]
@@ -113,39 +110,12 @@ class BamToJcntConverter:
     
         if normal_depth < self.min_depth or tumour_depth < self.min_depth:
             return None
-    
-        # Shift index to one based position.
-        one_based_pos = pos + 1
         
-        jcnt_entry = [ one_based_pos, ref_base, normal_non_ref_base, tumour_non_ref_base ]
+        jcnt_entry = [ pos, ref_base, normal_non_ref_base, tumour_non_ref_base ]
         jcnt_entry.extend(normal_counts)
         jcnt_entry.extend(tumour_counts)
         
         return jcnt_entry
-               
-    def _parse_pileup_column(self, pileup_column):
-        bases = []
-        
-        for read in pileup_column.pileups:
-            if read.is_del:
-                continue
-                 
-            mqual = read.alignment.mapq
-            
-            if mqual < self.min_mqual:
-                continue            
-            
-            qpos = read.qpos
-            
-            bqual = ord(read.alignment.qual[qpos]) - ascii_offset            
-            
-            if bqual < self.min_bqual:
-                continue
-            
-            base = read.alignment.seq[qpos]
-            bases.append(base)
-        
-        return bases
 
     def _get_counts(self, ref_base, bases, non_ref_base=None):
         counter = Counter(bases)
@@ -156,19 +126,15 @@ class BamToJcntConverter:
     
     def _parse_counts(self, ref_base, counter, non_ref_base=None):
         ref_counts = counter[ref_base]
-        
-        del counter[ref_base]
-        del counter['N']
-        
+
         # Check if there is any non-ref bases.
         if non_ref_base is not None:
             non_ref_counts = counter[non_ref_base]
-        else:
-            if len(counter) > 0:
-                non_ref_base, non_ref_counts = counter.most_common(1)[0]
-            else:
+        else:            
+            non_ref_base, non_ref_counts = counter.most_common(2)[1]
+            
+            if non_ref_counts == 0:
                 non_ref_base = 'N'
-                non_ref_counts = 0
         
         counts = (ref_counts, non_ref_counts)
         
@@ -183,19 +149,19 @@ class JointPileupIterator:
         return self
     
     def next(self):
-        normal_column = self.normal_iter.next()
-        tumour_column = self.tumour_iter.next()
+        normal_counter_row = self.normal_iter.next()
+        tumour_counter_row = self.tumour_iter.next()
         
         while True:                    
-            normal_pos = normal_column.pos
-            tumour_pos = tumour_column.pos
+            normal_pos = normal_counter_row.position
+            tumour_pos = tumour_counter_row.position
                   
             if normal_pos == tumour_pos:
-                return normal_column, tumour_column
+                return normal_counter_row, tumour_counter_row
             elif normal_pos < tumour_pos:
-                normal_column = self.normal_iter.next()
+                normal_counter_row = self.normal_iter.next()
             elif normal_pos > tumour_pos:
-                tumour_column = self.tumour_iter.next()
+                tumour_counter_row = self.tumour_iter.next()
             else:
                 raise Exception("Error in joint pileup iterator.")
             
