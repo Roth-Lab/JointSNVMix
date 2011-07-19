@@ -11,7 +11,7 @@ import warnings
 import tables
 warnings.filterwarnings('ignore', category=tables.NaturalNameWarning)
 
-from joint_snv_mix.pre_processing.bam_to_jcnt import paired_bams_to_jcnt
+from joint_snv_mix.pre_processing import paired_bams_to_jcnt
 
 from joint_snv_mix.classification.run_classification import run_binomial, run_fisher, run_threshold
 from joint_snv_mix.post_processing.call_jsm_somatics import call_somatics_from_jsm, jsm_to_tsv
