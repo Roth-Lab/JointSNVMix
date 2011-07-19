@@ -118,7 +118,7 @@ class JointCountsWriter(object):
         
         For example
         
-        [12345, 'A', 'C', 'C', 100, 0, 100, 100]
+        [12345, 'A', 'C', 100, 0, 100, 100]
         '''        
         if chrom not in self._row_buffer:
             self._row_buffer[chrom] = []
@@ -223,14 +223,12 @@ class _JointCountsIndexTable(IsDescription):
 
     ref_base = StringCol(itemsize=1, pos=1)
 
-    normal_base = StringCol(itemsize=1, pos=2)
+    non_ref_base = StringCol(itemsize=1, pos=2)
 
-    tumour_base = StringCol(itemsize=1, pos=3)
-
-    normal_counts_a = UInt32Col(pos=4)
+    normal_counts_a = UInt32Col(pos=3)
     
-    normal_counts_b = UInt32Col(pos=5)
+    normal_counts_b = UInt32Col(pos=4)
     
-    tumour_counts_a = UInt32Col(pos=6)
+    tumour_counts_a = UInt32Col(pos=5)
     
-    tumour_counts_b = UInt32Col(pos=7)
+    tumour_counts_b = UInt32Col(pos=6)
