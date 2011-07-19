@@ -22,3 +22,11 @@ syntax: regexp
 ^tests/data/tumour\.bam$
 syntax: regexp
 ^tests/data/tumour\.bam\.bai$
+syntax: regexp
+^\.settings$
+syntax: regexp
+^\.hgignore$
+syntax: regexp
+^\.project$
+syntax: regexp
+^\.pydevproject$
