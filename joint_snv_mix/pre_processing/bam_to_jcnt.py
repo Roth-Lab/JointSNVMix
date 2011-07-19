@@ -23,15 +23,16 @@ def paired_bams_to_jcnt(args):
         write_all_positions(counter, writer, args.min_depth)
     else:
         write_specified_positions(counter, writer, args.min_depth, args.positions_file, args.delimiter)
+    
+    writer.close()
         
 def write_all_positions(counter, writer, min_depth):
     for ref in sorted(counter.refs):
+        print ref
         for row in counter.iter_ref(ref):
             if row.depth >= min_depth:        
                 out_row = format_row(row)                
                 writer.add_row(row.ref, out_row)
-                
-                print row.ref, row.position
 
 def write_specified_positions(counter, writer, min_depth, positions_file, delimiter):
     if delimiter == 'tab':
