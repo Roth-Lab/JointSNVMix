@@ -1,0 +1,8 @@
+@HD	VN:1.0
+@SQ	SN:1	LN:1575
+@CO	Example alignment with identical reads except for mapping qualities
+@CO	Mapping qualities are 0, 10, 20, 30
+read_1	99	1	33	0	35M	=	200	167	AGCTTAGCTAGCTACCTATATCTTGGTCTTGGCCG	<<<<<<<<<<<<<<<<<<<<<:<9/,&,22;;<<<	NM:i:1	RG:Z:L1	PG:Z:P1	XT:A:U
+read_2	99	1	33	10	35M	=	200	167	AGCTTAGCTAGCTACCTATATCTTGGTCTTGGCCG	<<<<<<<<<<<<<<<<<<<<<:<9/,&,22;;<<<	NM:i:1	RG:Z:L1	PG:Z:P1	XT:A:U
+read_3	99	1	33	20	35M	=	200	167	AGCTTAGCTAGCTACCTATATCTTGGTCTTGGCCG	<<<<<<<<<<<<<<<<<<<<<:<9/,&,22;;<<<	NM:i:1	RG:Z:L1	PG:Z:P1	XT:A:U
+read_4	99	1	33	30	35M	=	200	167	AGCTTAGCTAGCTACCTATATCTTGGTCTTGGCCG	<<<<<<<<<<<<<<<<<<<<<:<9/,&,22;;<<<	NM:i:1	RG:Z:L1	PG:Z:P1	XT:A:U
