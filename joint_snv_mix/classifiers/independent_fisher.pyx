@@ -1,24 +1,23 @@
-cdef class IndependentFisherClassifierOptions(ClassifierOptions):
-    def __init__(self, **kwargs):
-        ClassifierOptions.__init__(self, **kwargs)
-        
-        self.min_var_freq = kwargs.get('min_var_freq', 0.1)
-        self.hom_var_freq = kwargs.get('hom_var_freq', 0.9)
-        self.p_value_threshold = kwargs.get('p_value_threshold', 0.05)
-        self.expected_error_rate = kwargs.get('expected_error_rate', 0.001)
-
 cdef class IndependentFisherClassifier(Classifier):    
-    def iter_ref(self, ref):
+    def iter_ref(self, ref, **kwargs):
         if ref not in self._refs:
             raise Exception("Invalid reference passed.")
         
         return IndependentFisherClassifierRefIterator(
                                                       ref,
                                                       self._counter.iter_ref(ref),
-                                                      self._options
+                                                      **kwargs
                                                       )
              
 cdef class IndependentFisherClassifierRefIterator(ClassifierRefIterator):
+    def __init__(self, char * ref, JointBinaryBaseCounterIterator iter, **kwargs):
+        ClassifierRefIterator.__init__(self, ref, iter, **kwargs)
+        
+        self._min_var_freq = kwargs.get('min_var_freq', 0.1)
+        self._hom_var_freq = kwargs.get('hom_var_freq', 0.9)
+        self._p_value_threshold = kwargs.get('p_value_threshold', 0.05)
+        self._expected_error_rate = kwargs.get('expected_error_rate', 0.001)
+
     cdef tuple _get_labels(self):
         cdef int normal_genotype, tumour_genotype, joint_genotype 
         cdef float normal_pv, tumour_pv
@@ -44,9 +43,6 @@ cdef class IndependentFisherClassifierRefIterator(ClassifierRefIterator):
         '''
         cdef int d
         cdef float pv, var_freq
-        cdef IndependentFisherClassifierOptions options
-        
-        options = self._options
         
         d = a + b
         
@@ -58,12 +54,12 @@ cdef class IndependentFisherClassifierRefIterator(ClassifierRefIterator):
             var_freq = 0
         
         # Counts differ from expectation due to random error and depth of coverage is acceptable.
-        if pv <= options.p_value_threshold:
+        if pv <= self._p_value_threshold:
             # Homozygous variant.
-            if var_freq >= options.hom_var_freq:
+            if var_freq >= self._hom_var_freq:
                 return 2
             # Heterozygous variant.
-            elif var_freq >= options.min_var_freq:
+            elif var_freq >= self._min_var_freq:
                 return 1
         
         # Something failed so call non-variant.        
@@ -73,13 +69,10 @@ cdef class IndependentFisherClassifierRefIterator(ClassifierRefIterator):
     cdef float _get_significance(self, int a, int b):
         cdef int expected_a, expected_b, d
         cdef PValues pv
-        cdef IndependentFisherClassifierOptions options
-        
-        options = self._options
         
         d = a + b
         
-        expected_b = < int > floor(options.expected_error_rate * d)
+        expected_b = < int > floor(self._expected_error_rate * d)
         expected_a = d - expected_b
         
         pv = fisher_exact_test(

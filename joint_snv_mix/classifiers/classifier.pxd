@@ -1,14 +1,8 @@
 from joint_snv_mix.counters.joint_binary_counter cimport JointBinaryBaseCounter, JointBinaryBaseCounterIterator, JointBinaryCounterRow
 
-cdef class ClassifierOptions(object):
-    cdef int min_normal_depth
-    cdef int min_tumour_depth
-
 cdef class Classifier(object):
     # List of references in Bam file(s) the counter works over.
     cdef tuple _refs
-    
-    cdef ClassifierOptions _options
     
     cdef JointBinaryBaseCounter _counter
 
@@ -36,10 +30,12 @@ cdef class ClassifierRefIterator(object):
     
     cdef object _current_row
     
-    cdef cnext(self)
+    cdef int _min_normal_depth
     
-    cdef tuple _get_labels(self)
-    
-    cdef ClassifierOptions _options
+    cdef int _min_tumour_depth
     
     cdef JointBinaryBaseCounterIterator _iter
+    
+    cdef cnext(self)
+    
+    cdef tuple _get_labels(self)    

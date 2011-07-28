@@ -7,11 +7,6 @@ Created on 2011-07-27
 
 @author: Andrew Roth
 '''
-cdef class ClassifierOptions(object):
-    def __init__(self, **kwargs):
-        self.min_normal_depth = kwargs.get('min_normal_depth', 10)
-        self.min_tumour_depth = kwargs.get('min_tumour_depth', 10)
-
 cdef class Classifier(object):
     '''
     Base clase for all objects for classifying somatics from Bam files.
@@ -20,14 +15,11 @@ cdef class Classifier(object):
     1) Keeps track of available references accessible by refs property. 
     2) Provides iterators over references via iter_ref() method.
     '''
-    def __init__(self, JointBinaryBaseCounter counter, ClassifierOptions options):
-        self._counter = counter
-    
-        self._options = options
-        
+    def __init__(self, JointBinaryBaseCounter counter):        
+        self._counter = counter            
         self._refs = counter.refs
             
-    def iter_ref(self, ref):
+    def iter_ref(self, ref, **kwargs):
         '''
         Returns a ClassifierIter subclass over ref.
         '''
@@ -45,12 +37,12 @@ cdef class ClassifierRefIterator(object):
     Base class for all iterator objects over a reference. Should return a ClassifierRow subclass object on each
     iteration.
     '''
-    def __init__(self, char * ref, JointBinaryBaseCounterIterator iter, ClassifierOptions options):
-        self._ref = ref
-        
+    def __init__(self, char * ref, JointBinaryBaseCounterIterator iter, **kwargs):
+        self._ref = ref        
         self._iter = iter
         
-        self._options = options
+        self._min_normal_depth = kwargs.get('min_normal_depth', 10)
+        self._min_tumour_depth = kwargs.get('min_tumour_depth', 10)
     
     def __iter__(self):
         return self
@@ -81,7 +73,7 @@ cdef class ClassifierRefIterator(object):
             normal_depth = jbc_row._normal_counts.A + jbc_row._normal_counts.B
             tumour_depth = jbc_row._tumour_counts.A + jbc_row._tumour_counts.B
             
-            if normal_depth >= self._options.min_normal_depth and tumour_depth >= self._options.min_tumour_depth:
+            if normal_depth >= self._min_normal_depth and tumour_depth >= self._min_tumour_depth:
                 break
         
         labels = self._get_labels()
