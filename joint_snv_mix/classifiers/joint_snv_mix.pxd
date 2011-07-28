@@ -11,11 +11,11 @@ cdef class JointSnvMixClassifier(Classifier):
     pass
              
 cdef class JointSnvMixClassifierRefIterator(ClassifierRefIterator):   
-    cdef float _mu_N[3]
-    cdef float _mu_T[3]
-    cdef float _pi[9]
+    cdef float _log_mu_N[3][2]
+    cdef float _log_mu_T[3][2]
+    cdef float _log_pi[9]
 
-    cdef void _compute_likelihood(self, float likelihood[3], int a, int b, float mu[3])
+    cdef void _compute_likelihood(self, float likelihood[3], int a, int b, float mu[3][2])
     cdef void _compute_joint_probs(
                                    self,
                                    float joint_probs[9],

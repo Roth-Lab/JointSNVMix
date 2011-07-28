@@ -19,12 +19,15 @@ cdef class JointSnvMixClassifierRefIterator(ClassifierRefIterator):
         pi = kwargs.get('pi', (1e6, 1e2, 1e2, 1e2, 1e4, 1e2, 1e1, 1e1, 1e4))
         
         for i in range(3):
-            self._mu_N[i] = mu_N[i]
-            self._mu_T[i] = mu_T[i]
+            self._log_mu_N[i][0] = log(< float > mu_N[i])
+            self._log_mu_N[i][1] = log(< float > (1 - mu_N[i]))
+            
+            self._log_mu_T[i][0] = log(< float > mu_T[i])
+            self._log_mu_T[i][1] = log(< float > (1 - mu_T[i]))
         
         nc = sum(pi)
         for i in range(9):            
-            self._pi[i] = pi[i] / nc
+            self._log_pi[i] = log(< float > pi[i] / nc)
 
     cdef tuple _get_labels(self):
         cdef float x
@@ -35,29 +38,27 @@ cdef class JointSnvMixClassifierRefIterator(ClassifierRefIterator):
         
         row = self._iter._current_row
         
-        self._compute_likelihood(normal_likelihood, row._normal_counts.A, row._normal_counts.B, self._mu_N)
-        self._compute_likelihood(tumour_likelihood, row._tumour_counts.A, row._tumour_counts.B, self._mu_T)   
+        self._compute_likelihood(normal_likelihood, row._normal_counts.A, row._normal_counts.B, self._log_mu_N)
+        self._compute_likelihood(tumour_likelihood, row._tumour_counts.A, row._tumour_counts.B, self._log_mu_T)   
         
-        self._compute_joint_probs(joint_probs, normal_likelihood, tumour_likelihood, self._pi)
+        self._compute_joint_probs(joint_probs, normal_likelihood, tumour_likelihood, self._log_pi)
         
         return tuple([x for x in joint_probs[:9]])
                 
-    cdef void _compute_likelihood(self, float likelihood[3], int a, int b, float mu[3]):
+    cdef void _compute_likelihood(self, float likelihood[3], int a, int b, float log_mu[3][2]):
         '''
         Return posterior probabilities under SNVMix1 model.
         '''
         cdef int i
         
         for i in range(3):
-            likelihood[i] = a * log(mu[i]) + b * log(1 - mu[i])
-        
-
+            likelihood[i] = a * log_mu[i][0] + b * log_mu[i][1]
     
     cdef void _compute_joint_probs(self,
                                    float joint_probs[9],
                                    float normal_likelihood[3],
                                    float tumour_likelihood[3],
-                                   float pi[9]):
+                                   float log_pi[9]):
         cdef int i, j, k
         cdef float x, total
         
@@ -65,7 +66,7 @@ cdef class JointSnvMixClassifierRefIterator(ClassifierRefIterator):
         for i in range(3):
             for j in range(3):
                 k = 3 * i + j
-                joint_probs[k] = log(pi[i]) + normal_likelihood[i] + tumour_likelihood[j]
+                joint_probs[k] = log_pi[i] + normal_likelihood[i] + tumour_likelihood[j]
 
         self._normalise_log_probs(joint_probs)
 
