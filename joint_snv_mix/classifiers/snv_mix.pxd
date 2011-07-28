@@ -11,12 +11,12 @@ cdef class SnvMixClassifier(Classifier):
     pass
              
 cdef class SnvMixClassifierRefIterator(ClassifierRefIterator):   
-    cdef tuple _mu_N
-    cdef tuple _mu_T
-    cdef tuple _pi_N
-    cdef tuple _pi_T
+    cdef float _mu_N[3]
+    cdef float _mu_T[3]
+    cdef float _pi_N[3]
+    cdef float _pi_T[3]
 
-    cdef tuple _get_probs(self, int a, int b, tuple mu, tuple pi)
+    cdef void _get_probs(self, float[3]probs, int a, int b, float mu[3], float pi[3])
     cdef void _normalise_log_probs(self, float probs[3])
     cdef float _compute_log_norm_constant(self, float probs[3])
-    cdef tuple _combine_probs(self, tuple normal_probs, tuple tumour_probs)
+    cdef void _combine_probs(self, float[9] joint_probs, float[3] normal_probs, float[3] tumour_probs)
