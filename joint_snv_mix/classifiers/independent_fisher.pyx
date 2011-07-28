@@ -20,7 +20,6 @@ cdef class IndependentFisherClassifierRefIterator(ClassifierRefIterator):
 
     cdef tuple _get_labels(self):
         cdef int normal_genotype, tumour_genotype, joint_genotype 
-        cdef float normal_pv, tumour_pv
         cdef list labels
         cdef JointBinaryCounterRow row
         
