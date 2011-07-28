@@ -1,3 +1,5 @@
+from libc.stdlib cimport malloc, free
+
 from csamtools cimport Samfile, Fastafile
 
 from joint_snv_mix.counters.counter cimport Counter, CounterRefIterator, CounterRow
@@ -10,6 +12,19 @@ cdef extern from * :
 
 cdef extern from "stdlib.h":
     void qsort (void * ARRAY, size_t COUNT, size_t SIZE, int (*COMPARE)(const_void * , const_void *))
+
+ctypedef struct binary_depth_struct:
+    int A
+    int B
+
+ctypedef struct binary_quality_struct:
+    double * A
+    double * B
+
+ctypedef struct base_map_qualities_struct:
+    binary_depth_struct depth
+    binary_quality_struct base_quals
+    binary_quality_struct map_quals
     
 cdef class JointBinaryQualityCounter(Counter):
     cdef QualityCounter _normal_counter
@@ -19,8 +34,8 @@ cdef class JointBinaryQualityCounter(Counter):
 cdef class JointBinaryQualityCounterRow(CounterRow):
     cdef char * _ref_base
     cdef char * _non_ref_base
-    cdef QualityCounterRow _normal_row
-    cdef QualityCounterRow _tumour_row
+    cdef base_map_qualities_struct _normal_data
+    cdef base_map_qualities_struct _tumour_data
 
 cdef class JointBinaryQualityCounterIterator(CounterRefIterator):
     cdef QualityCounterRefIterator _normal_iter
