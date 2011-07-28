@@ -141,6 +141,30 @@ cdef class QualityCounterRow(CounterRow):
         def __get__(self):            
             return self._num_reads
 
+    cdef base_counts_struct get_base_counts(self, char * base):
+        cdef int i
+        cdef base_counts_struct base_counts
+        
+        base_counts.base = base
+        base_counts.counts = 0
+        
+        for i in range(self._num_reads):
+            if base[0] == self._bases[i]:
+                base_counts.counts += 1
+        
+        return base_counts
+    
+    cdef int get_counts(self, char * base):
+        cdef int i, counts
+        
+        counts = 0
+        
+        for i in range(self._num_reads):
+            if base[0] == self._bases[i]:
+                counts += 1
+        
+        return counts
+
 '''
 C level constructor for BaseCounterRow object.
 '''
