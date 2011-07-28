@@ -1,4 +1,6 @@
-cdef class SnvMixClassifier(Classifier):    
+#cython: cdivision=True
+
+cdef class SnvMixClassifier(Classifier):
     def iter_ref(self, ref, **kwargs):
         if ref not in self._refs:
             raise Exception("Invalid reference passed.")
@@ -13,40 +15,44 @@ cdef class SnvMixClassifierRefIterator(ClassifierRefIterator):
     def __init__(self, char * ref, JointBinaryBaseCounterIterator iter, **kwargs):
         ClassifierRefIterator.__init__(self, ref, iter, **kwargs)
         
-        self._mu_N = kwargs.get('mu_N', (0.99, 0.5, 0.01))
-        self._mu_T = kwargs.get('mu_T', (0.99, 0.5, 0.01))
+        mu_N = kwargs.get('mu_N', (0.99, 0.5, 0.01))
+        mu_T = kwargs.get('mu_T', (0.99, 0.5, 0.01))
+        pi_N = kwargs.get('pi_N', (0.99, 0.009, 0.001))
+        pi_T = kwargs.get('pi_T', (0.99, 0.009, 0.001))
         
-        self._pi_N = kwargs.get('pi_N', (0.99, 0.009, 0.001))
-        self._pi_T = kwargs.get('pi_T', (0.99, 0.009, 0.001))
+        for i in range(3):
+            self._mu_N[i] = mu_N[i]
+            self._mu_T[i] = mu_T[i]
+            self._pi_N[i] = pi_N[i]
+            self._pi_T[i] = pi_T[i]
 
     cdef tuple _get_labels(self):
-        cdef int normal_genotype, tumour_genotype, joint_genotype 
-        cdef list labels
+        cdef float x
+        cdef float normal_probs[3]
+        cdef float tumour_probs[3]
+        cdef float joint_probs[9] 
         cdef JointBinaryCounterRow row
         
         row = self._iter._current_row
         
-        normal_probs = self._get_probs(row._normal_counts.A, row._normal_counts.B, self._mu_N, self._pi_N)
-        tumour_probs = self._get_probs(row._tumour_counts.A, row._tumour_counts.B, self._mu_T, self._pi_T)        
+        self._get_probs(normal_probs, row._normal_counts.A, row._normal_counts.B, self._mu_N, self._pi_N)
+        self._get_probs(tumour_probs, row._tumour_counts.A, row._tumour_counts.B, self._mu_T, self._pi_T)        
         
-        joint_probs = self._combine_probs(normal_probs, tumour_probs)
+        self._combine_probs(joint_probs, normal_probs, tumour_probs)
         
-        return joint_probs
+        return tuple([x for x in joint_probs[:9]])
                 
-    cdef tuple _get_probs(self, int a, int b, tuple mu, tuple pi):
+    cdef void _get_probs(self, float probs[3], int a, int b, float mu[3], float pi[3]):
         '''
         Return posterior probabilities under SNVMix1 model.
         '''
         cdef int i
         cdef float x
-        cdef float probs[3]        
         
         for i in range(3):
             probs[i] = log(pi[i]) + a * log(mu[i]) + b * log(1 - mu[i])
         
         self._normalise_log_probs(probs)
-        
-        return tuple([x for x in probs[:3]])
         
     cdef void _normalise_log_probs(self, float probs[3]):
         cdef float nc
@@ -71,10 +77,9 @@ cdef class SnvMixClassifierRefIterator(ClassifierRefIterator):
         
         return log(total) + max_exp
     
-    cdef tuple _combine_probs(self, tuple normal_probs, tuple tumour_probs):
+    cdef void _combine_probs(self, float joint_probs[9], float normal_probs[3], float tumour_probs[3]):
         cdef int i, j, k
         cdef float x, total
-        cdef float joint_probs[9]
         cdef list normalise_probs
         
         total = 0
@@ -86,8 +91,6 @@ cdef class SnvMixClassifierRefIterator(ClassifierRefIterator):
         
         for i in range(9):
             joint_probs[i] = joint_probs[i] / total
-        
-        return tuple([x for x in joint_probs[:9]])
             
                 
         
