@@ -62,6 +62,12 @@ snv_mix_classifier = Extension(
                                  include_dirs=classifier_includes
                                  )
 
+snv_mix_classifier = Extension(
+                                 "joint_snv_mix.classifiers.joint_snv_mix",
+                                 ["joint_snv_mix/classifiers/joint_snv_mix.pyx"],
+                                 include_dirs=classifier_includes
+                                 )
+
 utils_includes = [
                   'joint_snv_mix/utils'
                   ]
