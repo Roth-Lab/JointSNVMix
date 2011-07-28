@@ -83,6 +83,7 @@ cdef class JointBinaryQualityCounterIterator(CounterRefIterator):
         
         region_length = 1 
         
+        # Samtools mallocs this!
         ref_base = self._ref_genome_fasta._fetch(
                                                  self._normal_row._ref,
                                                  self._normal_row._position,
@@ -93,8 +94,8 @@ cdef class JointBinaryQualityCounterIterator(CounterRefIterator):
         self._current_row = makeJointBinaryQualityCounterRow(ref_base, self._normal_row, self._tumour_row)
     
 cdef class JointBinaryQualityCounterRow
-cdef JointBinaryQualityCounterRow makeJointBinaryQualityCounterRow(char * ref_base, 
-                                                                   QualityCounterRow normal_row, 
+cdef JointBinaryQualityCounterRow makeJointBinaryQualityCounterRow(char * ref_base,
+                                                                   QualityCounterRow normal_row,
                                                                    QualityCounterRow tumour_row):
     '''
     Constructor method for creating a JointBinaryQualityCounterRow from C.
@@ -112,8 +113,8 @@ cdef JointBinaryQualityCounterRow makeJointBinaryQualityCounterRow(char * ref_ba
     
     row._non_ref_base = non_ref_base
      
-    row._normal_row = normal_row
-    row._tumour_row = tumour_row
+    row._normal_data = get_base_map_qualities(ref_base, non_ref_base, normal_row)
+    row._tumour_data = get_base_map_qualities(ref_base, non_ref_base, tumour_row)
      
     return row
 
@@ -123,6 +124,11 @@ cdef class JointBinaryQualityCounterRow(CounterRow):
     '''    
     def __init__(self):
         raise TypeError("This class cannot be instantiated from Python")
+    
+    def __dealloc__(self):
+        destroy_base_map_qualities_struct(self._normal_data)
+        destroy_base_map_qualities_struct(self._tumour_data)
+        free(self._ref_base)
     
     def __str__(self):
         '''
@@ -136,16 +142,23 @@ cdef class JointBinaryQualityCounterRow(CounterRow):
     property counts:
         def __get__(self):
             return (
-                    self._normal_row.counts,
-                    self._tumour_row.counts
+                    self._normal_data.depth.A,
+                    self._normal_data.depth.B,
+                    self._tumour_data.depth.A,
+                    self._tumour_data.depth.B,
                     )
     
     property depth:
         def __get__(self):
-            if self._normal_row.depth < self._tumour_row.depth:
-                return self._normal_row.depth
+            cdef int normal_depth, tumour_depth
+            
+            normal_depth = self._normal_data.depth.A + self._normal_data.depth.B
+            tumour_depth = self._tumour_data.depth.A + self._tumour_data.depth.B            
+            
+            if normal_depth < tumour_depth:
+                return normal_depth
             else:
-                return self._tumour_row.depth
+                return tumour_depth
         
     property ref_base:
         def __get__(self):
@@ -206,4 +219,55 @@ cdef binary_counts_struct get_binary_counts(char * ref_base, char * non_ref_base
     counts.A = row.get_counts(ref_base)
     counts.B = row.get_counts(non_ref_base)
     
-    return counts 
+    return counts
+
+cdef base_map_qualities_struct get_base_map_qualities(char * ref_base, char * non_ref_base, QualityCounterRow row):
+    cdef int i, ref_counts, non_ref_counts, A_index, B_index
+    cdef base_map_qualities_struct data
+    
+    ref_counts = row.get_counts(ref_base)
+    non_ref_counts = row.get_counts(non_ref_base)
+    
+    data = create_base_map_qualities_struct(ref_counts, non_ref_counts)
+    
+    A_index = 0 
+    B_index = 0
+    
+    for i in range(row._num_reads):
+        if row._bases[i] == ref_base[0]:
+            data.base_quals.A[A_index] = row._base_quals[i]
+            
+            data.map_quals.A[A_index] = row._map_quals[i]
+            
+            A_index += 1
+            
+        elif row._bases[i] == non_ref_base[0]:
+            data.base_quals.B[B_index] = row._base_quals[i]
+            
+            data.map_quals.B[B_index] = row._map_quals[i]
+            
+            B_index += 1
+    
+    return data
+
+cdef base_map_qualities_struct create_base_map_qualities_struct(int A_counts, int B_counts):
+    cdef base_map_qualities_struct data
+    
+    data.depth.A = A_counts
+    data.depth.B = B_counts
+
+    data.base_quals.A = < double * > malloc(A_counts * sizeof(double)) 
+    data.base_quals.B = < double * > malloc(B_counts * sizeof(double))
+    
+    data.map_quals.A = < double * > malloc(A_counts * sizeof(double))
+    data.map_quals.B = < double * > malloc(B_counts * sizeof(double))
+    
+    return data
+
+cdef void destroy_base_map_qualities_struct(base_map_qualities_struct data):
+    free(data.base_quals.A)
+    free(data.base_quals.B)
+    
+    free(data.map_quals.A)
+    free(data.map_quals.B)
+            

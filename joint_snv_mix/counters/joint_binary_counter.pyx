@@ -122,6 +122,9 @@ cdef class JointBinaryCounterRow(CounterRow):
     def __init__(self):
         raise TypeError("This class cannot be instantiated from Python")
     
+    def __dealloc__(self):
+        free(self._ref_base)
+    
     def __str__(self):
         '''
         Overide parent class method to include ref and non_ref base.

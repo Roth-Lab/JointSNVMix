@@ -1,3 +1,5 @@
+from libc.stdlib cimport free
+
 from csamtools cimport Samfile, Fastafile
 
 from joint_snv_mix.counters.counter cimport Counter, CounterRefIterator, CounterRow
