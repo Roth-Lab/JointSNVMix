@@ -19,6 +19,12 @@ base_counter = Extension(
                         include_dirs=counter_includes
                         )
 
+quality_counter = Extension(
+                            "joint_snv_mix.counters.quality_counter",
+                            ["joint_snv_mix/counters/quality_counter.pyx"],
+                            include_dirs=counter_includes
+                            )
+
 joint_bin_counter = Extension(
                             "joint_snv_mix.counters.joint_binary_counter",
                             ["joint_snv_mix/counters/joint_binary_counter.pyx"],
@@ -87,6 +93,7 @@ special_functions = Extension(
 ext_modules = [ 
                counter,
                base_counter,
+               quality_counter,
                joint_bin_counter,
                base_classifier,
                indep_fisher_classifier,

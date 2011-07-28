@@ -56,15 +56,23 @@ cdef class QualityCounterRefIterator(CounterRefIterator):
         self._current_row = self._parse_pileup_column(pileup_column)
             
     cdef QualityCounterRow _parse_pileup_column(self, PileupProxy pileup_column):
-        cdef int x, qpos, map_qual, base_qual, num_reads
+        cdef int i, qpos, map_qual, base_qual, num_reads
         cdef char * base        
         cdef bam1_t * alignment
         cdef bam_pileup1_t * pileup        
         cdef char * bases
         cdef double * base_quals, * map_quals
         
-        num_reads = pileup_column.n_pu
+        num_reads = 0
         
+        for i in range(pileup_column.n_pu):
+            pileup = & pileup_column.plp[i]
+            
+            if pileup.is_del:
+                continue
+            
+            num_reads += 1
+                    
         bases = < char *> malloc(num_reads * sizeof(char))
         base_quals = < double *> malloc(num_reads * sizeof(double))
         map_quals = < double *> malloc(num_reads * sizeof(double))
@@ -81,9 +89,9 @@ cdef class QualityCounterRefIterator(CounterRefIterator):
             
             map_qual = alignment.core.qual
             map_quals[i] = self._qual_map[map_qual]
-            
+                        
             base_qual = get_qual(alignment, qpos)
-            base_quals[i] = self._qual_map[base_qual]    
+            base_quals[i] = self._qual_map[base_qual]
                        
             base = get_base(alignment, qpos)
             bases[i] = base[0]
