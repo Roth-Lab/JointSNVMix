@@ -28,3 +28,9 @@ syntax: regexp
 ^\.project$
 syntax: regexp
 ^\.pydevproject$
+syntax: regexp
+\.c$
+syntax: regexp
+\.so$
+syntax: regexp
+\.html$
