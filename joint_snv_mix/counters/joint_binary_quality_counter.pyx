@@ -113,7 +113,7 @@ cdef JointBinaryQualityCounterRow makeJointBinaryQualityCounterRow(char * ref_ba
     row._non_ref_base = non_ref_base
      
     row._normal_row = normal_row
-    row._tumour_row = tumour_row    
+    row._tumour_row = tumour_row
      
     return row
 
