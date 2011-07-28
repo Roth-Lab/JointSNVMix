@@ -56,7 +56,7 @@ cdef class QualityCounterRefIterator(CounterRefIterator):
         self._current_row = self._parse_pileup_column(pileup_column)
             
     cdef QualityCounterRow _parse_pileup_column(self, PileupProxy pileup_column):
-        cdef int i, qpos, map_qual, base_qual, num_reads
+        cdef int i, qpos, map_qual, base_qual, num_reads, read
         cdef char * base        
         cdef bam1_t * alignment
         cdef bam_pileup1_t * pileup        
@@ -65,6 +65,7 @@ cdef class QualityCounterRefIterator(CounterRefIterator):
         
         num_reads = 0
         
+        # Find out how many valid non del reads.
         for i in range(pileup_column.n_pu):
             pileup = & pileup_column.plp[i]
             
@@ -77,7 +78,10 @@ cdef class QualityCounterRefIterator(CounterRefIterator):
         base_quals = < double *> malloc(num_reads * sizeof(double))
         map_quals = < double *> malloc(num_reads * sizeof(double))
         
-        for i in range(num_reads):
+        # Keep track of which valid reads
+        read = 0
+        
+        for i in range(pileup_column.n_pu):
             pileup = & pileup_column.plp[i]
             
             if pileup.is_del:
@@ -88,13 +92,15 @@ cdef class QualityCounterRefIterator(CounterRefIterator):
             alignment = bam_dup1(pileup.b) 
             
             map_qual = alignment.core.qual
-            map_quals[i] = self._qual_map[map_qual]
+            map_quals[read] = self._qual_map[map_qual]
                         
             base_qual = get_qual(alignment, qpos)
-            base_quals[i] = self._qual_map[base_qual]
+            base_quals[read] = self._qual_map[base_qual]
                        
             base = get_base(alignment, qpos)
-            bases[i] = base[0]
+            bases[read] = base[0]
+            
+            read += 1
 
             bam_destroy1(alignment)
         
