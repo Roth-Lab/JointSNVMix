@@ -32,30 +32,29 @@ cdef class BaseCounterRefIterator(CounterRefIterator):
     '''
     def __init__(self, char * ref, IteratorColumnRegion pileup_iter, int min_base_qual, int min_map_qual):
         self._ref = ref
-        self._pileup_iter = pileup_iter
         self._min_base_qual = min_base_qual
         self._min_map_qual = min_map_qual
         
-        self._position = pileup_iter.pos
+        self._ref_iter = CRefIterator(ref, pileup_iter)                        
+        self._position = self._ref_iter.position
   
     cdef cnext(self):
-        cdef PileupProxy pileup_column
+        cdef column_struct column
         cdef counts_struct counts
-        cdef BaseCounterRow row
+                
+        self._ref_iter.cnext()
         
-        pileup_column = self._pileup_iter.next()
+        column = self._ref_iter.current_column        
         
-        self._position = pileup_column.pos
+        self._position = self._ref_iter.position
         
-        counts = self._parse_pileup_column(pileup_column)
+        counts = self._parse_column(column)
     
         self._current_row = makeBaseCounterRow(self._ref, self._position, counts)
             
-    cdef counts_struct _parse_pileup_column(self, PileupProxy pileup_column):
-        cdef int x, qpos, map_qual, base_qual
-        cdef char * base
-        cdef bam1_t * alignment
-        cdef bam_pileup1_t * pileup
+    cdef counts_struct _parse_column(self, column_struct column):            
+        cdef int i
+        cdef char base[2]
         cdef counts_struct counts
         
         counts.A = 0
@@ -63,28 +62,15 @@ cdef class BaseCounterRefIterator(CounterRefIterator):
         counts.G = 0
         counts.T = 0
         
-        for x in range(pileup_column.n_pu):
-            pileup = & pileup_column.plp[x]
-            
-            if pileup.is_del:
-                continue
-            
-            qpos = pileup.qpos
-            
-            alignment = bam_dup1(pileup.b) 
-            map_qual = alignment.core.qual
-            
-            if map_qual < self._min_map_qual:
-                bam_destroy1(alignment)
+        for i in range(column.depth):                     
+            if column.map_quals[i] < self._min_map_qual:
                 continue            
-            
-            base_qual = get_qual(alignment, qpos)            
-            
-            if base_qual < self._min_base_qual:
-                bam_destroy1(alignment)
+                                 
+            if column.base_quals[i] < self._min_base_qual:
                 continue
             
-            base = get_base(alignment, qpos)
+            base[0] = column.bases[i]
+            base[1] = '\0'
             
             if strcmp(base, "A") == 0:
                 counts.A += 1        
@@ -94,8 +80,6 @@ cdef class BaseCounterRefIterator(CounterRefIterator):
                 counts.G += 1
             elif strcmp(base, "T") == 0:
                 counts.T += 1
-            
-            bam_destroy1(alignment)
             
         return counts
 
@@ -179,37 +163,3 @@ cdef BaseCounterRow makeBaseCounterRow(char * ref, int position, counts_struct c
      row._counts = counts
      
      return row
-                         
-#===============================================================================
-# Modified pysam code
-#===============================================================================
-cdef char * bam_nt16_rev_table = "=ACMGRSVTWYHKDBN"
-
-cdef char * get_base(bam1_t * src, int pos):
-    cdef uint8_t * p
-    cdef char base
-    cdef char[2] base_str
-
-    if src.core.l_qseq == 0: 
-        return None
-    
-    if not src.core.l_qseq:
-        return None
-
-    seq = bam1_seq(src)
-    
-    base = bam_nt16_rev_table[seq[pos / 2] >> 4 * (1 - pos % 2) & 0xf]
-    
-    base_str[0] = base
-    base_str[1] = '\0'
-    
-    return base_str
-
-cdef int get_qual(bam1_t * src, int pos):    
-    cdef uint8_t * p
-
-    p = bam1_qual(src)
-    if p[0] == 0xff:
-        return None
-
-    return p[pos]
