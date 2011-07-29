@@ -6,22 +6,24 @@ from joint_snv_mix.counters.joint_binary_counter cimport JointBinaryCounterRow, 
 from joint_snv_mix.classifiers.classifier cimport Classifier, ClassifierRefIterator, ClassifierRow
 
 from joint_snv_mix.utils.fisher_exact_test cimport PValues, fisher_exact_test
+from joint_snv_mix.utils.normalise cimport log_space_normalise_row
+
+DEF NUM_GENOTYPES = 3
+DEF NUM_JOINT_GENOTYPES = 9
 
 cdef class JointSnvMixClassifier(Classifier):    
     pass
              
 cdef class JointSnvMixClassifierRefIterator(ClassifierRefIterator):   
-    cdef float _log_mu_N[3][2]
-    cdef float _log_mu_T[3][2]
-    cdef float _log_pi[9]
+    cdef double _log_mu_N[NUM_GENOTYPES][2]
+    cdef double _log_mu_T[NUM_GENOTYPES][2]
+    cdef double _log_pi[9]
 
-    cdef void _compute_likelihood(self, float likelihood[3], int a, int b, float mu[3][2])
+    cdef void _compute_likelihood(self, double likelihood[NUM_GENOTYPES], int a, int b, double mu[NUM_GENOTYPES][2])
     cdef void _compute_joint_probs(
                                    self,
-                                   float joint_probs[9],
-                                   float normal_likelihood[3],
-                                   float tumour_likelihood[3],
-                                   float pi[9]
+                                   double joint_probs[NUM_JOINT_GENOTYPES],
+                                   double normal_likelihood[NUM_GENOTYPES],
+                                   double tumour_likelihood[NUM_GENOTYPES],
+                                   double pi[NUM_JOINT_GENOTYPES]
                                    )
-    cdef void _normalise_log_probs(self, float probs[9])
-    cdef float _compute_log_norm_constant(self, float probs[9])

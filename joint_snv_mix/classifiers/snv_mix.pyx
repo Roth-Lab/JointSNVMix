@@ -1,5 +1,8 @@
 #cython: cdivision=True
 
+DEF NUM_GENOTYPES = 3
+DEF NUM_JOINT_GENOTYPES = 9
+
 cdef class SnvMixClassifier(Classifier):
     def iter_ref(self, ref, **kwargs):
         if ref not in self._refs:
@@ -20,76 +23,77 @@ cdef class SnvMixClassifierRefIterator(ClassifierRefIterator):
         pi_N = kwargs.get('pi_N', (0.99, 0.009, 0.001))
         pi_T = kwargs.get('pi_T', (0.99, 0.009, 0.001))
         
-        for i in range(3):
-            self._mu_N[i] = mu_N[i]
-            self._mu_T[i] = mu_T[i]
-            self._pi_N[i] = pi_N[i]
-            self._pi_T[i] = pi_T[i]
+        for i in range(NUM_GENOTYPES):
+            self._log_mu_N[i][0] = log(mu_N[i])
+            self._log_mu_N[i][1] = log(1 - mu_N[i])
+            
+            self._log_mu_T[i][0] = log(mu_T[i])
+            self._log_mu_T[i][1] = log(1 - mu_T[i])
+            
+            self._log_pi_N[i] = log(pi_N[i])            
+            self._log_pi_T[i] = log(pi_T[i])
 
     cdef tuple _get_labels(self):
-        cdef float x
-        cdef float normal_probs[3]
-        cdef float tumour_probs[3]
-        cdef float joint_probs[9] 
+        cdef double x
+        cdef double normal_probs[NUM_GENOTYPES]
+        cdef double tumour_probs[NUM_GENOTYPES]
+        cdef double joint_probs[NUM_JOINT_GENOTYPES] 
         cdef JointBinaryCounterRow row
         
         row = self._iter._current_row
         
-        self._get_probs(normal_probs, row._normal_counts.A, row._normal_counts.B, self._mu_N, self._pi_N)
-        self._get_probs(tumour_probs, row._tumour_counts.A, row._tumour_counts.B, self._mu_T, self._pi_T)        
+        self._get_probs(
+                        normal_probs,
+                        row._normal_counts.A, row._normal_counts.B,
+                        self._log_mu_N, self._log_pi_N
+                        )
+        self._get_probs(
+                        tumour_probs,
+                        row._tumour_counts.A, row._tumour_counts.B,
+                        self._log_mu_T, self._log_pi_T
+                        )        
         
         self._combine_probs(joint_probs, normal_probs, tumour_probs)
         
-        return tuple([x for x in joint_probs[:9]])
-                
-    cdef void _get_probs(self, float probs[3], int a, int b, float mu[3], float pi[3]):
+        return tuple([x for x in joint_probs[:NUM_JOINT_GENOTYPES]])
+                                
+    cdef void _get_probs(self,
+                         double probs[NUM_GENOTYPES],
+                         int a,
+                         int b,
+                         double log_mu[NUM_GENOTYPES][2],
+                         double log_pi[NUM_GENOTYPES]):
         '''
         Return posterior probabilities under SNVMix1 model.
         '''
         cdef int i
-        cdef float x
+        cdef double x
         
-        for i in range(3):
-            probs[i] = log(pi[i]) + a * log(mu[i]) + b * log(1 - mu[i])
+        for i in range(NUM_GENOTYPES):
+            probs[i] = log_pi[i] + a * log_mu[i][0] + b * log_mu[i][1]
         
-        self._normalise_log_probs(probs)
+        log_space_normalise_row(probs, NUM_GENOTYPES)
         
-    cdef void _normalise_log_probs(self, float probs[3]):
-        cdef float nc
-        
-        nc = self._compute_log_norm_constant(probs)
-        
-        for i in range(3):
-            probs[i] = exp(probs[i] - nc)
+        for i in range(NUM_GENOTYPES):
+            probs[i] = exp(probs[i])
     
-    cdef float _compute_log_norm_constant(self, float probs[3]):
-        cdef float max_exp, total
-     
-        max_exp = probs[0]
-     
-        for i in range(3):
-            if max_exp < probs[i]:
-                max_exp = probs[i]
-    
-        total = 0
-        for i in range(3):
-            total += exp(probs[i] - max_exp)
-        
-        return log(total) + max_exp
-    
-    cdef void _combine_probs(self, float joint_probs[9], float normal_probs[3], float tumour_probs[3]):
+    cdef void _combine_probs(self,
+                             double joint_probs[NUM_JOINT_GENOTYPES],
+                             double normal_probs[NUM_GENOTYPES],
+                             double tumour_probs[NUM_GENOTYPES]):
         cdef int i, j, k
-        cdef float x, total
-        cdef list normalise_probs
+        cdef double total
         
         total = 0
-        for i in range(3):
-            for j in range(3):
-                k = 3 * i + j
+        for i in range(NUM_GENOTYPES):
+            for j in range(NUM_GENOTYPES):
+                k = NUM_GENOTYPES * i + j
+                
                 joint_probs[k] = normal_probs[i] * tumour_probs[j]
+
                 total += joint_probs[k]
         
-        for i in range(9):
+        for i in range(NUM_JOINT_GENOTYPES):
             joint_probs[i] = joint_probs[i] / total
             
                 

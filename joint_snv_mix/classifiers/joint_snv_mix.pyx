@@ -1,3 +1,6 @@
+DEF NUM_GENOTYPES = 3
+DEF NUM_JOINT_GENOTYPES = 9
+
 cdef class JointSnvMixClassifier(Classifier):
     def iter_ref(self, ref, **kwargs):
         if ref not in self._refs:
@@ -18,22 +21,22 @@ cdef class JointSnvMixClassifierRefIterator(ClassifierRefIterator):
         
         pi = kwargs.get('pi', (1e6, 1e2, 1e2, 1e2, 1e4, 1e2, 1e1, 1e1, 1e4))
         
-        for i in range(3):
-            self._log_mu_N[i][0] = log(< float > mu_N[i])
-            self._log_mu_N[i][1] = log(< float > (1 - mu_N[i]))
+        for i in range(NUM_GENOTYPES):
+            self._log_mu_N[i][0] = log(< double > mu_N[i])
+            self._log_mu_N[i][1] = log(< double > (1 - mu_N[i]))
             
-            self._log_mu_T[i][0] = log(< float > mu_T[i])
-            self._log_mu_T[i][1] = log(< float > (1 - mu_T[i]))
+            self._log_mu_T[i][0] = log(< double > mu_T[i])
+            self._log_mu_T[i][1] = log(< double > (1 - mu_T[i]))
         
         nc = sum(pi)
-        for i in range(9):            
-            self._log_pi[i] = log(< float > pi[i] / nc)
+        for i in range(NUM_JOINT_GENOTYPES):            
+            self._log_pi[i] = log(< double > pi[i] / nc)
 
     cdef tuple _get_labels(self):
-        cdef float x
-        cdef float normal_likelihood[3]
-        cdef float tumour_likelihood[3]
-        cdef float joint_probs[9] 
+        cdef double x
+        cdef double normal_likelihood[NUM_GENOTYPES]
+        cdef double tumour_likelihood[NUM_GENOTYPES]
+        cdef double joint_probs[NUM_JOINT_GENOTYPES] 
         cdef JointBinaryCounterRow row
         
         row = self._iter._current_row
@@ -43,52 +46,32 @@ cdef class JointSnvMixClassifierRefIterator(ClassifierRefIterator):
         
         self._compute_joint_probs(joint_probs, normal_likelihood, tumour_likelihood, self._log_pi)
         
-        return tuple([x for x in joint_probs[:9]])
+        return tuple([x for x in joint_probs[:NUM_JOINT_GENOTYPES]])
                 
-    cdef void _compute_likelihood(self, float likelihood[3], int a, int b, float log_mu[3][2]):
+    cdef void _compute_likelihood(self, double likelihood[NUM_GENOTYPES], int a, int b, double log_mu[NUM_GENOTYPES][2]):
         '''
         Return posterior probabilities under SNVMix1 model.
         '''
         cdef int i
         
-        for i in range(3):
+        for i in range(NUM_GENOTYPES):
             likelihood[i] = a * log_mu[i][0] + b * log_mu[i][1]
     
     cdef void _compute_joint_probs(self,
-                                   float joint_probs[9],
-                                   float normal_likelihood[3],
-                                   float tumour_likelihood[3],
-                                   float log_pi[9]):
+                                   double joint_probs[NUM_JOINT_GENOTYPES],
+                                   double normal_likelihood[NUM_GENOTYPES],
+                                   double tumour_likelihood[NUM_GENOTYPES],
+                                   double log_pi[NUM_JOINT_GENOTYPES]):
         cdef int i, j, k
-        cdef float x, total
+        cdef double x, total
         
         total = 0
-        for i in range(3):
-            for j in range(3):
-                k = 3 * i + j
+        for i in range(NUM_GENOTYPES):
+            for j in range(NUM_GENOTYPES):
+                k = NUM_GENOTYPES * i + j
                 joint_probs[k] = log_pi[i] + normal_likelihood[i] + tumour_likelihood[j]
 
-        self._normalise_log_probs(joint_probs)
-
-    cdef void _normalise_log_probs(self, float probs[9]):
-        cdef float nc
+        log_space_normalise_row(joint_probs, NUM_JOINT_GENOTYPES)
         
-        nc = self._compute_log_norm_constant(probs)
-        
-        for i in range(9):
-            probs[i] = exp(probs[i] - nc)
-    
-    cdef float _compute_log_norm_constant(self, float probs[9]):
-        cdef float max_exp, total
-     
-        max_exp = probs[0]
-     
-        for i in range(9):
-            if max_exp < probs[i]:
-                max_exp = probs[i]
-    
-        total = 0
-        for i in range(9):
-            total += exp(probs[i] - max_exp)
-        
-        return log(total) + max_exp
+        for i in range(NUM_JOINT_GENOTYPES):
+            joint_probs[i] = exp(joint_probs[i])
