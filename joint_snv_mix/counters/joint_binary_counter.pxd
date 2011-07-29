@@ -28,7 +28,5 @@ cdef class JointBinaryBaseCounterIterator(CounterRefIterator):
     cdef BaseCounterRefIterator _normal_iter
     cdef BaseCounterRefIterator _tumour_iter   
     cdef Fastafile _ref_genome_fasta    
-    cdef BaseCounterRow _normal_row
-    cdef BaseCounterRow _tumour_row
     
     cdef _set_current_row(self)
