@@ -19,5 +19,8 @@ cdef class BaseCounterRefIterator(CounterRefIterator):
     cdef int _min_base_qual
     cdef int _min_map_qual
     cdef CRefIterator _ref_iter
+        
+    cdef parse_current_position(self)
+    cdef advance_position(self)
     
     cdef counts_struct _parse_column(self, column_struct column)
