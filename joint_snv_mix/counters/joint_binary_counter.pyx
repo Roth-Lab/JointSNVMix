@@ -19,7 +19,7 @@ cdef class JointBinaryBaseCounter(Counter):
         self._refs = tuple(set(self._normal_counter.refs) & set(self._tumour_counter.refs)) 
         
     def iter_ref(self, ref):
-        if ref not in self._refs:
+        if ref not in self.refs:
             raise Exception("Invalid reference passed.")
         
         return JointBinaryBaseCounterIterator(
@@ -46,51 +46,51 @@ cdef class JointBinaryBaseCounterIterator(CounterRefIterator):
         self._position = -1
 
     cdef cnext(self):        
-        cdef BaseCounterRow normal_row
-        cdef BaseCounterRow tumour_row
-        
         cdef int normal_pos
         cdef int tumour_pos
         
-        self._normal_iter.cnext()
-        self._normal_row = self._normal_iter._current_row
-        
-        self._tumour_iter.cnext()
-        self._tumour_row = self._tumour_iter._current_row
-        
+        self._normal_iter.advance_position()        
+        self._tumour_iter.advance_position()
+                
         while True:
-            normal_pos = self._normal_row._position
-            tumour_pos = self._tumour_row._position
+            normal_pos = self._normal_iter._position
+            tumour_pos = self._tumour_iter._position
             
             if normal_pos == tumour_pos:
                 self._position = normal_pos
                 
                 self._set_current_row()
-                
+                           
                 break             
             elif normal_pos < tumour_pos:
-                self._normal_iter.cnext()
-                self._normal_row = self._normal_iter._current_row
+                self._normal_iter.advance_position()
             elif normal_pos > tumour_pos:
-                self._tumour_iter.cnext()
-                self._tumour_row = self._tumour_iter._current_row
+                self._tumour_iter.advance_position()
             else:
                 raise Exception("Error in joint pileup iterator.")
     
     cdef _set_current_row(self):
         cdef int region_length
         cdef char * ref_base
+        cdef BaseCounterRow normal_row
+        cdef BaseCounterRow tumour_row
+        
+        self._normal_iter.parse_current_position()        
+        normal_row = self._normal_iter._current_row
+        
+        self._tumour_iter.parse_current_position()
+        tumour_row = self._tumour_iter._current_row
         
         region_length = 1 
         
         ref_base = self._ref_genome_fasta._fetch(
-                                                 self._normal_row._ref,
-                                                 self._normal_row._position,
-                                                 self._normal_row._position + 1,
+                                                 normal_row._ref,
+                                                 normal_row._position,
+                                                 normal_row._position + 1,
                                                  & region_length
                                                  )
     
-        self._current_row = makeJointBinaryCounterRow(ref_base, self._normal_row, self._tumour_row)
+        self._current_row = makeJointBinaryCounterRow(ref_base, normal_row, tumour_row)
     
 cdef class JointBinaryCounterRow
 cdef JointBinaryCounterRow makeJointBinaryCounterRow(char * ref_base, BaseCounterRow normal_row, BaseCounterRow tumour_row):
