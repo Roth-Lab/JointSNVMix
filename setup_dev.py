@@ -74,6 +74,12 @@ snv_mix_classifier = Extension(
                                  include_dirs=classifier_includes
                                  )
 
+snv_mix_qualities_classifier = Extension(
+                                         "joint_snv_mix.classifiers.snv_mix_qualities",
+                                         ["joint_snv_mix/classifiers/snv_mix_qualities.pyx"],
+                                         include_dirs=classifier_includes
+                                         )
+
 joint_snv_mix_classifier = Extension(
                                      "joint_snv_mix.classifiers.joint_snv_mix",
                                      ["joint_snv_mix/classifiers/joint_snv_mix.pyx"],
@@ -107,6 +113,7 @@ ext_modules = [
                joint_fisher_classifier,
                threshold_classifier,
                snv_mix_classifier,
+               snv_mix_qualities_classifier,
                joint_snv_mix_classifier,
                fisher_exact_test,
                special_functions
