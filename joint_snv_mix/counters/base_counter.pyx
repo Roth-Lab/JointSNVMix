@@ -32,25 +32,32 @@ cdef class BaseCounterRefIterator(CounterRefIterator):
     '''
     def __init__(self, char * ref, IteratorColumnRegion pileup_iter, int min_base_qual, int min_map_qual):
         self._ref = ref
+                
         self._min_base_qual = min_base_qual
         self._min_map_qual = min_map_qual
         
-        self._ref_iter = CRefIterator(ref, pileup_iter)                        
-        self._position = self._ref_iter.position
+        self._ref_iter = CRefIterator(ref, pileup_iter)                                
+        self._position = self._ref_iter._position
   
     cdef cnext(self):
+        self.advance_position()
+        self.parse_current_position()
+    
+    cdef advance_position(self):
+        self._ref_iter.advance_position()
+        self._position = self._ref_iter._position
+    
+    cdef parse_current_position(self):
         cdef column_struct column
         cdef counts_struct counts
                 
-        self._ref_iter.cnext()
+        self._ref_iter.parse_current_position()
         
-        column = self._ref_iter.current_column        
-        
-        self._position = self._ref_iter.position
+        column = self._ref_iter._current_column        
         
         counts = self._parse_column(column)
     
-        self._current_row = makeBaseCounterRow(self._ref, self._position, counts)
+        self._current_row = makeBaseCounterRow(self._ref, self._position, counts)    
             
     cdef counts_struct _parse_column(self, column_struct column):            
         cdef int i
