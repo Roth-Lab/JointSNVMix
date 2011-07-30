@@ -246,3 +246,26 @@ cdef void destroy_base_map_qualities_struct(base_map_qualities_struct data):
     free(data.map_quals.A)
     free(data.map_quals.B)
             
+    cdef base_counts_struct get_base_counts(self, char * base):
+        cdef int i
+        cdef base_counts_struct base_counts
+        
+        base_counts.base = base
+        base_counts.counts = 0
+        
+        for i in range(self._depth):
+            if base[0] == self._bases[i]:
+                base_counts.counts += 1
+        
+        return base_counts
+    
+    cdef int get_counts(self, char * base):
+        cdef int i, counts
+        
+        counts = 0
+        
+        for i in range(self._depth):
+            if base[0] == self._bases[i]:
+                counts += 1
+        
+        return counts

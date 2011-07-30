@@ -53,70 +53,47 @@ cdef class QualityCounterRefIterator(RefIterator):
         self._current_row = makeQualityCounterRow(column)  
     
     
-cdef class QualityCounterRow(CounterRow):
-    '''
-    Class for storing count data from Bam file position.
-    '''    
-    def __init__(self):
-        raise TypeError("This class cannot be instantiated from Python")
-    
+cdef class QualityCounterRow(SingleSampleCounterRow):
     def __dealloc__(self):
         free(self._bases)
         free(self._base_quals)
         free(self._map_quals)
     
-    property counts:
-        '''
-        Return the counts for the four bases as tuple in the order A,C,G,T.
-        '''
+    def __str__(self):
+        row = [self.ref, str(self.position)]
+        
+        return "\t".join(row)
+    
+    property bases:        
         def __get__(self):
             cdef char base[2]
-            cdef list counts = []
-            
             base[1] = '\0'
             
-            for i in range(self._depth):
-                base[0] = self._bases[i]                
-                
-                counts.append((
-                               base,
-                               self._base_quals[i],
-                               self._map_quals[i]
-                               ))
-            
-            
-            return counts
-                
-    property depth:
-        '''
-        Depth of all counts.
-        '''
-        def __get__(self):            
-            return self._depth
+            bases = []
 
-    cdef base_counts_struct get_base_counts(self, char * base):
-        cdef int i
-        cdef base_counts_struct base_counts
-        
-        base_counts.base = base
-        base_counts.counts = 0
-        
-        for i in range(self._depth):
-            if base[0] == self._bases[i]:
-                base_counts.counts += 1
-        
-        return base_counts
+            for i in range(self._depth):
+                base[0] = self._bases[i]                                
+                bases.append(base)            
+            
+            return bases
     
-    cdef int get_counts(self, char * base):
-        cdef int i, counts
-        
-        counts = 0
-        
-        for i in range(self._depth):
-            if base[0] == self._bases[i]:
-                counts += 1
-        
-        return counts
+    property map_quals:        
+        def __get__(self):
+            map_quals = []
+            
+            for i in range(self._depth):
+                map_quals.append(self._map_quals[i])                                
+            
+            return map_quals
+    
+    property base_quals:        
+        def __get__(self):
+            base_quals = []
+            
+            for i in range(self._depth):
+                base_quals.append(self._base_quals[i])                                
+            
+            return base_quals
 
 '''
 C level constructor for BaseCounterRow object.
