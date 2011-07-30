@@ -29,7 +29,7 @@ cdef class JointBinaryQualityCounter(Counter):
                                                  self._ref_genome_fasta
                                                  )
         
-cdef class JointBinaryQualityCounterIterator(CounterRefIterator):
+cdef class JointBinaryQualityCounterIterator(JointRefIterator):
     def __init__(self,
                  char * ref,
                  QualityCounterRefIterator normal_iter,
@@ -45,54 +45,29 @@ cdef class JointBinaryQualityCounterIterator(CounterRefIterator):
         
         self._position = -1
 
-    cdef cnext(self):        
+    cdef parse_current_position(self):
+        cdef int region_length
+        cdef char * ref_base
         cdef QualityCounterRow normal_row
         cdef QualityCounterRow tumour_row
         
-        cdef int normal_pos
-        cdef int tumour_pos
+        self._normal_iter.parse_current_position()        
+        normal_row = self._normal_iter._current_row
         
-        self._normal_iter.cnext()
-        self._normal_row = self._normal_iter._current_row
-        
-        self._tumour_iter.cnext()
-        self._tumour_row = self._tumour_iter._current_row
-        
-        while True:
-            normal_pos = self._normal_row._position
-            tumour_pos = self._tumour_row._position
-            
-            if normal_pos == tumour_pos:
-                self._position = normal_pos
-                
-                self._set_current_row()
-                
-                break             
-            elif normal_pos < tumour_pos:
-                self._normal_iter.cnext()
-                self._normal_row = self._normal_iter._current_row
-            elif normal_pos > tumour_pos:
-                self._tumour_iter.cnext()
-                self._tumour_row = self._tumour_iter._current_row
-            else:
-                raise Exception("Error in joint pileup iterator.")
-    
-    cdef _set_current_row(self):
-        cdef int region_length
-        cdef char * ref_base
+        self._tumour_iter.parse_current_position()
+        tumour_row = self._tumour_iter._current_row
         
         region_length = 1 
         
-        # Samtools mallocs this!
         ref_base = self._ref_genome_fasta._fetch(
-                                                 self._normal_row._ref,
-                                                 self._normal_row._position,
-                                                 self._normal_row._position + 1,
+                                                 normal_row._ref,
+                                                 normal_row._position,
+                                                 normal_row._position + 1,
                                                  & region_length
                                                  )
     
-        self._current_row = makeJointBinaryQualityCounterRow(ref_base, self._normal_row, self._tumour_row)
-    
+        self._current_row = makeJointBinaryQualityCounterRow(ref_base, normal_row, tumour_row)
+
 cdef class JointBinaryQualityCounterRow
 cdef JointBinaryQualityCounterRow makeJointBinaryQualityCounterRow(char * ref_base,
                                                                    QualityCounterRow normal_row,
@@ -233,7 +208,7 @@ cdef base_map_qualities_struct get_base_map_qualities(char * ref_base, char * no
     A_index = 0 
     B_index = 0
     
-    for i in range(row._num_reads):
+    for i in range(row._depth):
         if row._bases[i] == ref_base[0]:
             data.base_quals.A[A_index] = row._base_quals[i]
             
@@ -256,11 +231,11 @@ cdef base_map_qualities_struct create_base_map_qualities_struct(int A_counts, in
     data.depth.A = A_counts
     data.depth.B = B_counts
 
-    data.base_quals.A = < double * > malloc(A_counts * sizeof(double)) 
-    data.base_quals.B = < double * > malloc(B_counts * sizeof(double))
+    data.base_quals.A = < int * > malloc(A_counts * sizeof(int)) 
+    data.base_quals.B = < int * > malloc(B_counts * sizeof(int))
     
-    data.map_quals.A = < double * > malloc(A_counts * sizeof(double))
-    data.map_quals.B = < double * > malloc(B_counts * sizeof(double))
+    data.map_quals.A = < int * > malloc(A_counts * sizeof(int))
+    data.map_quals.B = < int * > malloc(B_counts * sizeof(int))
     
     return data
 

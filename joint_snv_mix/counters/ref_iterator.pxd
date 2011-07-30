@@ -34,7 +34,8 @@ cdef class CRefIterator(object):
     cdef int _get_depth(self, PileupProxy pileup_column)
     
 cdef class JointRefIterator(RefIterator):
-    pass 
+    cdef RefIterator _normal_iter
+    cdef RefIterator _tumour_iter 
         
 cdef column_struct make_column_struct(char * ref, int position, int depth)
 cdef void destroy_column_struct(column_struct column)

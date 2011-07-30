@@ -25,7 +25,7 @@ cdef class QualityCounter(Counter):
         
         return iter
 
-cdef class QualityCounterRefIterator(CounterRefIterator):
+cdef class QualityCounterRefIterator(RefIterator):
     '''
     Iterator class for iterating over a reference in a bam file and returning BaseCounterRow objects.
     '''
