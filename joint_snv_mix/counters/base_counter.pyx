@@ -1,7 +1,4 @@
 '''
-Use the convention every position at C-level is 0-based. If the position is
-accessed by property mechanism from python layer it should be one based.
-
 Created on 2011-06-21
 
 @author: Andrew Roth
@@ -83,17 +80,19 @@ cdef class BaseCounterRefIterator(RefIterator):
                 counts.G += 1
             elif strcmp(base, "T") == 0:
                 counts.T += 1
-            
+        
         return counts
 
-cdef class BaseCounterRow(CounterRow):
+cdef class BaseCounterRow(SingleSampleCounterRow):
     '''
-    Class for storing count data from Bam file position.
-    '''    
-    def __init__(self):
-        raise TypeError("This class cannot be instantiated from Python")
-    
-    
+    Class for storing four nucleotide count data from Bam file position.
+    '''
+    def __str__(self):
+        row = [self.ref, str(self.position)]
+        row.extend([str(x) for x in self.counts])
+        
+        return "\t".join(row)
+        
     property counts:
         '''
         Return the counts for the four bases as tuple in the order A,C,G,T.
@@ -105,54 +104,6 @@ cdef class BaseCounterRow(CounterRow):
                     self._counts.G,
                     self._counts.T
                     )
-                
-    property depth:
-        '''
-        Depth of all counts.
-        '''
-        def __get__(self):
-            cdef int depth
-            
-            depth = self._counts.A + self._counts.C + self._counts.G + self._counts.T
-            
-            return depth
-        
-    cdef int get_counts(self, char * base):
-        '''
-        Lookup the counts for a given base.
-        '''
-        cdef int counts
-    
-        counts = 0
-        
-        if strcmp(base, "A") == 0: 
-            counts = self._counts.A
-        elif strcmp(base, "C") == 0: 
-            counts = self._counts.C
-        elif strcmp(base, "G") == 0:
-            counts = self._counts.G
-        elif strcmp(base, "T") == 0:
-            counts = self._counts.T
-        
-        return counts
-    
-    cdef base_counts_struct get_base_counts(self, char * base):
-        cdef base_counts_struct base_counts
-        
-        base_counts.base = base
-        
-        if strcmp(base, "A") == 0: 
-            base_counts.counts = self._counts.A
-        elif strcmp(base, "C") == 0: 
-            base_counts.counts = self._counts.C
-        elif strcmp(base, "G") == 0:
-            base_counts.counts = self._counts.G
-        elif strcmp(base, "T") == 0:
-            base_counts.counts = self._counts.T
-        else:
-            base_counts.counts = 0
-        
-        return base_counts
 
 '''
 C level constructor for BaseCounterRow object.
@@ -163,6 +114,7 @@ cdef BaseCounterRow makeBaseCounterRow(char * ref, int position, counts_struct c
     
      row._ref = ref
      row._position = position
-     row._counts = counts
+     row._counts = counts     
+     row._depth = counts.A + counts.C + counts.G + counts.T
      
      return row
