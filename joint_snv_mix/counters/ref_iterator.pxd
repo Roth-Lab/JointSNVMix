@@ -3,7 +3,7 @@ from libc.stdlib cimport malloc, free
 from csamtools cimport IteratorColumnRegion, PileupProxy, bam1_t, bam1_seq, bam1_qual, \
                                              bam_pileup1_t, bam_dup1, bam_destroy1
 
-from joint_snv_mix.counters.counter cimport CounterRow
+from joint_snv_mix.counters.counter_row cimport CounterRow
 from joint_snv_mix.counters.shared cimport column_struct
 
 cdef extern from "stdint.h":

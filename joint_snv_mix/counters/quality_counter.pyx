@@ -143,37 +143,3 @@ cdef QualityCounterRow makeQualityCounterRow(column_struct column):
         row._map_quals[i] = column.map_quals[i]     
     
     return row
-                         
-#===============================================================================
-# Modified pysam code
-#===============================================================================
-cdef char * bam_nt16_rev_table = "=ACMGRSVTWYHKDBN"
-
-cdef char * get_base(bam1_t * src, int pos):
-    cdef uint8_t * p
-    cdef char base
-    cdef char[2] base_str
-
-    if src.core.l_qseq == 0: 
-        return None
-    
-    if not src.core.l_qseq:
-        return None
-
-    seq = bam1_seq(src)
-    
-    base = bam_nt16_rev_table[seq[pos / 2] >> 4 * (1 - pos % 2) & 0xf]
-    
-    base_str[0] = base
-    base_str[1] = '\0'
-    
-    return base_str
-
-cdef int get_qual(bam1_t * src, int pos):    
-    cdef uint8_t * p
-
-    p = bam1_qual(src)
-    if p[0] == 0xff:
-        return None
-
-    return p[pos]

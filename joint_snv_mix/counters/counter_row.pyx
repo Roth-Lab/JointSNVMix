@@ -23,7 +23,7 @@ cdef class SingleSampleCounterRow(CounterRow):
         def __get__(self):    
             return self._depth
 
-cdef class PairedSampleCounterRow(object):
+cdef class PairedSampleCounterRow(CounterRow):
     property normal_depth:
         def __get__(self):
             return self._normal_depth
