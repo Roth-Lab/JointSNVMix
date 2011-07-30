@@ -25,7 +25,9 @@ cdef class SnvMixClassifierRefIterator(object):
     # 0-based current position of the iterator.
     cdef int _position
     
-    cdef object _current_row
+    cdef object _current_row    
+           
+    cdef double _qual_map[256]
     
     cdef JointBinaryQualityCounterIterator _iter
        
@@ -52,3 +54,4 @@ cdef class SnvMixClassifierRefIterator(object):
     cdef double _compute_single_base_log_prob(self, double q, double r, double m)
     cdef tuple _get_labels(self)
     cdef cnext(self)
+    cdef _init_qual_map(self)
