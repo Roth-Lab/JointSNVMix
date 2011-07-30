@@ -90,10 +90,13 @@ cdef JointBinaryQualityCounterRow makeJointBinaryQualityCounterRow(char * ref_ba
      
     row._normal_data = get_base_map_qualities(ref_base, non_ref_base, normal_row)
     row._tumour_data = get_base_map_qualities(ref_base, non_ref_base, tumour_row)
+    
+    row._normal_depth = row._normal_data.depth.A + row._normal_data.depth.B
+    row._tumour_depth = row._tumour_data.depth.A + row._tumour_data.depth.B
      
     return row
 
-cdef class JointBinaryQualityCounterRow(CounterRow):
+cdef class JointBinaryQualityCounterRow(PairedSampleCounterRow):
     '''
     Class for storing binary count data from a pair of Bam files at a position.
     '''    
@@ -122,18 +125,6 @@ cdef class JointBinaryQualityCounterRow(CounterRow):
                     self._tumour_data.depth.A,
                     self._tumour_data.depth.B,
                     )
-    
-    property depth:
-        def __get__(self):
-            cdef int normal_depth, tumour_depth
-            
-            normal_depth = self._normal_data.depth.A + self._normal_data.depth.B
-            tumour_depth = self._tumour_data.depth.A + self._tumour_data.depth.B            
-            
-            if normal_depth < tumour_depth:
-                return normal_depth
-            else:
-                return tumour_depth
         
     property ref_base:
         def __get__(self):
@@ -154,47 +145,6 @@ cdef int compare_base_counts_struct(const_void * a, const_void * b):
     second = < base_counts_struct *> b
 
     return first.counts - second.counts
-
-cdef char * get_non_ref_base(char * ref_base, QualityCounterRow normal_row, QualityCounterRow tumour_row):
-    '''
-    Sort the bases by number observed and return the most common non-reference base.
-    
-    Return N if the counts of most common non-reference is 0.
-    ''' 
-    cdef int non_ref_index    
-    cdef base_counts_struct[4] counts
-
-    counts[0] = normal_row.get_base_counts("A")
-    counts[1] = normal_row.get_base_counts("C")
-    counts[2] = normal_row.get_base_counts("G")
-    counts[3] = normal_row.get_base_counts("T")
-    
-    counts[0].counts += tumour_row.get_counts("A")
-    counts[1].counts += tumour_row.get_counts("C")
-    counts[2].counts += tumour_row.get_counts("G")
-    counts[3].counts += tumour_row.get_counts("T")
-
-    # Sort the structs by counts field. 
-    qsort(counts, 4, sizeof(base_counts_struct), compare_base_counts_struct)
-            
-    # If the most prevalent base is not the reference return it.
-    if strcmp(counts[3].base, ref_base) != 0:
-        non_ref_index = 3
-    else:
-        non_ref_index = 2
-    
-    if counts[non_ref_index].counts > 0:
-        return counts[non_ref_index].base
-    else:
-        return 'N'
-        
-cdef binary_counts_struct get_binary_counts(char * ref_base, char * non_ref_base, QualityCounterRow row):
-    cdef binary_counts_struct counts
-
-    counts.A = row.get_counts(ref_base)
-    counts.B = row.get_counts(non_ref_base)
-    
-    return counts
 
 cdef base_map_qualities_struct get_base_map_qualities(char * ref_base, char * non_ref_base, QualityCounterRow row):
     cdef int i, ref_counts, non_ref_counts, A_index, B_index
@@ -245,27 +195,3 @@ cdef void destroy_base_map_qualities_struct(base_map_qualities_struct data):
     
     free(data.map_quals.A)
     free(data.map_quals.B)
-            
-    cdef base_counts_struct get_base_counts(self, char * base):
-        cdef int i
-        cdef base_counts_struct base_counts
-        
-        base_counts.base = base
-        base_counts.counts = 0
-        
-        for i in range(self._depth):
-            if base[0] == self._bases[i]:
-                base_counts.counts += 1
-        
-        return base_counts
-    
-    cdef int get_counts(self, char * base):
-        cdef int i, counts
-        
-        counts = 0
-        
-        for i in range(self._depth):
-            if base[0] == self._bases[i]:
-                counts += 1
-        
-        return counts

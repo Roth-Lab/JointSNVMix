@@ -2,7 +2,8 @@ from libc.stdlib cimport malloc, free
 
 from csamtools cimport Samfile, Fastafile
 
-from joint_snv_mix.counters.counter cimport Counter, CounterRow
+from joint_snv_mix.counters.counter cimport Counter
+from joint_snv_mix.counters.counter_row cimport PairedSampleCounterRow, get_non_ref_base, get_binary_counts
 from joint_snv_mix.counters.quality_counter cimport QualityCounter, QualityCounterRow, QualityCounterRefIterator
 from joint_snv_mix.counters.ref_iterator cimport JointRefIterator
 from joint_snv_mix.counters.shared cimport binary_counts_struct, base_counts_struct, strcmp
@@ -32,7 +33,7 @@ cdef class JointBinaryQualityCounter(Counter):
     cdef QualityCounter _tumour_counter    
     cdef Fastafile _ref_genome_fasta    
     
-cdef class JointBinaryQualityCounterRow(CounterRow):
+cdef class JointBinaryQualityCounterRow(PairedSampleCounterRow):
     cdef char * _ref_base
     cdef char * _non_ref_base
     cdef base_map_qualities_struct _normal_data

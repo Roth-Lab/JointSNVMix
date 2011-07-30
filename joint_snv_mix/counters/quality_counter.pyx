@@ -94,6 +94,17 @@ cdef class QualityCounterRow(SingleSampleCounterRow):
                 base_quals.append(self._base_quals[i])                                
             
             return base_quals
+    
+    cdef int get_counts(self, char * base):
+        cdef int i, counts
+        
+        counts = 0
+        
+        for i in range(self._depth):
+            if base[0] == self._bases[i]:
+                counts += 1
+        
+        return counts        
 
 '''
 C level constructor for BaseCounterRow object.
