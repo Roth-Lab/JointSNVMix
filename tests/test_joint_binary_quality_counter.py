@@ -69,34 +69,34 @@ class Test(unittest.TestCase):
         row = iter.next()
         self.check_position(row, '1', 2, 'A', 'C')
    
-    def test_tumour_del(self):
-        counter = self.get_counter()
-        
-        for row in counter.iter_ref('1'):
-            print row
-            if row.position == 3:
-                # Check normal
-                self.assertEqual(row.counts[0][0][0], 'A')
-                self.assertEqual(row.counts[0][1][0], 'A')
-                self.assertEqual(row.counts[0][2][0], 'A')
-                
-                # Check tumour
-                self.assertEqual(row.counts[1][0][0], 'A')
-                self.assertEqual(row.counts[1][1][0], 'A')
-    
-    def test_tumour_insertion(self):
-        counter = self.get_counter()
-        
-        for row in counter.iter_ref('1'):
-            if row.position == 4:
-                self.assertEqual(row.counts[1][0][0], 'C')
-                self.assertEqual(row.counts[1][1][0], 'C')
-                self.assertEqual(row.counts[1][2][0], 'C')
-            
-            if row.position == 5:
-                self.assertEqual(row.counts[1][0][0], 'C')
-                self.assertEqual(row.counts[1][1][0], 'C')
-                self.assertEqual(row.counts[1][2][0], 'C')
+#    def test_tumour_del(self):
+#        counter = self.get_counter()
+#        
+#        for row in counter.iter_ref('1'):
+#            print row
+#            if row.position == 3:
+#                # Check normal
+#                self.assertEqual(row.ref_base, 'A')
+#                self.assertEqual(row.ref_base, 'A')
+#                self.assertEqual(row.ref_base, 'A')
+#                
+#                # Check tumour
+#                self.assertEqual(row.counts[1][0][0], 'A')
+#                self.assertEqual(row.counts[1][1][0], 'A')
+#    
+#    def test_tumour_insertion(self):
+#        counter = self.get_counter()
+#        
+#        for row in counter.iter_ref('1'):
+#            if row.position == 4:
+#                self.assertEqual(row.counts[1][0][0], 'C')
+#                self.assertEqual(row.counts[1][1][0], 'C')
+#                self.assertEqual(row.counts[1][2][0], 'C')
+#            
+#            if row.position == 5:
+#                self.assertEqual(row.counts[1][0][0], 'C')
+#                self.assertEqual(row.counts[1][1][0], 'C')
+#                self.assertEqual(row.counts[1][2][0], 'C')
                 
 
     def test_homzygous_germline(self):
