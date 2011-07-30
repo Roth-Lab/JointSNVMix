@@ -52,16 +52,9 @@ class Test(unittest.TestCase):
         iter.next()
         row_1 = iter.next()     
         self.assertEqual(row_1.position, 35)
-        expect_row = (
-                      'C',
-                      self._get_prob_from_phred(ord('<') - 33),
-                      self._get_prob_from_phred(20)
-                      )
+        expect_row = ('C', ord('<') - 33, 20)
         self.assertEqual(row_1.counts[0], expect_row)
         self.assertEqual(row_1.depth, 3)
-
-    def _get_prob_from_phred(self, qual):
-        return 1. - pow(10, -qual / 10.) 
     
     def test_deletion_correct(self):
         reader = self.get_counter('data/deletion.bam')
