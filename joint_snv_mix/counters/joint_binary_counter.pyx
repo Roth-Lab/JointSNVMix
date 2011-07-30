@@ -30,10 +30,10 @@ cdef class JointBinaryBaseCounter(Counter):
                                                )
         
 cdef class JointBinaryBaseCounterIterator(JointRefIterator):
-    def __init__(self, 
-                 char * ref, 
-                 BaseCounterRefIterator normal_iter, 
-                 BaseCounterRefIterator tumour_iter, 
+    def __init__(self,
+                 char * ref,
+                 BaseCounterRefIterator normal_iter,
+                 BaseCounterRefIterator tumour_iter,
                  Fastafile ref_genome_fasta):
         
         self._ref = ref
@@ -87,11 +87,14 @@ cdef JointBinaryCounterRow makeJointBinaryCounterRow(char * ref_base, BaseCounte
     row._non_ref_base = non_ref_base
      
     row._normal_counts = get_binary_counts(ref_base, non_ref_base, normal_row)
-    row._tumour_counts = get_binary_counts(ref_base, non_ref_base, tumour_row)    
+    row._tumour_counts = get_binary_counts(ref_base, non_ref_base, tumour_row)
+    
+    row._normal_depth = row._normal_counts.A + row._normal_counts.B
+    row._tumour_depth = row._tumour_counts.A + row._tumour_counts.B   
      
     return row
 
-cdef class JointBinaryCounterRow(CounterRow):
+cdef class JointBinaryCounterRow(PairedSampleCounterRow):
     '''
     Class for storing binary count data from a pair of Bam files at a position.
     '''    
@@ -118,26 +121,6 @@ cdef class JointBinaryCounterRow(CounterRow):
                     self._tumour_counts.A,
                     self._tumour_counts.B
                     )
-    
-    property depth:
-        def __get__(self):
-            cdef int normal_depth
-            cdef int tumour_depth
-            
-            normal_depth = self._normal_counts.A + self._normal_counts.B
-            tumour_depth = self._tumour_counts.A + self._tumour_counts.B
-            
-            if normal_depth < tumour_depth:
-                return normal_depth
-            else:
-                return tumour_depth
-    
-    property has_var:
-        def __get__(self):
-            if self._tumour_counts.B > 0:
-                return True
-            else:
-                return False
     
     property ref_base:
         def __get__(self):
@@ -168,15 +151,15 @@ cdef char * get_non_ref_base(char * ref_base, BaseCounterRow normal_row, BaseCou
     cdef int non_ref_index    
     cdef base_counts_struct[4] counts
 
-    counts[0] = normal_row.get_base_counts("A")
-    counts[1] = normal_row.get_base_counts("C")
-    counts[2] = normal_row.get_base_counts("G")
-    counts[3] = normal_row.get_base_counts("T")
+    counts[0].base = "A"
+    counts[1].base = "C"
+    counts[2].base = "G"
+    counts[3].base = "T"
     
-    counts[0].counts += tumour_row.get_counts("A")
-    counts[1].counts += tumour_row.get_counts("C")
-    counts[2].counts += tumour_row.get_counts("G")
-    counts[3].counts += tumour_row.get_counts("T")
+    counts[0].counts = normal_row._counts.A + tumour_row._counts.A
+    counts[1].counts = normal_row._counts.C + tumour_row._counts.C
+    counts[2].counts = normal_row._counts.G + tumour_row._counts.G
+    counts[3].counts = normal_row._counts.T + tumour_row._counts.T   
 
     # Sort the structs by counts field. 
     qsort(counts, 4, sizeof(base_counts_struct), compare_base_counts_struct)
@@ -195,7 +178,21 @@ cdef char * get_non_ref_base(char * ref_base, BaseCounterRow normal_row, BaseCou
 cdef binary_counts_struct get_binary_counts(char * ref_base, char * non_ref_base, BaseCounterRow row):
     cdef binary_counts_struct counts
 
-    counts.A = row.get_counts(ref_base)
-    counts.B = row.get_counts(non_ref_base)
+    counts.A = get_counts(ref_base, row._counts)
+    counts.B = get_counts(non_ref_base, row._counts)
     
-    return counts 
+    return counts
+
+cdef int get_counts(char * base, counts_struct counts):
+    cdef int result
+
+    if strcmp(base, "A") == 0:
+        result = counts.A        
+    elif strcmp(base, "C") == 0:
+        result = counts.C
+    elif strcmp(base, "G") == 0:
+        result = counts.G
+    elif strcmp(base, "T") == 0:
+        result = counts.T
+    
+    return result
