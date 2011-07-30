@@ -7,6 +7,17 @@ Cython.Compiler.Options.annotate = True
 
 counter_includes = ['joint_snv_mix/counters', 'include/pysam', 'include/samtools']
 
+ref_iterator = Extension(
+                         "joint_snv_mix.counters.ref_iterator",
+                         ["joint_snv_mix/counters/ref_iterator.pyx"],
+                         include_dirs=counter_includes
+                         )
+counter_row = Extension(
+                        "joint_snv_mix.counters.counter_row",
+                        ["joint_snv_mix/counters/counter_row.pyx"],
+                        include_dirs=counter_includes
+                        )
+
 counter = Extension(
                     "joint_snv_mix.counters.counter",
                     ["joint_snv_mix/counters/counter.pyx"],
@@ -102,21 +113,23 @@ special_functions = Extension(
                               include_dirs=classifier_includes
                               )
 
-ext_modules = [ 
+ext_modules = [
                counter,
+               ref_iterator,
+               counter_row,               
                base_counter,
                quality_counter,
                joint_bin_counter,
                joint_quality_counter,
-               base_classifier,
-               indep_fisher_classifier,
-               joint_fisher_classifier,
-               threshold_classifier,
-               snv_mix_classifier,
-               snv_mix_qualities_classifier,
-               joint_snv_mix_classifier,
-               fisher_exact_test,
-               special_functions
+#               base_classifier,
+#               indep_fisher_classifier,
+#               joint_fisher_classifier,
+#               threshold_classifier,
+#               snv_mix_classifier,
+#               snv_mix_qualities_classifier,
+#               joint_snv_mix_classifier,
+#               fisher_exact_test,
+#               special_functions
                ]
 
 setup(
