@@ -28,45 +28,6 @@ cdef class Counter(object):
         def __get__(self):
             return self._refs
 
-cdef class CounterRefIterator(object):
-    '''
-    Base class for all iterator objects over a reference. Should return a CounterRow subclass object on each iteration.
-    '''
-    def __iter__(self):
-        return self
-    
-    def __next__(self):
-        '''
-        Python level next() method.
-        '''
-        self.cnext()
-        
-        return self._current_row
-    
-    cdef cnext(self):
-        '''
-        C level next method. All subclasses need to re-implement this method.
-        
-        Should move the self._current_row to next value.
-        
-        No return value should be specified to allow Cython to pass exceptions along chain.
-        '''
-        pass
-    
-    property ref:
-        '''
-        Read only access to reference which the iterator runs over.
-        '''
-        def __get__(self):
-            return self._ref
-    
-    property position:
-        '''
-        Read only access to 1-based current position of iterator.
-        '''
-        def __get__(self):
-            return self._position + 1
-
 cdef class CounterRow(object):
     '''
     Base class for all counts row objects.

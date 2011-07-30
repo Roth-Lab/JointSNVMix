@@ -7,15 +7,4 @@ cdef class CounterRow(object):
     cdef char * _ref
     
     # 0-based position of the row.
-    cdef int _position    
-
-cdef class CounterRefIterator(object):
-    # Ref which the iterator runs over.
-    cdef char * _ref
-    
-    # 0-based current position of the iterator.
     cdef int _position
-    
-    cdef object _current_row
-    
-    cdef cnext(self)
