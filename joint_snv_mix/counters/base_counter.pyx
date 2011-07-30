@@ -105,6 +105,21 @@ cdef class BaseCounterRow(SingleSampleCounterRow):
                     self._counts.T
                     )
 
+    cdef int get_counts(self, char * base):
+        cdef int result
+    
+        if strcmp(base, "A") == 0:
+            result = self._counts.A        
+        elif strcmp(base, "C") == 0:
+            result = self._counts.C
+        elif strcmp(base, "G") == 0:
+            result = self._counts.G
+        elif strcmp(base, "T") == 0:
+            result = self._counts.T
+        else:
+            return 0
+        
+        return result
 '''
 C level constructor for BaseCounterRow object.
 '''
