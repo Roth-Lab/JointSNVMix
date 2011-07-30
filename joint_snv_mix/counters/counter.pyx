@@ -27,48 +27,4 @@ cdef class Counter(object):
         '''
         def __get__(self):
             return self._refs
-
-cdef class CounterRow(object):
-    '''
-    Base class for all counts row objects.
-    '''
-    def __str__(self):
-        '''
-        Method to display row object. Outputs in format tab delmited format
-        
-        ref position counts
-        '''
-        out_row = [self.ref, str(self.position)]
-        out_row.extend([str(x) for x in self.counts])
-        
-        return "\t".join(out_row)
-    
-    property ref:
-        '''
-        Read only access to reference for row.
-        '''
-        def __get__(self):
-            return self._ref
-    
-    property position:
-        '''
-        Read only access to 1-based position of row.
-        '''
-        def __get__(self):
-            return self._position + 1
-    
-    property counts:
-        '''
-        Read only access to count data. Should return the counts as a list of integers.
-        '''
-        def __get__(self):
-            pass
-    
-    property depth:
-        '''
-        Read only access to depth. Depth will depend on the nature of CounterRow. For rows with counts from multiple
-        references minimum depth over samples should be returned.
-        '''
-        def __get__(self):
-            pass
             
