@@ -1,3 +1,51 @@
+cdef class RefIterator(object):
+    '''
+    Base class for all iterator objects over a reference. Should return a CounterRow subclass object on each iteration.
+    '''
+    def __iter__(self):
+        return self
+    
+    def __next__(self):
+        '''
+        Python level next() method.
+        '''
+        self.cnext()
+        
+        return self._current_row
+    
+    cdef cnext(self):
+        '''
+        C level next method.
+        '''
+        self.advance_position()
+        self.parse_current_position()
+    
+    cdef advance_position(self):
+        '''
+        C level method to move the iterator along without parsing the row. Allows for lazy parsing.
+        '''
+        pass
+    
+    cdef parse_current_position(self):
+        '''
+        Responsible for parsing the current position to a CounterRow object and setting self._current_row.
+        '''
+        pass
+    
+    property ref:
+        '''
+        Read only access to reference which the iterator runs over.
+        '''
+        def __get__(self):
+            return self._ref
+    
+    property position:
+        '''
+        Read only access to 1-based current position of iterator.
+        '''
+        def __get__(self):
+            return self._position + 1
+
 cdef class CRefIterator(object):
     '''
     Designed for C level access only. Main attribute is current_column which is column_struct object.
@@ -109,6 +157,32 @@ cdef void destroy_column_struct(column_struct column):
     free(column.bases)
     free(column.base_quals)
     free(column.map_quals)
+
+#=======================================================================================================================
+# JointRefIterator code
+#=======================================================================================================================
+cdef class JointRefIterator(RefIterator):
+    cdef advance_position(self):        
+        cdef int normal_pos
+        cdef int tumour_pos
+        
+        self._normal_iter.advance_position()        
+        self._tumour_iter.advance_position()
+                
+        while True:
+            normal_pos = self._normal_iter._position
+            tumour_pos = self._tumour_iter._position
+            
+            if normal_pos == tumour_pos:
+                self._position = normal_pos
+                                       
+                break             
+            elif normal_pos < tumour_pos:
+                self._normal_iter.advance_position()
+            elif normal_pos > tumour_pos:
+                self._tumour_iter.advance_position()
+            else:
+                raise Exception("Error in joint pileup iterator.")
 
 #=======================================================================================================================
 # Modified pysam code
