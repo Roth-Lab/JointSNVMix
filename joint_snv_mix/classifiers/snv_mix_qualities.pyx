@@ -29,6 +29,8 @@ cdef class SnvMixClassifierRefIterator(object):
         self._ref = ref        
         self._iter = iter
         
+        self._init_qual_map()
+        
         mu_N = kwargs.get('mu_N', (0.99, 0.5, 0.01))
         mu_T = kwargs.get('mu_T', (0.99, 0.5, 0.01))
         pi_N = kwargs.get('pi_N', (0.99, 0.009, 0.001))
@@ -40,6 +42,16 @@ cdef class SnvMixClassifierRefIterator(object):
             
             self._log_pi_N[i] = log(pi_N[i])            
             self._log_pi_T[i] = log(pi_T[i])
+    
+    cdef _init_qual_map(self):
+        cdef int qual
+        cdef double base, exp
+        
+        for qual in range(256):
+            exp = -1 * (< double > qual) / 10
+            base = 10
+            
+            self._qual_map[qual] = 1 - pow(base, exp)
 
     def __iter__(self):
         return self
@@ -119,14 +131,14 @@ cdef class SnvMixClassifierRefIterator(object):
             m = mu[genotype]
             
             for read_index in range(data.depth.A):
-                q = data.base_quals.A[read_index]
-                r = data.map_quals.A[read_index]
+                q = self._qual_map[data.base_quals.A[read_index]]
+                r = self._qual_map[data.map_quals.A[read_index]]
                 
                 p += self._compute_single_base_log_prob(q, r, m)
             
             for read_index in range(data.depth.B):
-                q = (1 - data.base_quals.B[read_index]) / 3
-                r = data.map_quals.B[read_index]
+                q = (1 - self._qual_map[data.base_quals.B[read_index]]) / 3
+                r = self._qual_map[data.map_quals.B[read_index]]
                 
                 p += self._compute_single_base_log_prob(q, r, m)
             
