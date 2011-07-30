@@ -26,7 +26,7 @@ cdef class BaseCounter(Counter):
         
         return iter
 
-cdef class BaseCounterRefIterator(CounterRefIterator):
+cdef class BaseCounterRefIterator(RefIterator):
     '''
     Iterator class for iterating over a reference in a bam file and returning BaseCounterRow objects.
     '''
@@ -39,10 +39,6 @@ cdef class BaseCounterRefIterator(CounterRefIterator):
         self._ref_iter = CRefIterator(ref, pileup_iter)                                
         self._position = self._ref_iter._position
   
-    cdef cnext(self):
-        self.advance_position()
-        self.parse_current_position()
-    
     cdef advance_position(self):
         self._ref_iter.advance_position()
         self._position = self._ref_iter._position
