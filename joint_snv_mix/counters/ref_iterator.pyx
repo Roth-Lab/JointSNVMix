@@ -5,16 +5,16 @@ cdef class CRefIterator(object):
     Iterator class for iterating over a reference in a bam file data for each position.
     '''
     def __init__(self, char * ref, IteratorColumnRegion pileup_iter):
-        self.ref = ref
-        self.position = -1
+        self._ref = ref
+        self._position = -1
         
         self._pileup_iter = pileup_iter
         
-        self.current_column.bases = NULL
+        self._current_column.bases = NULL
     
     def __dealloc__(self):
-        if self.current_column.bases is not NULL:
-            destroy_column_struct(self.current_column)
+        if self._current_column.bases is not NULL:
+            destroy_column_struct(self._current_column)
   
     cdef cnext(self):
         '''
@@ -29,16 +29,16 @@ cdef class CRefIterator(object):
         self.current_column is in an undefined state unless self.parse_current_position() is called.
         '''
         self._current_pileup_column = self._pileup_iter.next()        
-        self.position = self._current_pileup_column.pos
+        self._position = self._current_pileup_column.pos
     
     cdef parse_current_position(self):
         '''
         Parses current value stored in self.current_pileup_column. 
         '''
-        if self.current_column.bases is not NULL:
-            destroy_column_struct(self.current_column)
+        if self._current_column.bases is not NULL:
+            destroy_column_struct(self._current_column)
         
-        self.current_column = self._parse_pileup_column(self._current_pileup_column)
+        self._current_column = self._parse_pileup_column(self._current_pileup_column)
                 
     cdef column_struct _parse_pileup_column(self, PileupProxy pileup_column):
         cdef int i, depth, index, qpos
@@ -47,7 +47,7 @@ cdef class CRefIterator(object):
         cdef column_struct column
                 
         depth = self._get_depth(pileup_column)        
-        column = make_column_struct(self.ref, pileup_column.pos, depth)
+        column = make_column_struct(self._ref, pileup_column.pos, depth)
         
         index = 0
 

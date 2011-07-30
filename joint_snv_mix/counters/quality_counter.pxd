@@ -4,7 +4,8 @@ from csamtools cimport Samfile, Fastafile, IteratorColumnRegion, PileupProxy,\
                        bam1_t, bam1_seq, bam1_qual, bam_pileup1_t, bam_dup1, bam_destroy1
 
 from joint_snv_mix.counters.counter cimport Counter, CounterRefIterator, CounterRow
-from joint_snv_mix.counters.shared cimport base_counts_struct
+from joint_snv_mix.counters.ref_iterator cimport CRefIterator
+from joint_snv_mix.counters.shared cimport base_counts_struct, column_struct
     
 cdef extern from "stdint.h":
     ctypedef int uint8_t
@@ -16,19 +17,19 @@ cdef class QualityCounter(Counter):
     cdef Samfile _bam_file
     
 cdef class QualityCounterRow(CounterRow):
-    cdef int _num_reads
+    cdef int _depth
     cdef char * _bases
-    cdef double * _base_quals
-    cdef double * _map_quals
+    cdef int * _base_quals
+    cdef int * _map_quals
     
     cdef base_counts_struct get_base_counts(self, char * base)
     cdef int get_counts(self, char * base)
 
 cdef class QualityCounterRefIterator(CounterRefIterator):
     cdef double _qual_map[NUM_QUAL_VAL]
-    cdef IteratorColumnRegion _pileup_iter
-    
-    cdef _init_qual_map(self)
-    cdef QualityCounterRow _parse_pileup_column(self, PileupProxy pileup_column)    
+    cdef CRefIterator _ref_iter
+
+    cdef advance_position(self)
+    cdef parse_current_position(self)
     
     
