@@ -29,7 +29,7 @@ cdef class JointBinaryBaseCounter(Counter):
                                                self._ref_genome_fasta
                                                )
         
-cdef class JointBinaryBaseCounterIterator(CounterRefIterator):
+cdef class JointBinaryBaseCounterIterator(JointRefIterator):
     def __init__(self, 
                  char * ref, 
                  BaseCounterRefIterator normal_iter, 
@@ -44,32 +44,8 @@ cdef class JointBinaryBaseCounterIterator(CounterRefIterator):
         self._ref_genome_fasta = ref_genome_fasta
         
         self._position = -1
-
-    cdef cnext(self):        
-        cdef int normal_pos
-        cdef int tumour_pos
-        
-        self._normal_iter.advance_position()        
-        self._tumour_iter.advance_position()
-                
-        while True:
-            normal_pos = self._normal_iter._position
-            tumour_pos = self._tumour_iter._position
-            
-            if normal_pos == tumour_pos:
-                self._position = normal_pos
-                
-                self._set_current_row()
-                           
-                break             
-            elif normal_pos < tumour_pos:
-                self._normal_iter.advance_position()
-            elif normal_pos > tumour_pos:
-                self._tumour_iter.advance_position()
-            else:
-                raise Exception("Error in joint pileup iterator.")
     
-    cdef _set_current_row(self):
+    cdef parse_current_position(self):
         cdef int region_length
         cdef char * ref_base
         cdef BaseCounterRow normal_row
