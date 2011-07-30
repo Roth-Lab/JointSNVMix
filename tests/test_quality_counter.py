@@ -52,9 +52,9 @@ class Test(unittest.TestCase):
         iter.next()
         row_1 = iter.next()     
         self.assertEqual(row_1.position, 35)
-        expect_row = ('C', ord('<') - 33, 20)
-        self.assertEqual(row_1.counts[0], expect_row)
-        self.assertEqual(row_1.depth, 3)
+        self.assertEqual(row_1.bases[0], 'C')
+        self.assertEqual(row_1.base_quals[0], ord('<') - 33)
+        self.assertEqual(row_1.map_quals[0], 20)
     
     def test_deletion_correct(self):
         reader = self.get_counter('data/deletion.bam')
@@ -64,22 +64,22 @@ class Test(unittest.TestCase):
                 self.assertEqual(row.depth, 0)
                 
             if row.position == 35:
-                self.assertEqual(row.counts[0][0], ('G'))
-                self.assertEqual(row.counts[1][0], ('G'))
-                self.assertEqual(row.counts[2][0], ('C'))
+                self.assertEqual(row.bases[0], ('G'))
+                self.assertEqual(row.bases[1], ('G'))
+                self.assertEqual(row.bases[2], ('C'))
 
     def test_insertion_correct(self):
         reader = self.get_counter('data/insertion.bam')
         
         for row in reader.iter_ref('1'):
             if row.position == 34:
-                self.assertEqual(row.counts[0][0], ('C'))
-                self.assertEqual(row.counts[1][0], ('C'))
+                self.assertEqual(row.bases[0], ('C'))
+                self.assertEqual(row.bases[1], ('C'))
                                 
             if row.position == 35:
-                self.assertEqual(row.counts[0][0], ('T'))
-                self.assertEqual(row.counts[1][0], ('T'))
-                self.assertEqual(row.counts[2][0], ('C'))
+                self.assertEqual(row.bases[0], ('T'))
+                self.assertEqual(row.bases[1], ('T'))
+                self.assertEqual(row.bases[2], ('C'))
         
 if __name__ == "__main__":
     #import sys;sys.argv = ['', 'Test.testName']
