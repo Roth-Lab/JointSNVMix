@@ -31,80 +31,27 @@ cdef class QualityCounterRefIterator(CounterRefIterator):
     '''
     def __init__(self, char * ref, IteratorColumnRegion pileup_iter):
         self._ref = ref
-        self._pileup_iter = pileup_iter
         
-        self._position = pileup_iter.pos
-        
-        self._init_qual_map()
-    
-    cdef _init_qual_map(self):
-        cdef double base, exp
-        
-        for qual in range(NUM_QUAL_VAL):
-            exp = -1 * (< double > qual) / 10
-            base = 10
-            
-            self._qual_map[qual] = 1 - pow(base, exp)
+        self._ref_iter = CRefIterator(ref, pileup_iter)                                
+        self._position = self._ref_iter._position
   
     cdef cnext(self):
-        cdef PileupProxy pileup_column
+        self.advance_position()
+        self.parse_current_position()
+    
+    cdef advance_position(self):
+        self._ref_iter.advance_position()
+        self._position = self._ref_iter._position
+    
+    cdef parse_current_position(self):
+        cdef column_struct column
+                
+        self._ref_iter.parse_current_position()
         
-        pileup_column = self._pileup_iter.next()
-        
-        self._position = pileup_column.pos
-        
-        self._current_row = self._parse_pileup_column(pileup_column)
-            
-    cdef QualityCounterRow _parse_pileup_column(self, PileupProxy pileup_column):
-        cdef int i, qpos, map_qual, base_qual, num_reads, read
-        cdef char * base        
-        cdef bam1_t * alignment
-        cdef bam_pileup1_t * pileup        
-        cdef char * bases
-        cdef double * base_quals, * map_quals
-        
-        num_reads = 0
-        
-        # Find out how many valid non del reads.
-        for i in range(pileup_column.n_pu):
-            pileup = & pileup_column.plp[i]
-            
-            if pileup.is_del:
-                continue
-            
-            num_reads += 1
-                    
-        bases = < char *> malloc(num_reads * sizeof(char))
-        base_quals = < double *> malloc(num_reads * sizeof(double))
-        map_quals = < double *> malloc(num_reads * sizeof(double))
-        
-        # Keep track of which valid reads
-        read = 0
-        
-        for i in range(pileup_column.n_pu):
-            pileup = & pileup_column.plp[i]
-            
-            if pileup.is_del:
-                continue
-            
-            qpos = pileup.qpos
-            
-            alignment = bam_dup1(pileup.b) 
-            
-            map_qual = alignment.core.qual
-            map_quals[read] = self._qual_map[map_qual]
-                        
-            base_qual = get_qual(alignment, qpos)
-            base_quals[read] = self._qual_map[base_qual]
-                       
-            base = get_base(alignment, qpos)
-            bases[read] = base[0]
-            
-            read += 1
-
-            bam_destroy1(alignment)
-        
-        return makeQualityCounterRow(self._ref, self._position, num_reads, bases, base_quals, map_quals)
+        column = self._ref_iter._current_column        
+    
+        self._current_row = makeQualityCounterRow(column)  
+    
     
 cdef class QualityCounterRow(CounterRow):
     '''
@@ -128,7 +75,7 @@ cdef class QualityCounterRow(CounterRow):
             
             base[1] = '\0'
             
-            for i in range(self._num_reads):
+            for i in range(self._depth):
                 base[0] = self._bases[i]                
                 
                 counts.append((
@@ -145,7 +92,7 @@ cdef class QualityCounterRow(CounterRow):
         Depth of all counts.
         '''
         def __get__(self):            
-            return self._num_reads
+            return self._depth
 
     cdef base_counts_struct get_base_counts(self, char * base):
         cdef int i
@@ -154,7 +101,7 @@ cdef class QualityCounterRow(CounterRow):
         base_counts.base = base
         base_counts.counts = 0
         
-        for i in range(self._num_reads):
+        for i in range(self._depth):
             if base[0] == self._bases[i]:
                 base_counts.counts += 1
         
@@ -165,7 +112,7 @@ cdef class QualityCounterRow(CounterRow):
         
         counts = 0
         
-        for i in range(self._num_reads):
+        for i in range(self._depth):
             if base[0] == self._bases[i]:
                 counts += 1
         
@@ -175,24 +122,27 @@ cdef class QualityCounterRow(CounterRow):
 C level constructor for BaseCounterRow object.
 '''
 cdef class QualityCounterRow
-cdef QualityCounterRow makeQualityCounterRow(
-                                          char * ref,
-                                          int position,
-                                          int num_reads,
-                                          char * bases,
-                                          double * base_quals,
-                                          double * map_quals
-                                          ):
-     cdef QualityCounterRow row = QualityCounterRow.__new__(QualityCounterRow)
+cdef QualityCounterRow makeQualityCounterRow(column_struct column):
+    cdef int i
+
+    cdef QualityCounterRow row = QualityCounterRow.__new__(QualityCounterRow)
     
-     row._ref = ref
-     row._position = position
-     row._num_reads = num_reads
-     row._bases = bases
-     row._base_quals = base_quals
-     row._map_quals = map_quals     
-     
-     return row
+    row._ref = column.ref
+    row._position = column.position     
+    row._depth = column.depth
+    
+    row._bases = < char *> malloc(column.depth * sizeof(char))
+    
+    row._base_quals = < int *> malloc(column.depth * sizeof(int))
+    
+    row._map_quals = < int *> malloc(column.depth * sizeof(int))
+    
+    for i in range(column.depth):
+        row._bases[i] = column.bases[i]
+        row._base_quals[i] = column.base_quals[i]
+        row._map_quals[i] = column.map_quals[i]     
+    
+    return row
                          
 #===============================================================================
 # Modified pysam code

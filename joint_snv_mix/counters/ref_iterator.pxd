@@ -9,9 +9,9 @@ cdef extern from "stdint.h":
     ctypedef int uint8_t
 
 cdef class CRefIterator(object):
-    cdef char * ref
-    cdef int position
-    cdef column_struct current_column
+    cdef char * _ref
+    cdef int _position
+    cdef column_struct _current_column
     
     cdef IteratorColumnRegion _pileup_iter
     cdef PileupProxy _current_pileup_column
