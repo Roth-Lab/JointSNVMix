@@ -68,7 +68,7 @@ cdef class JointBinaryBaseCounterIterator(JointRefIterator):
     
         self._current_row = makeJointBinaryCounterRow(ref_base, normal_row, tumour_row)
     
-cdef class JointBinaryCounterRow(PairedSampleCounterRow):
+cdef class JointBinaryCounterRow(PairedSampleBinomialCounterRow):
     def __dealloc__(self):
         free(self._ref_base)
     
