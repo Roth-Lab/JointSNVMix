@@ -16,7 +16,7 @@ cdef class SingleSampleCounterRow(CounterRow):
     
     cdef int get_counts(self, char * base)
 
-cdef class PaireSampleBinomialCounterRow(CounterRow):
+cdef class PairedSampleBinomialCounterRow(CounterRow):
     cdef int _normal_depth
     cdef int _tumour_depth
     
