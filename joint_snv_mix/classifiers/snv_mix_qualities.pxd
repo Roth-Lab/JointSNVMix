@@ -4,15 +4,12 @@ from libc.math cimport log
 
 from joint_snv_mix.counters.joint_binary_quality_counter cimport JointBinaryQualityCounterRow, \
                                                                  JointBinaryQualityCounterIterator, \
-                                                                 JointBinaryQualityCounter, \
                                                                  base_map_qualities_struct
                                                                  
-from joint_snv_mix.classifiers.classifier cimport Classifier, ClassifierRefIterator, ClassifierRow
+from joint_snv_mix.classifiers.classifier cimport Classifier, ClassifierRefIterator
 
 from joint_snv_mix.classifiers.shared cimport snv_mix_2_log_likelihood, get_mixture_posterior, \
                                               combine_independent_probs, get_phred_to_prob_qual_map
-
-from joint_snv_mix.utils.normalise cimport log_space_normalise_row
 
 DEF NUM_GENOTYPES = 3
 DEF NUM_JOINT_GENOTYPES = 9

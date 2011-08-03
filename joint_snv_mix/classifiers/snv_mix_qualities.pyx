@@ -18,13 +18,9 @@ cdef class SnvMix2ClassifierRefIterator(ClassifierRefIterator):
     def __init__(self, char * ref, JointBinaryQualityCounterIterator iter, **kwargs):
         ClassifierRefIterator.__init__(self, ref, iter, **kwargs)
         
-        print "S"
-        
         self._qual_map = get_phred_to_prob_qual_map(256)
         
         self._init_params(**kwargs)
-        
-        print self._qual_map[0]
             
     def __dealloc__(self):
         free(self._qual_map)
