@@ -68,7 +68,27 @@ cdef class JointBinaryQualityCounterIterator(JointRefIterator):
     
         self._current_row = makeJointBinaryQualityCounterRow(ref_base, normal_row, tumour_row)
 
-cdef class JointBinaryQualityCounterRow
+cdef class JointBinaryQualityCounterRow(PairedSampleCounterRow):
+    '''
+    Class for storing binary count data with qualities from a pair of Bam files at a position.
+    '''    
+    def __dealloc__(self):
+        destroy_base_map_qualities_struct(self._normal_data)
+        destroy_base_map_qualities_struct(self._tumour_data)
+        free(self._ref_base)
+
+    property counts:
+        def __get__(self):
+            return (
+                    self._normal_data.depth.A,
+                    self._normal_data.depth.B,
+                    self._tumour_data.depth.A,
+                    self._tumour_data.depth.B,
+                    )
+
+#=======================================================================================================================
+# Row factory function and helper functions.
+#=======================================================================================================================
 cdef JointBinaryQualityCounterRow makeJointBinaryQualityCounterRow(char * ref_base,
                                                                    QualityCounterRow normal_row,
                                                                    QualityCounterRow tumour_row):
@@ -95,56 +115,6 @@ cdef JointBinaryQualityCounterRow makeJointBinaryQualityCounterRow(char * ref_ba
     row._tumour_depth = row._tumour_data.depth.A + row._tumour_data.depth.B
      
     return row
-
-cdef class JointBinaryQualityCounterRow(PairedSampleCounterRow):
-    '''
-    Class for storing binary count data from a pair of Bam files at a position.
-    '''    
-    def __init__(self):
-        raise TypeError("This class cannot be instantiated from Python")
-    
-    def __dealloc__(self):
-        destroy_base_map_qualities_struct(self._normal_data)
-        destroy_base_map_qualities_struct(self._tumour_data)
-        free(self._ref_base)
-    
-    def __str__(self):
-        '''
-        Overide parent class method to include ref and non_ref base.
-        '''
-        out_row = [self.ref, str(self.position), self.ref_base, self.non_ref_base]
-        out_row.extend([str(x) for x in self.counts])
-        
-        return "\t".join(out_row)
-    
-    property counts:
-        def __get__(self):
-            return (
-                    self._normal_data.depth.A,
-                    self._normal_data.depth.B,
-                    self._tumour_data.depth.A,
-                    self._tumour_data.depth.B,
-                    )
-        
-    property ref_base:
-        def __get__(self):
-            return self._ref_base
-
-    property non_ref_base:
-        def __get__(self):
-            return self._non_ref_base
-    
-#===============================================================================
-# Utility functions for finding non-ref bases and counts.
-#===============================================================================
-cdef int compare_base_counts_struct(const_void * a, const_void * b):
-    cdef base_counts_struct * first
-    cdef base_counts_struct * second
-    
-    first = < base_counts_struct *> a
-    second = < base_counts_struct *> b
-
-    return first.counts - second.counts
 
 cdef base_map_qualities_struct get_base_map_qualities(char * ref_base, char * non_ref_base, QualityCounterRow row):
     cdef int i, ref_counts, non_ref_counts, A_index, B_index

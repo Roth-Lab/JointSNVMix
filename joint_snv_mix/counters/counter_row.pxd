@@ -16,9 +16,12 @@ cdef class SingleSampleCounterRow(CounterRow):
     
     cdef int get_counts(self, char * base)
 
-cdef class PairedSampleCounterRow(CounterRow):
+cdef class PaireSampleBinomialCounterRow(CounterRow):
     cdef int _normal_depth
     cdef int _tumour_depth
+    
+    cdef char * _ref_base
+    cdef char * _non_ref_abse
     
 cdef char * get_non_ref_base(char * ref_base, SingleSampleCounterRow normal_row, SingleSampleCounterRow tumour_row)
 cdef binary_counts_struct get_binary_counts(char * ref_base, char * non_ref_base, SingleSampleCounterRow row)

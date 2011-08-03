@@ -68,8 +68,34 @@ cdef class JointBinaryBaseCounterIterator(JointRefIterator):
     
         self._current_row = makeJointBinaryCounterRow(ref_base, normal_row, tumour_row)
     
-cdef class JointBinaryCounterRow
-cdef JointBinaryCounterRow makeJointBinaryCounterRow(char * ref_base, BaseCounterRow normal_row, BaseCounterRow tumour_row):
+cdef class JointBinaryCounterRow(PairedSampleCounterRow):
+    def __dealloc__(self):
+        free(self._ref_base)
+    
+    def __str__(self):
+        '''
+        Overide parent class method to include ref and non_ref base.
+        '''
+        out_row = [self.ref, str(self.position), self.ref_base, self.non_ref_base]
+        out_row.extend([str(x) for x in self.counts])
+        
+        return "\t".join(out_row)
+    
+    property counts:
+        def __get__(self):
+            return (
+                    self._normal_counts.A,
+                    self._normal_counts.B,
+                    self._tumour_counts.A,
+                    self._tumour_counts.B
+                    )
+            
+#=======================================================================================================================
+# Row factory function
+#=======================================================================================================================
+cdef JointBinaryCounterRow makeJointBinaryCounterRow(char * ref_base,
+                                                     BaseCounterRow normal_row,
+                                                     BaseCounterRow tumour_row):
     '''
     Constructor method for creating a JointBinaryCounterRow from C.
     '''
@@ -93,39 +119,3 @@ cdef JointBinaryCounterRow makeJointBinaryCounterRow(char * ref_base, BaseCounte
     row._tumour_depth = row._tumour_counts.A + row._tumour_counts.B   
      
     return row
-
-cdef class JointBinaryCounterRow(PairedSampleCounterRow):
-    '''
-    Class for storing binary count data from a pair of Bam files at a position.
-    '''    
-    def __init__(self):
-        raise TypeError("This class cannot be instantiated from Python")
-    
-    def __dealloc__(self):
-        free(self._ref_base)
-    
-    def __str__(self):
-        '''
-        Overide parent class method to include ref and non_ref base.
-        '''
-        out_row = [self.ref, str(self.position), self.ref_base, self.non_ref_base]
-        out_row.extend([str(x) for x in self.counts])
-        
-        return "\t".join(out_row)
-    
-    property counts:
-        def __get__(self):
-            return (
-                    self._normal_counts.A,
-                    self._normal_counts.B,
-                    self._tumour_counts.A,
-                    self._tumour_counts.B
-                    )
-    
-    property ref_base:
-        def __get__(self):
-            return self._ref_base
-
-    property non_ref_base:
-        def __get__(self):
-            return self._non_ref_base
