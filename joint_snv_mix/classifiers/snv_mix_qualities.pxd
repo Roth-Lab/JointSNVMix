@@ -14,22 +14,11 @@ from joint_snv_mix.utils.normalise cimport log_space_normalise_row
 DEF NUM_GENOTYPES = 3
 DEF NUM_JOINT_GENOTYPES = 9
 
-cdef class SnvMixClassifier(object):    
-    cdef JointBinaryQualityCounter _counter
-    cdef tuple _refs
+cdef class SnvMix2Classifier(Classifier):    
+    pass
              
-cdef class SnvMixClassifierRefIterator(object):
-    # Ref which the iterator runs over.
-    cdef char * _ref
-    
-    # 0-based current position of the iterator.
-    cdef int _position
-    
-    cdef object _current_row    
-           
+cdef class SnvMix2ClassifierRefIterator(ClassifierRefIterator):              
     cdef double _qual_map[256]
-    
-    cdef JointBinaryQualityCounterIterator _iter
        
     cdef double _mu_N[NUM_GENOTYPES]
     cdef double _mu_T[NUM_GENOTYPES]
@@ -52,6 +41,4 @@ cdef class SnvMixClassifierRefIterator(object):
                              )
     
     cdef double _compute_single_base_log_prob(self, double q, double r, double m)
-    cdef tuple _get_labels(self)
-    cdef cnext(self)
     cdef _init_qual_map(self)

@@ -3,31 +3,20 @@
 DEF NUM_GENOTYPES = 3
 DEF NUM_JOINT_GENOTYPES = 9
 
-cdef class SnvMixClassifier(object):
-    def __init__(self, JointBinaryQualityCounter counter):        
-        self._counter = counter            
-        self._refs = counter.refs
-        
+cdef class SnvMix2Classifier(Classifier):
     def iter_ref(self, ref, **kwargs):
         if ref not in self._refs:
             raise Exception("Invalid reference passed.")
         
-        return SnvMixClassifierRefIterator(
+        return SnvMix2ClassifierRefIterator(
                                            ref,
                                            self._counter.iter_ref(ref),
                                            **kwargs
                                            )
-    property refs:
-        '''
-        Read only access to list of available references.
-        '''
-        def __get__(self):
-            return self._refs        
              
-cdef class SnvMixClassifierRefIterator(object):
+cdef class SnvMix2ClassifierRefIterator(ClassifierRefIterator):
     def __init__(self, char * ref, JointBinaryQualityCounterIterator iter, **kwargs):
-        self._ref = ref        
-        self._iter = iter
+        ClassifierRefIterator.__init__(self, ref, iter, **kwargs)
         
         self._init_qual_map()
         
@@ -52,44 +41,6 @@ cdef class SnvMixClassifierRefIterator(object):
             base = 10
             
             self._qual_map[qual] = 1 - pow(base, exp)
-
-    def __iter__(self):
-        return self
-    
-    def __next__(self):
-        '''
-        Python level next() method.
-        '''
-        self.cnext()
-        
-        return self._current_row
-    
-    cdef cnext(self):
-        '''
-        C level next method.
-        
-        All sub-classes need to re-implement the _get_labels() method for this to work.
-        '''
-        cdef int normal_depth, tumour_depth
-        cdef JointBinaryQualityCounterRow jbc_row
-        cdef tuple labels     
-        
-        
-        self._iter.cnext()
-        
-        jbc_row = self._iter._current_row
-        
-        
-        labels = self._get_labels()
-        
-        self._current_row = makeClassifierRow(jbc_row, labels)
-    
-    property ref:
-        '''
-        Read only access to reference which the iterator runs over.
-        '''
-        def __get__(self):
-            return self._ref            
 
     cdef tuple _get_labels(self):
         cdef double x
@@ -172,24 +123,5 @@ cdef class SnvMixClassifierRefIterator(object):
                 total += joint_probs[k]
                 
         for i in range(NUM_JOINT_GENOTYPES):
-            joint_probs[i] = joint_probs[i] / total
-            
-cdef inline ClassifierRow makeClassifierRow(JointBinaryQualityCounterRow jbc_row, tuple labels):
-    '''
-    Constructor method for creating a ClassifierRow from C.
-    '''
-    cdef ClassifierRow row = ClassifierRow.__new__(ClassifierRow)
-    
-    row._ref = jbc_row._ref
-    
-    row._position = jbc_row._position
-    
-    row._ref_base = jbc_row._ref_base
-    row._non_ref_base = jbc_row._non_ref_base
-        
-    row._counts = jbc_row.counts
-    
-    row._labels = labels
-    
-    return row                   
+            joint_probs[i] = joint_probs[i] / total         
         
