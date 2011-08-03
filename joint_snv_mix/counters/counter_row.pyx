@@ -29,7 +29,20 @@ cdef class SingleSampleCounterRow(CounterRow):
         '''
         pass
 
-cdef class PairedSampleCounterRow(CounterRow):
+cdef class PairedSampleBinomialCounterRow(CounterRow):
+    def __str__(self):
+        out_row = [self.ref, str(self.position), self.ref_base, self.non_ref_base]
+        out_row.extend([str(x) for x in self.counts])
+        
+        return "\t".join(out_row)
+    
+    property counts:
+        '''
+        Implement this in sub-class.
+        '''
+        def __get__(self):
+            pass
+
     property normal_depth:
         def __get__(self):
             return self._normal_depth
@@ -37,7 +50,14 @@ cdef class PairedSampleCounterRow(CounterRow):
     property tumour_depth:
         def __get__(self):
             return self._tumour_depth
-
+    
+    property ref_base:
+        def __get__(self):
+            return self._ref_base
+        
+    property non_ref_base:
+        def __get__(self):
+            return self._non_ref_base
 #===============================================================================
 # Utility functions for finding non-ref bases and counts.
 #===============================================================================

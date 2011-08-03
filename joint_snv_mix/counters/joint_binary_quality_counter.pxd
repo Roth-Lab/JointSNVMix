@@ -33,9 +33,7 @@ cdef class JointBinaryQualityCounter(Counter):
     cdef QualityCounter _tumour_counter    
     cdef Fastafile _ref_genome_fasta    
     
-cdef class JointBinaryQualityCounterRow(PairedSampleCounterRow):
-    cdef char * _ref_base
-    cdef char * _non_ref_base
+cdef class JointBinaryQualityCounterRow(PaireSampleBinomialCounterRow):
     cdef base_map_qualities_struct _normal_data
     cdef base_map_qualities_struct _tumour_data
 

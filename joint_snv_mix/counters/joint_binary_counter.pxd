@@ -13,9 +13,7 @@ cdef class JointBinaryBaseCounter(Counter):
     cdef BaseCounter _tumour_counter    
     cdef Fastafile _ref_genome_fasta    
     
-cdef class JointBinaryCounterRow(PairedSampleCounterRow):
-    cdef char * _ref_base
-    cdef char * _non_ref_base
+cdef class JointBinaryCounterRow(PaireSampleBinomialCounterRow):
     cdef binary_counts_struct _normal_counts
     cdef binary_counts_struct _tumour_counts
 
