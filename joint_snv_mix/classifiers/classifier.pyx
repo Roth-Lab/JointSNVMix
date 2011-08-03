@@ -102,7 +102,7 @@ cdef class ClassifierRow(object):
         '''
         out_row = [self.ref, str(self.position), self._ref_base, self._non_ref_base]
         out_row.extend([str(x) for x in self.counts])
-        out_row.extend([str(x) for x in self.labels])
+        out_row.extend(["{0:.4f}".format(x) for x in self.labels])
         
         return "\t".join(out_row)
     
