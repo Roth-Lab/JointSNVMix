@@ -68,7 +68,7 @@ cdef class JointBinaryQualityCounterIterator(JointRefIterator):
     
         self._current_row = makeJointBinaryQualityCounterRow(ref_base, normal_row, tumour_row)
 
-cdef class JointBinaryQualityCounterRow(PairedSampleCounterRow):
+cdef class JointBinaryQualityCounterRow(PairedSampleBinomialCounterRow):
     '''
     Class for storing binary count data with qualities from a pair of Bam files at a position.
     '''    
