@@ -3,7 +3,7 @@ from libc.stdlib cimport malloc, free
 
 from joint_snv_mix.counters.joint_binary_quality_counter cimport base_map_qualities_struct
 
-cdef double * multinomial_log_likelihood(int * counts, double ** log_mu, int num_genotypes, int num_bases)
+cdef double multinomial_log_likelihood(int * counts, double * log_mu, int num_bases)
 
 cdef double * get_phred_to_prob_qual_map(int num_quals)
 
