@@ -1,24 +1,20 @@
 #=======================================================================================================================
 # SNVMix1 Code
 #=======================================================================================================================
-cdef double * multinomial_log_likelihood(int * counts,
-                                         double ** log_mu,
-                                         int num_genotypes,
-                                         int num_bases):
+cdef double multinomial_log_likelihood(int * counts,
+                                       double * log_mu,
+                                       int num_bases):
     '''
     Return class log_likelihoods under SNVMix1 model with parameters mu=exp(log_mu).
-    
-    Allocates log_likelihood which will need to be freed by caller.
     '''
-    cdef int b, g
-    cdef double * log_likelihood = < double *> malloc(num_genotypes * sizeof(double))
+    cdef int b
+    cdef double log_likelihood
     
-    for g in range(num_genotypes):
-        log_likelihood[g] = 0
-        
-        for b in range(num_bases):
-            log_likelihood[g] += counts[b] * log_mu[g][b] 
+    log_likelihood = 0
     
+    for b in range(num_bases):
+        log_likelihood += counts[b] * log_mu[b] 
+
     return log_likelihood
 
 #=======================================================================================================================
