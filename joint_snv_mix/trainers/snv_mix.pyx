@@ -4,7 +4,7 @@ Created on 2011-08-04
 @author: Andrew Roth
 '''
 from libc.stdlib cimport free, malloc
-from libc.math cimport exp, log
+from libc.math cimport abs, exp, log
 
 from joint_snv_mix.counters.counter cimport Counter
 from joint_snv_mix.counters.joint_binary_counter cimport JointBinaryCounterRow
@@ -16,6 +16,7 @@ DEF FLOAT_INFN = float('-inf')
 
 DEF NUM_GENOTYPES = 3
 DEF NUM_BASES = 2
+DEF EPS = 1e-100
 
 ctypedef struct snv_mix_params_struct:
     double mu[NUM_GENOTYPES][NUM_BASES]
@@ -90,15 +91,15 @@ cdef class SnvMixPriors(object):
     
     def _init_params(self, **kwargs):
         mu_N = kwargs.get('mu_N', (
-                                   (100, 2),
+                                   (100, 3),
                                    (50, 50),
-                                   (2, 100)
+                                   (3, 100)
                                    )
                           )
         mu_T = kwargs.get('mu_T', (
-                                   (100, 2),
+                                   (100, 3),
                                    (50, 50),
-                                   (2, 100)
+                                   (3, 100)
                                    )
                           )
         pi_N = kwargs.get('pi_N', (1000, 100, 100))
@@ -221,9 +222,9 @@ cdef class SnvMixTrainer(Trainer):
         return params
     
     cdef snv_mix_ess_struct _do_e_step(self,
-                    (int *) counts[2],
-                    snv_mix_params_struct params,
-                    int sample_size):
+                                       (int *) counts[2],
+                                       snv_mix_params_struct params,
+                                       int sample_size):
         cdef int i, g
         cdef double ll[NUM_GENOTYPES], reps[NUM_GENOTYPES]
         cdef snv_mix_ess_struct ess
@@ -240,6 +241,8 @@ cdef class SnvMixTrainer(Trainer):
                 ess.n[g] += resp[g]
                 ess.a[g] += counts[i][0] * resp[g]
                 ess.b[g] += counts[i][1] * resp[g]
+            
+            free(resp)
         
         return ess
     
@@ -285,6 +288,10 @@ cdef class SnvMixTrainer(Trainer):
             for g in range(NUM_GENOTYPES):
                 pos_likelihood += exp(log(params.pi[g]) + multinomial_log_likelihood(counts[i], params.mu[g], NUM_BASES))
             
+            # Guard against numerical issues associated with highly unlikely positions.
+            if pos_likelihood == 0:
+                pos_likelihood = EPS
+            
             ll += log(pos_likelihood)
         
         for g in range(NUM_GENOTYPES):
@@ -295,10 +302,14 @@ cdef class SnvMixTrainer(Trainer):
         return ll
     
     cdef bint _check_convergence(self, lower_bounds, iter):
-        if lower_bounds[-1] - lower_bounds[-2] < 0:
+        cdef double rel_change
+        
+        rel_change = (lower_bounds[-1] - lower_bounds[-2]) / abs(< double > lower_bounds[-2])
+    
+        if rel_change < 0:
             print "Lower bound decreased exiting."
             return 1
-        elif lower_bounds[-1] - lower_bounds[-2] < 1e-6:
+        elif rel_change < 1e-6:
             print "Converged"
             return 1
         elif iter >= 100:
@@ -306,6 +317,8 @@ cdef class SnvMixTrainer(Trainer):
             return 1
         else:
             return 0
+    
+cdef class SnvMixQualityTrainer(AbstractSnvMixTrainer):
 
 #=======================================================================================================================
 # Helper functions
