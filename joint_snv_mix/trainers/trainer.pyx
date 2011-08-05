@@ -13,7 +13,7 @@ cdef class Trainer(object):
         
         print "Randomly sub-sampling {0}% of the data set.".format(100 * sub_sample_fraction)
         
-        for ref in ['1', ]:
+        for ref in ['Y', ]:
             ref_iter = counter.iter_ref(ref)
             
             ref_len = 0
@@ -27,7 +27,7 @@ cdef class Trainer(object):
                     if row._normal_depth < 10 or row._tumour_depth < 10:
                         continue
                     
-                    if gsl_rng_uniform(r) <= sub_sample_fraction:                        
+                    if gsl_rng_uniform(r) <= sub_sample_fraction:               
                         sample_data.append(row)
                         
                         ref_len += 1
