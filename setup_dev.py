@@ -55,11 +55,11 @@ classifier_includes = [
                        ]
 classifier_includes.extend(counter_includes)
 
-base_classifier = Extension(
-                            "joint_snv_mix.classifiers.classifier",
-                            ["joint_snv_mix/classifiers/classifier.pyx"],
-                            include_dirs=classifier_includes
-                            )
+classifier = Extension(
+                        "joint_snv_mix.classifiers.classifier",
+                        ["joint_snv_mix/classifiers/classifier.pyx"],
+                        include_dirs=classifier_includes
+                        )
 
 indep_fisher_classifier = Extension(
                                     "joint_snv_mix.classifiers.independent_fisher",
@@ -97,6 +97,19 @@ joint_snv_mix_classifier = Extension(
                                      include_dirs=classifier_includes
                                      )
 
+joint_snv_mix_qualities_classifier = Extension(
+                                               "joint_snv_mix.classifiers.joint_snv_mix_qualities",
+                                               ["joint_snv_mix/classifiers/joint_snv_mix_qualities.pyx"],
+                                               include_dirs=classifier_includes
+                                               )
+
+
+classifiers_shared = Extension(
+                              "joint_snv_mix.classifiers.shared",
+                              ["joint_snv_mix/classifiers/shared.pyx"],
+                              include_dirs=classifier_includes
+                              )
+
 utils_includes = [
                   'joint_snv_mix/utils'
                   ]
@@ -104,30 +117,59 @@ utils_includes = [
 fisher_exact_test = Extension(
                                 "joint_snv_mix.utils.fisher_exact_test",
                                 ["joint_snv_mix/utils/fisher_exact_test.pyx"],
-                                include_dirs=classifier_includes
+                                include_dirs=utils_includes
                                 )
 
 special_functions = Extension(
                               "joint_snv_mix.utils.special_functions",
                               ["joint_snv_mix/utils/special_functions.pyx"],
-                              include_dirs=classifier_includes
+                              include_dirs=utils_includes
                               )
 
+log_pdf = Extension(
+                    "joint_snv_mix.utils.log_pdf",
+                    ["joint_snv_mix/utils/log_pdf.pyx"],
+                    include_dirs=utils_includes
+                    )
+
+trainers_include = [
+                    'joint_snv_mix/trainers', 'include/gsl'
+                    ]
+trainers_include.extend(counter_includes)
+
+trainer = Extension(
+                    "joint_snv_mix.trainers.trainer",
+                    ["joint_snv_mix/trainers/trainer.pyx"],
+                    include_dirs=trainers_include,
+                    libraries=['gsl', 'gslcblas']
+                    )
+
+snv_mix_trainer = Extension(
+                            "joint_snv_mix.trainers.snv_mix",
+                            ["joint_snv_mix/trainers/snv_mix.pyx"],
+                            include_dirs=trainers_include,
+                            libraries=['gsl', 'gslcblas']
+                            )
 ext_modules = [
                counter,
                ref_iterator,
-               counter_row,               
+               counter_row,
                base_counter,
                quality_counter,
                joint_bin_counter,
                joint_quality_counter,
-#               base_classifier,
-#               indep_fisher_classifier,
-#               joint_fisher_classifier,
-#               threshold_classifier,
-#               snv_mix_classifier,
-#               snv_mix_qualities_classifier,
-#               joint_snv_mix_classifier,
+               classifiers_shared,
+               classifier,
+               indep_fisher_classifier,
+               joint_fisher_classifier,
+               threshold_classifier,
+               snv_mix_classifier,
+               snv_mix_qualities_classifier,
+               joint_snv_mix_classifier,
+               joint_snv_mix_qualities_classifier,
+               log_pdf,
+               trainer,
+               snv_mix_trainer
 #               fisher_exact_test,
 #               special_functions
                ]

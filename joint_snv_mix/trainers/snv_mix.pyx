@@ -8,8 +8,8 @@ from libc.math cimport abs, exp, log
 
 from joint_snv_mix.counters.counter cimport Counter
 from joint_snv_mix.counters.joint_binary_counter cimport JointBinaryCounterRow
-from joint_snv_mix.counters.joint_binary_quality_counter cimport JointBinaryQualityCounterRow, base_map_qualities_struct
-from joint_snv_mix.counters.shared cimport binary_counts_struct
+from joint_snv_mix.counters.joint_binary_quality_counter cimport JointBinaryQualityCounterRow
+from joint_snv_mix.counters.shared cimport binary_counts_struct, base_map_qualities_struct
 
 from joint_snv_mix.trainers.trainer cimport Trainer
 from joint_snv_mix.utils.log_pdf cimport multinomial_log_likelihood, dirichlet_log_likelihood, mixture_posterior
@@ -157,50 +157,51 @@ cdef SnvMixOneTrainingData makeSnvMixOneTrainingData(binary_counts_struct counts
     
     return data
          
-#cdef class SnvMixTwoTrainingData(SnvMixTrainingData):
-#    cdef int depth
-#    cdef int * labels
-#    cdef double * q
-#    cdef double * r    
-#    
-#    def __dealloc__(self):
-#        free(self.labels)
-#        free(self.q)
-#        free(self.r)
-#    
-#cdef SnvMixTwoTrainingData makeSnvMixTwoTrainingData(base_map_qualities_struct data_struct):
-#    cdef read_index, i, l
-#    cdef double temp_q
-#    cdef SnvMixTwoTrainingData data = SnvMixTwoTrainingData.__new__(SnvMixTwoTrainingData)
-#    
-#    l = data_struct.depth.A + data_struct.depth.B
-#    
-#    data.depth = l
-#    
-#    data.labels = < int *> malloc(l * sizeof(int))
-#    data.q = < double *> malloc(l * sizeof(double))
-#    data.r = < double *> malloc(l * sizeof(double))
-#    
-#    i = 0
-#    
-#    for read_index in range(data.depth.A):
-#        data.labels[i] = 1
-#        data.q[i] = get_phred_qual_to_prob(data.base_quals.A[read_index])
-#        data.r[i] = get_phred_qual_to_prob(data.map_quals.A[read_index])
-#        
-#        i += 1
-#    
-#    for read_index in range(data.depth.B):
-#        data.labels[i] = 1
-#        
-#        temp_q = get_phred_qual_to_prob(data.base_quals.B[read_index])
-#        data.q[i] = (1 - q) / 3
-#                
-#        data.r[i] = get_phred_qual_to_prob(data.map_quals.B[read_index])
-#        
-#        i += 1
-#    
-#    return data
+cdef class SnvMixTwoTrainingData(SnvMixTrainingData):
+    cdef int depth
+    cdef int * labels
+    cdef double * q
+    cdef double * r    
+    
+    def __dealloc__(self):
+        free(self.labels)
+        free(self.q)
+        free(self.r)
+    
+    
+cdef SnvMixTwoTrainingData makeSnvMixTwoTrainingData(base_map_qualities_struct data_struct):
+    cdef read_index, i, l
+    cdef double temp_q
+    cdef SnvMixTwoTrainingData data = SnvMixTwoTrainingData.__new__(SnvMixTwoTrainingData)
+    
+    l = data_struct.depth.A + data_struct.depth.B
+    
+    data.depth = l
+    
+    data.labels = < int *> malloc(l * sizeof(int))
+    data.q = < double *> malloc(l * sizeof(double))
+    data.r = < double *> malloc(l * sizeof(double))
+    
+    i = 0
+    
+    for read_index in range(data_struct.depth.A):
+        data.labels[i] = 1
+        data.q[i] = get_phred_qual_to_prob(data_struct.base_quals.A[read_index])
+        data.r[i] = get_phred_qual_to_prob(data_struct.map_quals.A[read_index])
+        
+        i += 1
+    
+    for read_index in range(data_struct.depth.B):
+        data.labels[i] = 0
+        
+        temp_q = get_phred_qual_to_prob(data_struct.base_quals.B[read_index])
+        data.q[i] = (1 - temp_q) / 3
+                
+        data.r[i] = get_phred_qual_to_prob(data_struct.map_quals.B[read_index])
+        
+        i += 1
+    
+    return data
 
 cdef class SnvMixTrainer(Trainer):
     def train(self, Counter counter, init_params, priors, sub_sample_fraction=0.01):
@@ -324,7 +325,7 @@ cdef class SnvMixTrainer(Trainer):
         
         return ll
 
-    cdef _get_pos_likelihood(self, SnvMixTrainingData data, snv_mix_params_struct params):
+    cdef double _get_pos_likelihood(self, SnvMixTrainingData data, snv_mix_params_struct params):
         pass
     
     cdef bint _check_convergence(self, lower_bounds, iter):
@@ -379,7 +380,7 @@ cdef class SnvMixOneTrainer(SnvMixTrainer):
         
         return ess
     
-    cdef _get_pos_likelihood(self, SnvMixTrainingData data, snv_mix_params_struct params):
+    cdef double _get_pos_likelihood(self, SnvMixTrainingData data, snv_mix_params_struct params):
         cdef int g
         cdef double pos_likelihood, density
         
@@ -391,149 +392,113 @@ cdef class SnvMixOneTrainer(SnvMixTrainer):
         return pos_likelihood
         
 
-#cdef class SnvMixTwoTrainer(AbstractSnvMixTrainer):
-#    cdef _train(self, list sample_data, SnvMixParameters init_params, SnvMixPriors priors):
-#        cdef list normal_data
-#        cdef list tumour_data
-#        cdef snv_mix_params_struct normal_params, tumour_params
-#        cdef JointBinaryQualityCounterRow row
-#        
-#        for row in sample_data:
-#            normal_counts.append(makeSnvMixTwoTrainingData(row._normal_data))
-#            tumour_counts.append(makeSnvMixTwoTrainingData(row._tumour_data))
-#            
-#        normal_params = self._do_em(normal_data, init_params._normal, priors._normal)
-#        tumour_params = self._do_em(tumour_data, init_params._tumour, priors._tumour)
-#
-#        return makeSnvMixParameters(normal_params, tumour_params)
-#
-#    cdef double * _get_resp(self, SnvMixTwoTrainingData data, snv_mix_params_struct params)):
-#        for i in range(data.depth):
-#            if data.labels[i] == 1:
-#                likelihood += self._get_match_likelihood(data.q[i], data.r[i], params.mu)
-#            elif data.labels[i] == 0:
-#                likelihood += self._get_mismatch_likelihood(data.q[i], data.r[i], params.mu)
-#    
-#    cdef void _update_ess(snv_mix_ess_struct ess, SnvMixOneTrainingData data, double * resp):
-#        for g in range(NUM_GENOTYPES):
-#            ess.a[g] = resp[g][1][0] + resp[g][1][1]
-#            ess.b[g] = resp[g][0][0] + resp[g][0][1]
-#            ess.n[g] = ess.a[g] + ess.b[g]
-#
-#    cdef double _get_pos_likelihood(self, SnvMixTwoTrainingData data, snv_mix_params_struct params):
-#        cdef int i
-#        cdef double likelihood
-#        
-#        likelihood = 0
-#        
-#        for i in range(data.depth):
-#            if data.labels[i] == 1:
-#                likelihood += self._get_match_likelihood(data.q[i], data.r[i], params.mu)
-#            elif data.labels[i] == 0:
-#                likelihood += self._get_mismatch_likelihood(data.q[i], data.r[i], params.mu)
-#        
-#        likelihood *= p
-#        
-#        return likelihood
-#
-##=======================================================================================================================
-## SNVMix2 Code
-##=======================================================================================================================
-#cdef double get_snv_mix_2_position_likelihood(base_map_qualities_struct data, snv_mix_params_struct params):
-#    cdef int read_index
-#    cdef double q, r, likelihood
-#    cdef double read_resp[NUM_GENOTYPES][2][2]
-#    
-#    likelihood = 0
-#    
-#    for read_index in range(data.depth.A):
-#        q = get_phred_qual_to_prob(data.base_quals.A[read_index])
-#        
-#        r = get_phred_qual_to_prob(data.map_quals.A[read_index])
-#        
-#        get_snv_mix_2_read_resp(q, r, params.mu, read_resp)
-#        
-#        likelihood += sum_snv_mix_2_resp(read_resp, params.pi)
-#    
-#    for read_index in range(data.depth.B):
-#        q = get_phred_qual_to_prob(data.base_quals.B[read_index])
-#        q = (1 - q) / 3
-#                
-#        r = get_phred_qual_to_prob(data.map_quals.B[read_index])
-#        
-#        get_snv_mix_2_read_resp(q, r, params.mu, read_resp)
-#        
-#        likelihood += sum_snv_mix_2_resp(read_resp, params.pi)
-#        
-#    return likelihood
-#
-#cdef void get_snv_mix_2_position_resp(base_map_qualities_struct data,
-#                                      double mu[NUM_GENOTYPES][2],
-#                                      double resp[NUM_GENOTYPES][2][2]):
-#    '''
-#    Return class log_likelihoods under SNVMix2 model with parameters mu.
-#    
-#    Allocates log_likelihood which will need to be freed by caller.
-#    '''
-#    cdef int read_index
-#    cdef double q, r
-#    cdef double read_resp[NUM_GENOTYPES][2][2]
-#    
-#    for read_index in range(data.depth.A):
-#        q = get_phred_qual_to_prob(data.base_quals.A[read_index])
-#        
-#        r = get_phred_qual_to_prob(data.map_quals.A[read_index])
-#        
-#        get_snv_mix_2_read_resp(q, r, mu, read_resp)
-#        
-#        add_snv_mix_2_resp(resp, read_resp)
-#    
-#    for read_index in range(data.depth.B):
-#        q = get_phred_qual_to_prob(data.base_quals.B[read_index])
-#        q = (1 - q) / 3
-#                
-#        r = get_phred_qual_to_prob(data.map_quals.B[read_index])
-#        
-#        get_snv_mix_2_read_resp(q, r, mu, read_resp)
-#        
-#        add_snv_mix_2_resp(resp, read_resp)
-#
-#cdef double get_phred_qual_to_prob(int qual):
-#    cdef double base, exp, prob
-#    
-#    exp = -1 * (< double > qual) / 10
-#    base = 10
-#    
-#    prob = 1 - pow(base, exp)
-#
-#    return prob
-#
-#cdef void get_snv_mix_2_read_resp(double q, double r, double mu[NUM_GENOTYPES][2], double resp[NUM_GENOTYPES][2][2]):
-#    cdef int a, g, z
-#    cdef double norm_const
-#    
-#    norm_const = 0
-#    for g in range(NUM_GENOTYPES):
-#        for a in range(2):
-#            for z in range(2):
-#                resp[g][a][z] = compute_snv_mix_2_conditional(q, r, mu[g][0], a, z)
-#                
-#                norm_const += resp[g][a][z]
-#     
-#    for g in range(NUM_GENOTYPES):
-#        for a in range(2):
-#            for z in range(2):
-#                resp[g][a][z] = resp[g][a][z] / norm_const
-#
-#cdef compute_snv_mix_2_conditional(double q, double r, double mu, int a, int z):
-#    if a == 0 and z == 0:
-#        return 0.5 * (1 - r) * (1 - mu)
-#    elif a == 0 and z == 1:
-#        return (1 - q) * r * (1 - mu)
-#    elif a == 1 and z == 0:
-#        return 0.5 * (1 - r) * mu
-#    else:
-#        return q * r * mu
+cdef class SnvMixTwoTrainer(SnvMixTrainer):
+    cdef _train(self, list sample_data, SnvMixParameters init_params, SnvMixPriors priors):
+        cdef list normal_data = []
+        cdef list tumour_data = []
+        cdef snv_mix_params_struct normal_params, tumour_params
+        cdef JointBinaryQualityCounterRow row
+        
+        for row in sample_data:
+            normal_data.append(makeSnvMixTwoTrainingData(row._normal_data))
+            tumour_data.append(makeSnvMixTwoTrainingData(row._tumour_data))
+            
+        normal_params = self._do_em(normal_data, init_params._normal, priors._normal)
+        tumour_params = self._do_em(tumour_data, init_params._tumour, priors._tumour)
+
+        return makeSnvMixParameters(normal_params, tumour_params)
+
+    cdef snv_mix_ess_struct _do_e_step(self,
+                                       list data,
+                                       snv_mix_params_struct params):
+        cdef int i, g
+        cdef snv_mix_ess_struct ess
+        cdef double * resp
+        cdef SnvMixTwoTrainingData pos_data
+        ess = make_snv_mix_ess_struct()
+    
+        for pos_data in data:
+            resp = self._get_resp(pos_data, params)
+            
+            for g in range(NUM_GENOTYPES):
+                a = self._get_expected_counts(pos_data, params.mu[g][0])
+                
+                ess.a[g] += a
+                ess.b[g] += pos_data.depth - a
+                ess.n[g] += resp[g]
+                
+            free(resp)
+        
+        return ess
+
+    cdef double * _get_resp(self, SnvMixTrainingData data, snv_mix_params_struct params):
+        cdef int i, g
+        cdef double ll[NUM_GENOTYPES]
+        cdef SnvMixTwoTrainingData cast_data = < SnvMixTwoTrainingData > data
+        
+        for g in range(NUM_GENOTYPES):
+            ll[g] = 0
+        
+        for i in range(cast_data.depth):
+            for g in range(NUM_GENOTYPES):
+                ll[g] += log(self._get_read_likelihood(cast_data.q[i], cast_data.r[i], params.mu[g][0]))
+        
+        resp = mixture_posterior(ll, params.pi, NUM_BASES)
+                
+        return resp
+
+    cdef double _get_pos_likelihood(self, SnvMixTrainingData data, snv_mix_params_struct params):
+        cdef int i, g
+        cdef double pos_likelihood
+        cdef SnvMixTwoTrainingData cast_data = < SnvMixTwoTrainingData > data
+                
+        pos_likelihood = 1
+        
+        for i in range(cast_data.depth):
+            for g in range(NUM_GENOTYPES):
+                pos_likelihood *= self._get_read_likelihood(cast_data.q[i], cast_data.r[i], params.mu[g][0])
+        
+        return pos_likelihood
+    
+    cdef double _get_read_likelihood(self, double q, double r, double mu):
+        cdef double read_likelihood
+        
+        read_likelihood = 0 
+                
+        read_likelihood += self._get_read_complete_likelihood(0, 0, q, r, mu)
+        read_likelihood += self._get_read_complete_likelihood(0, 1, q, r, mu)
+        read_likelihood += self._get_read_complete_likelihood(1, 0, q, r, mu)
+        read_likelihood += self._get_read_complete_likelihood(1, 1, q, r, mu)
+    
+        return read_likelihood
+    
+    cdef double _get_expected_counts(self, SnvMixTwoTrainingData data, double mu):
+        cdef double norm_const, q, r, a, temp_a, temp_b
+        
+        a = 0
+        
+        for i in range(data.depth):
+            q = data.q[i]
+            r = data.r[i]
+
+            temp_a = self._get_read_complete_likelihood(1, 0, q, r, mu) + \
+                     self._get_read_complete_likelihood(1, 1, q, r, mu)
+            temp_b = self._get_read_complete_likelihood(0, 0, q, r, mu) + \
+                     self._get_read_complete_likelihood(0, 1, q, r, mu)
+            
+            a += temp_a / (temp_a + temp_b)
+    
+        return a
+
+    cdef double _get_read_complete_likelihood(self, int a, int z, double q, double r, double mu):
+        if a == 0 and z == 0:
+            return 0.5 * (1 - r) * (1 - mu)
+        elif a == 0 and z == 1:
+            return (1 - q) * r * (1 - mu)
+        elif a == 1 and z == 0:
+            return 0.5 * (1 - r) * mu
+        else:
+            return q * r * mu
 
 #=======================================================================================================================
 # Helper functions
@@ -548,31 +513,13 @@ cdef snv_mix_ess_struct make_snv_mix_ess_struct():
         ess.b[g] = 0
     
     return ess
-#
-#cdef void init_snv_mix_2_resp(double resp[NUM_GENOTYPES][2][2]):
-#    cdef int a, g, z 
-#
-#    for g in range(NUM_GENOTYPES):
-#        for a in range(2):
-#            for z in range(2):
-#                resp[g][a][z] = 0
-#    
-#cdef void add_snv_mix_2_resp(double result_resp[NUM_GENOTYPES][2][2], double other_resp[NUM_GENOTYPES][2][2]):
-#    for g in range(NUM_GENOTYPES):
-#        for a in range(2):
-#            for z in range(2):
-#                result_resp[g][a][z] += other_resp[g][a][z]
-#
-#cdef double sum_snv_mix_2_resp(double resp[NUM_GENOTYPES][2][2], double pi[NUM_GENOTYPES]):
-#    cdef double result
-#    
-#    result = 0
-#    
-#    for g in range(NUM_GENOTYPES):
-#        for a in range(2):
-#            for z in range(2):
-#                result += pi[g] * resp[g][a][z]
-#    
-#    return result
+
+cdef double get_phred_qual_to_prob(int qual):
+    cdef double base, exp, prob
     
+    exp = -1 * (< double > qual) / 10
+    base = 10
     
+    prob = 1 - pow(base, exp)
+
+    return prob
