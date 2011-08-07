@@ -413,82 +413,121 @@ cdef class SnvMixTwoTrainer(SnvMixTrainer):
                                        snv_mix_params_struct params):
         cdef int i, g
         cdef snv_mix_ess_struct ess
-        cdef double * resp
+        cdef double * resp, **expected_counts
+        cdef double ** cpt
         cdef SnvMixTwoTrainingData pos_data
         ess = make_snv_mix_ess_struct()
     
         for pos_data in data:
+            cpt = self._get_pos_comple_likelihood_cpt(pos_data, params)
             resp = self._get_resp(pos_data, params)
+            expected_counts = self._get_expected_counts(pos_data.depth, cpt)
             
             for g in range(NUM_GENOTYPES):
-                a = self._get_expected_counts(pos_data, params.mu[g][0])
-                
-                ess.a[g] += a
-                ess.b[g] += pos_data.depth - a
+                ess.a[g] += expected_counts[g][1]
+                ess.b[g] += expected_counts[g][0]
                 ess.n[g] += resp[g]
-                
+            
+            free_cpt_array(cpt)            
+            free_expected_counts_array(expected_counts)            
             free(resp)
         
         return ess
 
-    cdef double * _get_resp(self, SnvMixTrainingData data, snv_mix_params_struct params):
-        cdef int i, g
-        cdef double ll[NUM_GENOTYPES]
-        cdef SnvMixTwoTrainingData cast_data = < SnvMixTwoTrainingData > data
-        
-        for g in range(NUM_GENOTYPES):
-            ll[g] = 0
-        
-        for i in range(cast_data.depth):
-            for g in range(NUM_GENOTYPES):
-                ll[g] += log(self._get_read_likelihood(cast_data.q[i], cast_data.r[i], params.mu[g][0]))
-        
-        resp = mixture_posterior(ll, params.pi, NUM_BASES)
-                
-        return resp
-
     cdef double _get_pos_likelihood(self, SnvMixTrainingData data, snv_mix_params_struct params):
-        cdef int i, g
-        cdef double pos_likelihood
-        cdef SnvMixTwoTrainingData cast_data = < SnvMixTwoTrainingData > data
-                
+        cdef int a, g, i, z, depth
+        cdef double pos_likelihood, read_likelihood
+        cdef double **** cpt
+        
+        depth = (< SnvMixTwoTrainingData > data).depth
+        
+        cpt = self._get_pos_comple_likelihood_cpt(data, params)
+        
         pos_likelihood = 1
         
-        for i in range(cast_data.depth):
-            for g in range(NUM_GENOTYPES):
-                pos_likelihood *= self._get_read_likelihood(cast_data.q[i], cast_data.r[i], params.mu[g][0])
+        for i in range(depth):
+            read_likelihood = 0
+            for g in range(NUM_GENOTYPES):                
+                for a in range(2):
+                    for z in range(2):
+                        read_likelihod += cpt[i][g][a][z]
+                        
+                pos_likelihood = pos_likelihood * read_likelihood
+        
+        free_cpt_array(cpt)
         
         return pos_likelihood
     
-    cdef double _get_read_likelihood(self, double q, double r, double mu):
-        cdef double read_likelihood
+    cdef double * _get_resp(self, SnvMixTrainingData data, snv_mix_params_struct params):
+        cdef int a, g, i, z, depth
+        cdef double ** cpt
         
-        read_likelihood = 0 
-                
-        read_likelihood += self._get_read_complete_likelihood(0, 0, q, r, mu)
-        read_likelihood += self._get_read_complete_likelihood(0, 1, q, r, mu)
-        read_likelihood += self._get_read_complete_likelihood(1, 0, q, r, mu)
-        read_likelihood += self._get_read_complete_likelihood(1, 1, q, r, mu)
-    
-        return read_likelihood
-    
-    cdef double _get_expected_counts(self, SnvMixTwoTrainingData data, double mu):
-        cdef double norm_const, q, r, a, temp_a, temp_b
+        depth = (< SnvMixTwoTrainingData > data).depth
         
-        a = 0
+        cpt = self._get_pos_comple_likelihood_cpt(data, params)        
         
-        for i in range(data.depth):
-            q = data.q[i]
-            r = data.r[i]
+        resp = < double *> malloc(NUM_GENOTYPES * sizeof(double))
+        
+        for g in range(NUM_GENOTYPES):
+            resp[g] = 0
+        
+        for i in range(cast_data.depth):
+            for g in range(NUM_GENOTYPES):
+                for a in range(2):
+                    for z in range(2):
+                        resp[g] += cpt[i][g][a][z]
+        
+        free_cpt_array(cpt)
+        
+        return resp
 
-            temp_a = self._get_read_complete_likelihood(1, 0, q, r, mu) + \
-                     self._get_read_complete_likelihood(1, 1, q, r, mu)
-            temp_b = self._get_read_complete_likelihood(0, 0, q, r, mu) + \
-                     self._get_read_complete_likelihood(0, 1, q, r, mu)
-            
-            a += temp_a / (temp_a + temp_b)
     
-        return a
+    cdef double ** _get_expected_counts(self, int depth, double ** cpt):
+        cdef a, g, i
+        cdef double * expected_counts
+        
+        expected_counts = get_expected_counts_array()
+        
+        for i in range(depth):
+            for g in range(NUM_GENOTYPES):
+                for a in range(2):
+                    expected_counts[g][a] += cpt[i][g][a][0] + cpt[i][g][a][1]
+        
+        return expected_counts
+    
+    cdef double ** _get_pos_comple_likelihood_cpt(self, SnvMixTrainingData data, snv_mix_params_struct params):
+        cdef int a, g, i, z
+        cdef double q, r, mu, read_likelihood
+        cdef SnvMixTwoTrainingData cast_data = < SnvMixTwoTrainingData > data
+        
+        cpt = get_cpt_array(cast_data.depth)
+        
+        for i in range(cast_data.depth):
+            q = cast_data.q[i]
+            r = cast_data.r[i]
+
+            for g in range(NUM_GENOTYPES):            
+                mu = params.mu[g][0]
+                pi = params.pi[g]
+                
+                for a in range(2):
+                    for z in range(2):
+                        read_likelihood = self._get_read_complete_likelihood(a, z, q, r, mu)                  
+                        cpt[i][g][a][z] = pi * read_likelihood
+        
+        for i in range(cast_data.depth):
+            norm_const = 0
+            for g in range(NUM_GENOTYPES):
+                for a in range(2):
+                    for z in range(2):
+                        norm_const += cpt[i][g][a][z]
+            
+            for g in range(NUM_GENOTYPES):
+                for a in range(2):
+                    for z in range(2):
+                        cpt[i][g][a][z] = cpt[i][g][a][z] / norm_const 
+        
+        return cpt
 
     cdef double _get_read_complete_likelihood(self, int a, int z, double q, double r, double mu):
         if a == 0 and z == 0:
@@ -523,3 +562,57 @@ cdef double get_phred_qual_to_prob(int qual):
     prob = 1 - pow(base, exp)
 
     return prob
+
+cdef double **** get_cpt_array(int depth):
+    cdef a, g, i, z
+    cdef double cpt
+    
+    cpt = < double **> malloc(depth * sizeof(double *))
+    
+    for i in range(dept):
+        cpt[i] = < double **> malloc(NUM_GENOTYPES * sizeof(double *))
+        
+        for g in range(NUM_GENOTYPES):
+            cpt[i][g] = < double **> malloc(2 * sizeof(double *))
+            
+            for a in range(2):
+                cpt[i][g][a] = < double *> malloc(2 * sizeof(double))
+                
+                for z in range(2):
+                    cpt[i][g][a][z] = 0
+    
+    return cpt
+
+cdef void free_cpt_array(double ** cpt):
+    cdef int a, g, i
+    
+    for i in range(dept):
+        for g in range(NUM_GENOTYPES):            
+            for a in range(2):
+                free(cpt[i][g][a])
+            free(cpt[i][g])        
+        free(cpt[i])
+    free(cpt)
+
+cdef double ** get_expected_counts_array():
+    cdef int a, g
+    cdef double ** expected_counts
+    
+    expected_counts = < double **> malloc(NUM_GENOTYPES * sizeof(double *))
+    
+    for g in range(NUM_GENOTYPES):
+        expected_counts[g] = < double *> malloc(2 * sizeof(double))
+        
+        for a in range(2):
+            expected_counts[g][a] = 0
+        
+    return expected_counts
+
+cdef void free_expected_counts_array(double ** expected_counts):
+    cdef int g
+    
+    for g in range(NUM_GENOTYPES):
+        free(expected_counts[g])
+    
+    free(expected_counts)
+    
