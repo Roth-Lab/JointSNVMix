@@ -20,130 +20,538 @@ DEF NUM_GENOTYPES = 3
 DEF NUM_BASES = 2
 DEF EPS = 1e-100
 
-ctypedef struct snv_mix_params_struct:
-    double mu[NUM_GENOTYPES][NUM_BASES]
-    double pi[NUM_GENOTYPES]
+#=======================================================================================================================
+# Subsamplers
+#=======================================================================================================================
+cdef class PairedDataSubSampler(object):
+    cdef int _skip_size
+    cdef int _min_normal_depth
+    cdef int _min_tumour_depth
+    
+    def __init__(self, double skip_size, int min_normal_depth, int min_tumour_depth):
+        self._skip_size = skip_size
+        self._min_normal_depth = min_normal_depth
+        self._min_tumour_depth = min_tumour_depth
 
-ctypedef struct snv_mix_priors_struct:
-    double mu[NUM_GENOTYPES][NUM_BASES]
-    double pi[NUM_GENOTYPES]
-    
-ctypedef struct snv_mix_ess_struct:
-    double n[NUM_GENOTYPES]
-    double a[NUM_GENOTYPES]
-    double b[NUM_GENOTYPES]
-    
-cdef class SnvMixParameters(object):
-    cdef snv_mix_params_struct _normal
-    cdef snv_mix_params_struct _tumour
-
-    def __init__(self, **kwargs):
-        self._init_params(**kwargs)
-    
-    def _init_params(self, **kwargs):
-        mu_N = kwargs.get('mu_N', (0.99, 0.5, 0.01))
-        mu_T = kwargs.get('mu_T', (0.99, 0.5, 0.01))
-        pi_N = kwargs.get('pi_N', (0.99, 0.009, 0.001))
-        pi_T = kwargs.get('pi_T', (0.99, 0.009, 0.001))
+    def subsample(self, Counter counter, refs=None):
+        cdef int ref_len
+        cdef RefIterator ref_iter       
+        cdef PairedSampleBinomialCounterRow row
+        cdef list sample
         
-        for i in range(NUM_GENOTYPES):
-            self._normal.mu[i][0] = mu_N[i]
-            self._normal.mu[i][1] = 1 - mu_N[i]
+        sample = {'normal' : [], 'tumour' : []}
+        
+        print "Randomly sub-sampling every {0}th position the data set.".format(self._skip_size)
+        
+        if refs = None:
+            refs = counter.refs
+        
+        for ref in refs:
+            ref_iter = counter.iter_ref(ref)
             
-            self._tumour.mu[i][0] = mu_T[i]
-            self._tumour.mu[i][1] = 1 - mu_T[i]
+            i = 0
             
-            self._normal.pi[i] = pi_N[i]            
-            self._tumour.pi[i] = pi_T[i]
-    
-    property normal:
-        def __get__(self):
-            return self._convert_params_struct_to_dict(self._normal)
-    
-    property tumour:
-        def __get__(self):
-            return self._convert_params_struct_to_dict(self._tumour)
-    
-    cdef dict _convert_params_struct_to_dict(self, snv_mix_params_struct params):
-        result = {}
-        
-        result['pi'] = []
-        result['mu'] = []
-        
-        for i in range(NUM_GENOTYPES):
-            result['pi'].append(params.pi[i])
-            result['mu'].append(params.mu[i][0])
-        
-        return result
-
-cdef SnvMixParameters makeSnvMixParameters(snv_mix_params_struct normal_params, snv_mix_params_struct tumour_params):
-     cdef SnvMixParameters params = SnvMixParameters.__new__(SnvMixParameters)
-    
-     params._normal = normal_params
-     params._tumour = tumour_params
-     
-     return params
-
-cdef class SnvMixPriors(object):
-    cdef snv_mix_priors_struct _normal
-    cdef snv_mix_priors_struct _tumour
-
-    def __init__(self, **kwargs):
-        self._init_params(**kwargs)
-    
-    def _init_params(self, **kwargs):
-        mu_N = kwargs.get('mu_N', (
-                                   (100, 3),
-                                   (50, 50),
-                                   (3, 100)
-                                   )
-                          )
-        mu_T = kwargs.get('mu_T', (
-                                   (100, 3),
-                                   (50, 50),
-                                   (3, 100)
-                                   )
-                          )
-        pi_N = kwargs.get('pi_N', (1000, 100, 100))
-        pi_T = kwargs.get('pi_T', (1000, 100, 100))
-        
-        for i in range(NUM_GENOTYPES):
-            self._normal.mu[i][0] = mu_N[i][0]
-            self._normal.mu[i][1] = mu_N[i][1]
+            try:
+                while True:
+                    ref_iter.cnext()
+                    
+                    row = ref_iter._current_row
+                    
+                    if row._normal_depth < self._min_normal_depth or row._tumour_depth < self._min_tumour_depth:
+                        continue
+                    
+                    if i % self._skip_size == 0:               
+                        self._add_row_to_sample(sample, row)
+                        
+                    i += 1
+                        
+            except StopIteration:
+                pass
             
-            self._tumour.mu[i][0] = mu_T[i][0]
-            self._tumour.mu[i][1] = mu_T[i][1]
-            
-            self._normal.pi[i] = pi_N[i]            
-            self._tumour.pi[i] = pi_T[i]
-    
-    property normal:
-        def __get__(self):
-            return self._convert_priors_struct_to_dict(self._normal)
-    
-    property tumour:
-        def __get__(self):
-            return self._convert_priors_struct_to_dict(self._tumour)
-    
-    cdef dict _convert_priors_struct_to_dict(self, snv_mix_priors_struct params):
-        result = {}
+            print "Sub-sampled {0} positions from ref {1}".format(i, ref)
         
-        result['pi'] = []
-        result['mu'] = []
+        print "Total sub-sample size is {0}".format(len(sample_data['normal']))
         
-        for i in range(NUM_GENOTYPES):
-            result['pi'].append(params.pi[i])
-            result['mu'].append(
-                                (params.mu[i][0], params.mu[i][1])
-                                )
+        return sample_data
+    
+    cdef _add_row_to_sample(self, dict sample, PairedSampleBinomialCounterRow row):
+        pass
+    
+#---------------------------------------------------------------------------------------------------------------------- 
+cdef class SnvMixOneSubsampler(PairedDataSubSampler):
+    cdef _add_row_to_sample(self, dict sample, PairedSampleBinomialCounterRow row):
+        cdef SnvMixTwoTrainingData normal_data, tumour_data
+    
+        normal_data = makeSnvMixTwoTrainingData((< JointBinaryQualityCounterRow > row)._normal_data)
+        tumour_data = makeSnvMixTwoTrainingData((< JointBinaryQualityCounterRow > row)._tumour_data)
         
-        return result
+        sample['normal'].append(normal_data)
+        sample['tumour'].append(tumour_data)
+        
+#---------------------------------------------------------------------------------------------------------------------- 
+cdef class SnvMixOneSubsampler(PairedDataSubSampler):
+    cdef _add_row_to_sample(self, dict sample, PairedSampleBinomialCounterRow row):
+        cdef SnvMixOneData normal_data, tumour_data
+    
+        normal_data = makeSnvMixOneTrainingData((< JointBinaryCounterRow > row)._normal_counts)
+        tumour_data = makeSnvMixOneTrainingData((< JointBinaryCounterRow > row)._tumour_counts)
+        
+        sample['normal'].append(normal_data)
+        sample['tumour'].append(tumour_data)
 
-cdef class SnvMixTrainingData(object):
-    cdef double component_log_likelihood(self, double mu[2]):
+#=======================================================================================================================
+# Models
+#=======================================================================================================================
+cdef class PairedSnvMixModel(object):
+    def __init__(self, SnvMixModel normal_model, SnvMixModel tumour_model):
+        self.normal_model = normal_model
+        self.tumour_model = tumour_model
+        
+    def fit(self, list normal_data, list tumour_data):
+        self.normal_model.fit(normal_data)
+        self.tumour_model.fit(tumour_data)
+    
+    def predict(self, SnvMixData normal_data, SnvMixData tumour_data):
+        normal_resp = self.normal_model.predict(normal_data)
+        tumour_resp = self.tumour_model.predict(tumour_data)
+        
+        joint_resp = self._get_joint_resp(normal_resp, tumour_resp)
+        
+cdef class SnvMixModel(object):
+    cdef SnvMixParams params
+    
+    def __init__(self, SnvMixParams params):
+        self.params = params
+    
+    def fit(self, list data, convergence_threshold=1e-6, max_iters=100):
+        trainer = SnvMixModelTrainer(self, convergence_threshold, max_iters)
+        
+        trainer.train(data)
+    
+    def predict(self, SnvMixData data):
         pass
 
-cdef class SnvMixOneTrainingData(SnvMixTrainingData):
+    cdef double _get_lower_bound(self, list data):
+        cdef double lb
+        cdef SnvMixData data
+        
+        lb = 0
+        
+        for pos_data in data:
+            lb += self._get_log_likelihood(pos_data)
+        
+        lb += self.params._get_prior_log_likelihood()
+        
+        return lb
+        
+    cdef SnvMixCpt _get_complete_log_likelihood(self, SnvMixData data):
+        pass
+    
+    cdef double _get_log_likelihood(self, SnvMixData data):
+        cdef SnvMixCpt cpt
+        cdef double likelihood
+        
+        cpt = self._get_complete_log_likelihood(data)
+        
+        likelihood = cpt.marginalise()
+        
+        if likelihood == 0:
+            likelihood = EPS
+        
+        return log(likelihood)
+
+#---------------------------------------------------------------------------------------------------------------------- 
+cdef class SnvMixOneModel(SnvMixModel):
+    cdef SnvMixCpt _get_complete_log_likelihood(self, SnvMixData data)
+        return SnvMixOneCpt(data, self.params)
+    
+#---------------------------------------------------------------------------------------------------------------------- 
+cdef class SnvMixTwoModel(SnvMixModel):
+    cdef SnvMixCpt _get_complete_log_likelihood(self, SnvMixData data)
+        return SnvMixTwoCpt(data, self.params)
+
+#=======================================================================================================================
+# CPT
+#=======================================================================================================================
+cdef class SnvMixCpt(object):
+    cdef double * get_resp():
+        pass
+    
+    cdef double * get_expected_counts_a():
+        pass
+    
+    cdef double * get_expected_counts_b():
+        pass
+    
+    cdef double marginalise():
+        pass
+
+#---------------------------------------------------------------------------------------------------------------------- 
+cdef class SnvMixOneCpt(SnvMixCpt):
+    cdef int _a
+    cdef int _b
+    cdef double * _cpt_array
+    
+    def __init__(self, SnvMixData data, SnvMixParams params):
+        self._init_cpt_array(data, params)
+        
+        self._a = (< SnvMixOneData > data).counts[0]
+        self._b = (< SnvMixOneData > data).counts[1]
+    
+    def __dealloc__(self):
+        free(self._cpt_array)
+    
+    cdef double * get_resp():
+        cdef int g
+        cdef double * resp
+    
+        resp = < double *> malloc(NUM_GENOTYPES * sizeof(double))
+        
+        for g in range(NUM_GENOTYPES):
+            resp[g] = self._cpt_array[g]
+        
+        log_space_normalise_row(resp, NUM_GENOTYPES)
+        
+        return resp
+    
+    cdef double * get_expected_counts_a()
+        cdef int g
+        cdef double * resp, * a
+        
+        a = < double *> malloc(NUM_GENOTYPES * sizeof(double))
+        
+        resp = self.get_resp()
+        
+        for g in range(NUM_GENOTYPES):
+            a[g] = self._a * resp[g]
+        
+        free(resp)
+        
+        return a
+    
+    cdef double * get_expected_counts_b()
+        cdef int g
+        cdef double * resp, * b
+        
+        b = < double *> malloc(NUM_GENOTYPES * sizeof(double))
+        
+        resp = self.get_resp()
+        
+        for g in range(NUM_GENOTYPES):
+            b[g] = self._b * resp[g]
+        
+        free(resp)
+        
+        return b
+    
+    cdef double marginalise(self):
+        cdef int g
+        cdef double marginal
+        
+        marginal = 0
+        
+        for g in range(NUM_GENOTYPES):
+            margianl += exp(self._cpt_array[g])
+        
+        return marginal
+    
+    cdef _init_cpt_array(self, SnvMixOneData data, SnvMixParams params):
+        cdef int a, b, g
+        cdef double mu, log_pi
+        
+        self._cpt_array = < double *> malloc(NUM_GENOTYPES * sizeof(double))
+        
+        for g in range(NUM_GENOTYPES):
+            a = data.counts[0]
+            b = data.counts[1]
+            mu = params.mu[g]
+            log_pi = log(params.pi[g])
+            
+            self._cpt_array[g] = log_pi + self._binomial_log_likelihood(a, b, mu)
+        
+    cdef double _binomial_log_likelihood(self, int a, int b, double mu):
+        return a * log(mu) + b * log(1 - mu)
+        
+#---------------------------------------------------------------------------------------------------------------------- 
+class SnvMixTwoCpt(SnvMixCpt):
+    cdef int depth
+    cdef double ** _cpt_array
+    
+    def __init__(self, SnvMixTwoTrainingData data, SnvMixParams params):
+        self.depth = data.depth
+        
+        self._make_cpt_array()
+        self._init_cpt_array(SnvMixTwoTrainingData data, SnvMixParams params)
+    
+    def __dealloc__(self):
+        self._destroy_cpt_array()
+    
+    cdef double * get_resp(self):
+        cdef int d, g, a, z
+        cdef double read_prob
+        cdef double * resp
+        cdef double norm_const
+        
+        resp = < double *> malloc(NUM_GENOTYPES * sizeof(double))
+        
+        norm_const = 0
+        for g in range(NUM_GENOTYPES):
+            resp[g] = 1
+        
+        # Marginalise each read over a and z.
+        for g in range(NUM_GENOTYPES):
+            for d in range(self.depth):            
+                read_prob = 0       
+                for a in range(2):
+                    for z in range(2):
+                        read_prob += self._cpt_array[d][g][a][z]
+                        
+                resp[g] = read_prob * resp[g]
+            
+            norm_const += resp[g]
+                
+        for g in range(NUM_GENOTYPES):
+            resp[g] = resp[g] / norm_const
+        
+        return resp
+    
+    cdef double * get_expected_counts_a(self):
+        return self._get_expected_counts(1)
+    
+    cdef double * get_expected_counts_b(self):
+        return self._get_expected_counts(0)
+    
+    cdef double marginalise(self):
+        cdef int d, g, a, z
+        cdef double marginal, class_marginal
+        
+        marginal = 0
+        
+        for g in range(NUM_GENOTYPES):
+            class_marginal = 1
+            for d in range(self.depth):
+                for a in range(2):
+                    for z in range(2):
+                        class_marginal = class_marginal * self._cpt_array[d][g][a][z]
+            
+            marginal += class_marginal
+        
+        return marginal 
+
+    cdef double * _get_expected_counts(self, int a):
+        '''
+        Get the expected number of counts for match a=1, mismatch a=0
+        '''
+        cdef int d, g, z
+        cdef double read_prob
+        cdef double * counts
+        
+        counts = < double *> malloc(NUM_GENOTYPES * sizeof(double))
+        
+        for g in range(NUM_GENOTYPES):
+            counts[g] = 0
+        
+        # Marginalise each read over z and d.
+        for g in range(NUM_GENOTYPES):
+            for d in range(self.depth):                   
+                    for z in range(2):
+                        counts[g] += self._cpt_array[d][g][a][z]
+        
+        return counts
+    
+    cdef _init_cpt_array(self):
+        self._fill_cpt_array()        
+        self._normalise_cpt_array()
+    
+    cdef _fill_cpt_array(self):
+        cdef int d, g, a, z
+        cdef double r, q, mu, pi, read_likelihood
+    
+        for d in range(self.depth):
+            q = data.q[d]
+            r = data.r[d]
+
+            for g in range(NUM_GENOTYPES):            
+                mu = params.mu[g]
+                pi = params.pi[g]
+                
+                for a in range(2):
+                    for z in range(2):
+                        read_likelihood = self._get_read_complete_likelihood(a, z, q, r, mu)                  
+                        self._cpt_array[d][g][a][z] = pi * read_likelihood
+    
+    cdef _normalise_cpt_array(self):
+        '''
+        Normalise entry in cpt for each read so the sum over a and z adds to 1.
+        '''
+        cdef int d, g, a, z
+        cdef double norm_const
+        
+        for d in range(self.depth):
+            norm_const = 0
+            for g in range(NUM_GENOTYPES):
+                for a in range(2):
+                    for z in range(2):
+                        norm_const += self._cpt_array[d][g][a][z]
+            
+            for g in range(NUM_GENOTYPES):
+                for a in range(2):
+                    for z in range(2):
+                        self._cpt_array[i][g][a][z] = self._cpt_array[d][g][a][z] / norm_const
+
+    cdef double _get_read_complete_likelihood(self, int a, int z, double q, double r, double mu):
+        if a == 0 and z == 0:
+            return 0.5 * (1 - r) * (1 - mu)
+        elif a == 0 and z == 1:
+            return (1 - q) * r * (1 - mu)
+        elif a == 1 and z == 0:
+            return 0.5 * (1 - r) * mu
+        else:
+            return q * r * mu
+        
+    cdef void _make_cpt_array(self):
+        cdef d, g, a, z
+        
+        self._cpt_array = < double **> malloc(depth * sizeof(double *))
+        
+        for d in range(self.depth):
+            self._cpt_array[d] = < double **> malloc(NUM_GENOTYPES * sizeof(double *))
+            
+            for g in range(NUM_GENOTYPES):
+                self._cpt_array[d][g] = < double **> malloc(2 * sizeof(double *))
+                
+                for a in range(2):
+                    self._cpt_array[d][g][a] = < double *> malloc(2 * sizeof(double))
+                    
+                    for z in range(2):
+                        self._cpt_array[d][g][a][z] = 0
+
+    cdef void _free_cpt_array(self):
+        cdef int d, g, a
+        
+        for d in range(self.depth):
+            for g in range(NUM_GENOTYPES):            
+                for a in range(2):
+                    free(self._cpt_array[d][g][a])
+                free(self._cpt_array[d][g])        
+            free(self._cpt_array[d])
+        free(self._cpt_array)
+
+#=======================================================================================================================
+# Trainer
+#=======================================================================================================================
+cdef class SnvMixModelTrainer(object):
+    cdef bint _converged
+    cdef int _iter
+    cdef double _convergence_threshold
+    cdef int _max_iters
+
+    cdef list _lower_bounds
+    cdef SnvMixModel _model
+    
+    def __init__(self, model, convergence_threshold, max_iters):
+        self._model = model
+        self._convergence_threshold = convergence_threshold
+        self._max_iters = max_iters
+        
+        self._converged = 0
+        self._iters = 0
+        self._lower_bounds = [FLOAT_INFN]
+
+    cdef train(self, list data):
+        cdef SnvMixEss ess
+        
+        while not self._converged:
+            ess = self._do_e_step(data)
+            params = self._do_m_step(ess)
+            
+            self._check_convergence(data)
+            
+            print self._iter, self.lower_bounds[-1]
+            print self.model.params
+
+    cdef SnvMixEss _do_e_step(self, list data):                              
+        cdef SnvMixTrainingData pos_data
+        cdef SnvMixEss ess
+        
+        ess = SnvMixEss()
+    
+        for pos_data in data:
+            ess.update(pos_data, self._model)
+        
+        return ess
+    
+    cdef SnvMixModel _do_m_step(self, SnvMixEss ess):       
+        self._model._params._update(ess)
+
+    cdef _check_convergence(self, list data):
+        cdef double rel_change, lb
+        
+        lb = self._model._get_lower_bound(data)        
+        self._lower_bounds.append(lb)
+        
+        rel_change = (lower_bounds[-1] - lower_bounds[-2]) / abs(< double > lower_bounds[-2])
+    
+        if rel_change < 0:
+            print "Lower bound decreased exiting."
+            self._converged = 1
+        elif rel_change < self._convergence_threshold:
+            print "Converged"
+            self.converged = 1
+        elif self._iter >= self._max_iters:
+            print "Maximum number of iters exceeded exiting."
+            self._converged = 1
+        else:
+            self._converged = 0
+        
+        self._iter += 1
+
+#=======================================================================================================================
+# ESS
+#=======================================================================================================================
+cdef class SnvMixEss(object):
+    cdef double a[NUM_GENOTYPES]
+    cdef double b[NUM_GENOTYPES]
+    cdef double n[NUM_GENOTYPES]
+    
+    def __init__(self):
+        self.reset()
+    
+    cdef void reset(self):
+        cdef int g
+        
+        for g in range(NUM_GENOTYPES):
+            self.a[g] = 0
+            self.b[g] = 0
+            self.n[g] = 0
+    
+    cdef update(self, SnvMixData data, SnvMixModel model):
+        cdef double * a, *b, * resp
+        cdef SnvMixCpt cpt
+        
+        cpt = model._get_complete_log_likelihood(data)
+        
+        resp = cpt.get_resp()
+        a = cpt.get_expected_counts_a()
+        b = cpt.get_expected_counts_b()
+    
+        for g in range(NUM_GENOTYPES):
+            self.n[g] += resp[g]
+            self.a[g] += a[g]
+            self.b[g] += b[g]
+        
+        free(resp)
+        free(a)
+        free(b)
+
+#=======================================================================================================================
+# Data
+#=======================================================================================================================
+cdef class SnvMixData(object):
+    pass
+
+#---------------------------------------------------------------------------------------------------------------------- 
+cdef class SnvMixOneData(SnvMixData):
     cdef int counts[2]
     
     cdef double component_log_likelihood(self, double mu[2]):
@@ -156,8 +564,9 @@ cdef SnvMixOneTrainingData makeSnvMixOneTrainingData(binary_counts_struct counts
     data.counts[1] = counts.B
     
     return data
-         
-cdef class SnvMixTwoTrainingData(SnvMixTrainingData):
+
+#---------------------------------------------------------------------------------------------------------------------- 
+cdef class SnvMixTwoData(SnvMixData):
     cdef int depth
     cdef int * labels
     cdef double * q
@@ -167,8 +576,7 @@ cdef class SnvMixTwoTrainingData(SnvMixTrainingData):
         free(self.labels)
         free(self.q)
         free(self.r)
-    
-    
+
 cdef SnvMixTwoTrainingData makeSnvMixTwoTrainingData(base_map_qualities_struct data_struct):
     cdef read_index, i, l
     cdef double temp_q
@@ -203,356 +611,6 @@ cdef SnvMixTwoTrainingData makeSnvMixTwoTrainingData(base_map_qualities_struct d
     
     return data
 
-cdef class SnvMixTrainer(Trainer):
-    def train(self, Counter counter, init_params, priors, sub_sample_fraction=0.01):
-        sample_data = self._load_data_set(counter, sub_sample_fraction)
-        
-        print "training"
-        
-        parameters = self._train(sample_data, init_params, priors)
-        
-        return parameters
-    
-    cdef _train(self, list sample_data, SnvMixParameters init_params, SnvMixPriors priors):
-        pass
-
-    cdef snv_mix_params_struct _do_em(self,
-                                      list data,
-                                      snv_mix_params_struct init_params,
-                                      snv_mix_priors_struct priors):
-        cdef bint converged
-        cdef int iter
-        cdef double lb
-        cdef list lower_bounds
-        cdef snv_mix_params_struct params
-        cdef snv_mix_ess_struct ess
-        
-        iter = 0
-        converged = 0
-        lower_bounds = [FLOAT_INFN]
-        
-        params = init_params
-        
-        lb = self._get_lower_bound(data, params, priors)        
-        lower_bounds.append(lb)
-                
-        converged = self._check_convergence(lower_bounds, iter)
-        
-        while not converged:
-            ess = self._do_e_step(data, params)
-            params = self._do_m_step(ess, priors)
-            
-            lb = self._get_lower_bound(data, params, priors)        
-            lower_bounds.append(lb)
-            
-            iter += 1
-            
-            converged = self._check_convergence(lower_bounds, iter)
-            
-            print iter, lb
-            print "mu : ", params.mu[0][0], params.mu[1][0], params.mu[2][0]
-            print "pi : ", params.pi[0], params.pi[1], params.pi[2]
-        
-        return params
-    
-    cdef snv_mix_ess_struct _do_e_step(self,
-                                       list data,
-                                       snv_mix_params_struct params):
-        cdef int i, g
-        cdef snv_mix_ess_struct ess
-        cdef double * resp
-        ess = make_snv_mix_ess_struct()
-    
-        for pos_data in data:
-            resp = self._get_resp(pos_data, params)
-            
-            ess = self._update_ess(ess, pos_data, resp)
-            
-            free(resp)
-        
-        return ess
-
-    cdef double * _get_resp(self, SnvMixTrainingData data, snv_mix_params_struct params):
-        pass
-    
-    cdef snv_mix_ess_struct _update_ess(self, snv_mix_ess_struct ess, SnvMixTrainingData data, double * resp):
-        pass
-    
-    cdef snv_mix_params_struct _do_m_step(self, snv_mix_ess_struct ess, snv_mix_priors_struct priors):
-        cdef int g
-        cdef double alpha, beta, pi, denom
-        cdef snv_mix_params_struct params
-    
-        for g in range(NUM_GENOTYPES):
-            alpha = ess.a[g] + priors.mu[g][0] - 1
-            beta = ess.b[g] + priors.mu[g][1] - 1
-            denom = alpha + beta
-            
-            params.mu[g][0] = alpha / denom
-            params.mu[g][1] = 1 - params.mu[g][0]
-        
-        denom = 0
-        for g in range(NUM_GENOTYPES):
-            pi = ess.n[g] + priors.pi[g] - 1
-            denom += pi
-        
-        for g in range(NUM_GENOTYPES):
-            pi = ess.n[g] + priors.pi[g] - 1
-            
-            params.pi[g] = pi / denom
-        
-        return params
-
-    cdef double _get_lower_bound(self, list data, snv_mix_params_struct params, snv_mix_priors_struct priors):
-        cdef int g
-        cdef double ll, pos_likelihod
-        
-        ll = 0
-        
-        for pos_data in data:
-            pos_likelihood = self._get_pos_likelihood(pos_data, params)
-
-            # Guard against numerical issues associated with highly unlikely positions.
-            if pos_likelihood == 0:
-                pos_likelihood = EPS
-            
-            ll += log(pos_likelihood)
-        
-        for g in range(NUM_GENOTYPES):
-            ll += dirichlet_log_likelihood(params.mu[g], priors.mu[g], NUM_BASES)
-        
-        ll += dirichlet_log_likelihood(params.pi, priors.pi, NUM_GENOTYPES)
-        
-        return ll
-
-    cdef double _get_pos_likelihood(self, SnvMixTrainingData data, snv_mix_params_struct params):
-        pass
-    
-    cdef bint _check_convergence(self, lower_bounds, iter):
-        cdef double rel_change
-        
-        rel_change = (lower_bounds[-1] - lower_bounds[-2]) / abs(< double > lower_bounds[-2])
-    
-        if rel_change < 0:
-            print "Lower bound decreased exiting."
-            return 1
-        elif rel_change < 1e-6:
-            print "Converged"
-            return 1
-        elif iter >= 100:
-            print "Maximum number of iters exceeded exiting."
-            return 1
-        else:
-            return 0
-
-cdef class SnvMixOneTrainer(SnvMixTrainer):    
-    cdef _train(self, list sample_data, SnvMixParameters init_params, SnvMixPriors priors):
-        cdef list normal_counts = []
-        cdef list tumour_counts = []
-        cdef snv_mix_params_struct normal_params, tumour_params
-        cdef JointBinaryCounterRow row
-        
-        for row in sample_data:
-            normal_counts.append(makeSnvMixOneTrainingData(row._normal_counts))
-            tumour_counts.append(makeSnvMixOneTrainingData(row._tumour_counts))
-    
-        normal_params = self._do_em(normal_counts, init_params._normal, priors._normal)
-        tumour_params = self._do_em(tumour_counts, init_params._tumour, priors._tumour)
-        
-        return makeSnvMixParameters(normal_params, tumour_params)
-    
-    cdef double * _get_resp(self, SnvMixTrainingData data, snv_mix_params_struct params):
-        cdef int g
-        cdef double ll[NUM_GENOTYPES]
-                
-        for g in range(NUM_GENOTYPES):
-            ll[g] = data.component_log_likelihood(params.mu[g])
-            
-        resp = mixture_posterior(ll, params.pi, NUM_BASES) 
-        
-        return resp
-    
-    cdef snv_mix_ess_struct _update_ess(self, snv_mix_ess_struct ess, SnvMixTrainingData data, double * resp):
-        for g in range(NUM_GENOTYPES):
-            ess.n[g] += resp[g]
-            ess.a[g] += (< SnvMixOneTrainingData > data).counts[0] * resp[g]
-            ess.b[g] += (< SnvMixOneTrainingData > data).counts[1] * resp[g]
-        
-        return ess
-    
-    cdef double _get_pos_likelihood(self, SnvMixTrainingData data, snv_mix_params_struct params):
-        cdef int g
-        cdef double pos_likelihood, density
-        
-        for g in range(NUM_GENOTYPES):
-            density = data.component_log_likelihood(params.mu[g])
-            
-            pos_likelihood += exp(log(params.pi[g]) + density)
-        
-        return pos_likelihood
-        
-
-cdef class SnvMixTwoTrainer(SnvMixTrainer):
-    cdef _train(self, list sample_data, SnvMixParameters init_params, SnvMixPriors priors):
-        cdef list normal_data = []
-        cdef list tumour_data = []
-        cdef snv_mix_params_struct normal_params, tumour_params
-        cdef JointBinaryQualityCounterRow row
-        
-        for row in sample_data:
-            normal_data.append(makeSnvMixTwoTrainingData(row._normal_data))
-            tumour_data.append(makeSnvMixTwoTrainingData(row._tumour_data))
-            
-        normal_params = self._do_em(normal_data, init_params._normal, priors._normal)
-        tumour_params = self._do_em(tumour_data, init_params._tumour, priors._tumour)
-
-        return makeSnvMixParameters(normal_params, tumour_params)
-
-    cdef snv_mix_ess_struct _do_e_step(self,
-                                       list data,
-                                       snv_mix_params_struct params):
-        cdef int i, g
-        cdef snv_mix_ess_struct ess
-        cdef double * resp, **expected_counts
-        cdef double ** cpt
-        cdef SnvMixTwoTrainingData pos_data
-        ess = make_snv_mix_ess_struct()
-    
-        for pos_data in data:
-            cpt = self._get_pos_comple_likelihood_cpt(pos_data, params)
-            resp = self._get_resp(pos_data, params)
-            expected_counts = self._get_expected_counts(pos_data.depth, cpt)
-            
-            for g in range(NUM_GENOTYPES):
-                ess.a[g] += expected_counts[g][1]
-                ess.b[g] += expected_counts[g][0]
-                ess.n[g] += resp[g]
-            
-            free_cpt_array(cpt)            
-            free_expected_counts_array(expected_counts)            
-            free(resp)
-        
-        return ess
-
-    cdef double _get_pos_likelihood(self, SnvMixTrainingData data, snv_mix_params_struct params):
-        cdef int a, g, i, z, depth
-        cdef double pos_likelihood, read_likelihood
-        cdef double **** cpt
-        
-        depth = (< SnvMixTwoTrainingData > data).depth
-        
-        cpt = self._get_pos_comple_likelihood_cpt(data, params)
-        
-        pos_likelihood = 1
-        
-        for i in range(depth):
-            read_likelihood = 0
-            for g in range(NUM_GENOTYPES):                
-                for a in range(2):
-                    for z in range(2):
-                        read_likelihod += cpt[i][g][a][z]
-                        
-                pos_likelihood = pos_likelihood * read_likelihood
-        
-        free_cpt_array(cpt)
-        
-        return pos_likelihood
-    
-    cdef double * _get_resp(self, SnvMixTrainingData data, snv_mix_params_struct params):
-        cdef int a, g, i, z, depth
-        cdef double ** cpt
-        
-        depth = (< SnvMixTwoTrainingData > data).depth
-        
-        cpt = self._get_pos_comple_likelihood_cpt(data, params)        
-        
-        resp = < double *> malloc(NUM_GENOTYPES * sizeof(double))
-        
-        for g in range(NUM_GENOTYPES):
-            resp[g] = 0
-        
-        for i in range(cast_data.depth):
-            for g in range(NUM_GENOTYPES):
-                for a in range(2):
-                    for z in range(2):
-                        resp[g] += cpt[i][g][a][z]
-        
-        free_cpt_array(cpt)
-        
-        return resp
-
-    
-    cdef double ** _get_expected_counts(self, int depth, double ** cpt):
-        cdef a, g, i
-        cdef double * expected_counts
-        
-        expected_counts = get_expected_counts_array()
-        
-        for i in range(depth):
-            for g in range(NUM_GENOTYPES):
-                for a in range(2):
-                    expected_counts[g][a] += cpt[i][g][a][0] + cpt[i][g][a][1]
-        
-        return expected_counts
-    
-    cdef double ** _get_pos_comple_likelihood_cpt(self, SnvMixTrainingData data, snv_mix_params_struct params):
-        cdef int a, g, i, z
-        cdef double q, r, mu, read_likelihood
-        cdef SnvMixTwoTrainingData cast_data = < SnvMixTwoTrainingData > data
-        
-        cpt = get_cpt_array(cast_data.depth)
-        
-        for i in range(cast_data.depth):
-            q = cast_data.q[i]
-            r = cast_data.r[i]
-
-            for g in range(NUM_GENOTYPES):            
-                mu = params.mu[g][0]
-                pi = params.pi[g]
-                
-                for a in range(2):
-                    for z in range(2):
-                        read_likelihood = self._get_read_complete_likelihood(a, z, q, r, mu)                  
-                        cpt[i][g][a][z] = pi * read_likelihood
-        
-        for i in range(cast_data.depth):
-            norm_const = 0
-            for g in range(NUM_GENOTYPES):
-                for a in range(2):
-                    for z in range(2):
-                        norm_const += cpt[i][g][a][z]
-            
-            for g in range(NUM_GENOTYPES):
-                for a in range(2):
-                    for z in range(2):
-                        cpt[i][g][a][z] = cpt[i][g][a][z] / norm_const 
-        
-        return cpt
-
-    cdef double _get_read_complete_likelihood(self, int a, int z, double q, double r, double mu):
-        if a == 0 and z == 0:
-            return 0.5 * (1 - r) * (1 - mu)
-        elif a == 0 and z == 1:
-            return (1 - q) * r * (1 - mu)
-        elif a == 1 and z == 0:
-            return 0.5 * (1 - r) * mu
-        else:
-            return q * r * mu
-
-#=======================================================================================================================
-# Helper functions
-#=======================================================================================================================
-cdef snv_mix_ess_struct make_snv_mix_ess_struct():
-    cdef int g
-    cdef snv_mix_ess_struct ess
-    
-    for g in range(NUM_GENOTYPES):
-        ess.n[g] = 0
-        ess.a[g] = 0
-        ess.b[g] = 0
-    
-    return ess
-
 cdef double get_phred_qual_to_prob(int qual):
     cdef double base, exp, prob
     
@@ -563,56 +621,140 @@ cdef double get_phred_qual_to_prob(int qual):
 
     return prob
 
-cdef double **** get_cpt_array(int depth):
-    cdef a, g, i, z
-    cdef double cpt
+#=======================================================================================================================
+# Parameters
+#=======================================================================================================================
+cdef class PairedSnvMixParameters(object):
+    cdef SnvMixParameters _normal_params
+    cdef SnvMixParameters _tumour_params
+
+    def __init__(self, **kwargs):
+        normal_priors = kwargs.get('priors', PairedSnvMixPriors())
+         
+        mu_N = kwargs.get('mu_N', (0.99, 0.5, 0.01))
+        mu_T = kwargs.get('mu_T', (0.99, 0.5, 0.01))
+        pi_N = kwargs.get('pi_N', (0.99, 0.009, 0.001))
+        pi_T = kwargs.get('pi_T', (0.99, 0.009, 0.001))
+        
+        self._normal_params = SnvMixParameters(priors._normal_priors, mu_N, pi_N)
+        self._tumour_params = SnvMixParameters(priors._tumour_priors, mu_T, pi_T)
     
-    cpt = < double **> malloc(depth * sizeof(double *))
+    property normal:
+        def __get__(self):
+            return self._normal_params
     
-    for i in range(dept):
-        cpt[i] = < double **> malloc(NUM_GENOTYPES * sizeof(double *))
+    property tumour:
+        def __get__(self):
+            return self._tumour_params
+
+#---------------------------------------------------------------------------------------------------------------------- 
+cdef class SnvMixParameters(object):
+    cdef SnvMixPriors priors
+    
+    cdef double mu[NUM_GENOTYPES]
+    cdef double pi[NUM_GENOTYPES]
+
+    def __init__(self, SnvMixPriors priors, tuple mu, tuple pi):
+        self.priors = priors
         
         for g in range(NUM_GENOTYPES):
-            cpt[i][g] = < double **> malloc(2 * sizeof(double *))
+            self.mu[g] = mu[g]
+            self.pi[g] = pi[g]
+        
+    def __str__(self):
+        s = "mu : {0}, {1}, {2}\n".format(self.mu[0],
+                                          self.mu[1],
+                                          self.mu[2])
+        
+        s += "pi : {0}, {1}, {2}\n".format(self.pi[0],
+                                           self.pi[1],
+                                           self.pi[2])
+        
+        return s
+
+    cdef update(self, SnvMixEss ess):
+        self._update_mu(ess)
+        self._update_pi(ess)
+
+    cdef _update_mu(self, SnvMixEss ess):
+        cdef int g
+        cdef double alpha, beta, denom
+    
+        for g in range(NUM_GENOTYPES)
+            alpha = ess.a[g] + self.priors.mu[g][0] - 1
+            beta = ess.b[g] + self.priors.mu[g][1] - 1
+            denom = alpha + beta
             
-            for a in range(2):
-                cpt[i][g][a] = < double *> malloc(2 * sizeof(double))
-                
-                for z in range(2):
-                    cpt[i][g][a][z] = 0
-    
-    return cpt
-
-cdef void free_cpt_array(double ** cpt):
-    cdef int a, g, i
-    
-    for i in range(dept):
-        for g in range(NUM_GENOTYPES):            
-            for a in range(2):
-                free(cpt[i][g][a])
-            free(cpt[i][g])        
-        free(cpt[i])
-    free(cpt)
-
-cdef double ** get_expected_counts_array():
-    cdef int a, g
-    cdef double ** expected_counts
-    
-    expected_counts = < double **> malloc(NUM_GENOTYPES * sizeof(double *))
-    
-    for g in range(NUM_GENOTYPES):
-        expected_counts[g] = < double *> malloc(2 * sizeof(double))
+            self.mu[g] = alpha / denom
+            
+    cdef _update_pi(self, SnvMixEss ess):
+        cdef int g
+        cdef double denom
+        cdef double pi[NUM_GENOTYPES]
         
-        for a in range(2):
-            expected_counts[g][a] = 0
+        denom = 0
         
-    return expected_counts
+        for g in range(NUM_GENOTYPES):
+            pi[g] = ess.n[g] + self.priors.pi[g] - 1
+            denom += pi[g]
+        
+        for g in range(NUM_GENOTYPES):
+            self.pi[g] = pi[g] / denom
 
-cdef void free_expected_counts_array(double ** expected_counts):
-    cdef int g
+#=======================================================================================================================
+# Priors
+#=======================================================================================================================
+cdef class PairedSnvMixPriors(object):
+    cdef SnvMixPriors _normal_priors
+    cdef SnvMixPriors _tumour_priors
+
+    def __init__(self, **kwargs):
+        default_mu = (
+                      (100, 2),
+                      (50, 50),
+                      (2, 100)
+                      )
+        
+        default_pi = (1000, 100, 100)
+        
+        mu_N = kwargs.get('mu_N', default_mu)
+        mu_T = kwargs.get('mu_T', default_mu)
+                          )
+        pi_N = kwargs.get('pi_N', default_pi)
+        pi_T = kwargs.get('pi_T', default_pi)
+        
+        self._normal_priors = SnvMixPriors(mu_N, pi_N)
+        self._tumour_priors = SnvMixPriors(mu_T, pi_T)
     
-    for g in range(NUM_GENOTYPES):
-        free(expected_counts[g])
+    property normal:
+        def __get__(self):
+            return self._normal_priors
     
-    free(expected_counts)
-    
+    property tumour:
+        def __get__(self):
+            return self._tumour_priors
+
+cdef class SnvMixPriors(object):
+    cdef double mu[NUM_GENOTYPES][2]
+    cdef double pi[NUM_GENOTYPES]
+
+    def __init__(self, tuple mu, tuple pi):
+        for g in range(NUM_GENOTYPES):
+            self.mu[g][0] = mu[g][0]
+            self.mu[g][1] = mu[g][1]
+            self.pi[g] = pi[g]
+
+    def __str__(self):
+        s = "mu_alpha : {0}, {1}, {2}\n".format(self.mu[0][0],
+                                                self.mu[1][0],
+                                                self.mu[2][0])
+        
+        s += "mu_beta : {0}, {1}, {2}\n".format(self.mu[0][1],
+                                                self.mu[1][1],
+                                                self.mu[2][1])
+        
+        s += "pi : {0}, {1}, {2}\n".format(self.pi[0],
+                                           self.pi[1],
+                                           self.pi[2])
+        
+        return s
