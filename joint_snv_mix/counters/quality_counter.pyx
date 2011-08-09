@@ -18,9 +18,9 @@ cdef class QualityCounter(Counter):
         self._refs = self._bam_file.references
     
     def iter_ref(self, ref):
-        '''
-        Returns a BaseCounterIter iterator for given ref.
-        '''
+        if ref not in self._refs:
+            raise Exception("Invalid reference passed.")
+        
         iter = QualityCounterRefIterator(ref, self._bam_file.pileup(ref))
         
         return iter
@@ -34,10 +34,6 @@ cdef class QualityCounterRefIterator(RefIterator):
         
         self._ref_iter = CRefIterator(ref, pileup_iter)                                
         self._position = self._ref_iter._position
-  
-    cdef cnext(self):
-        self.advance_position()
-        self.parse_current_position()
     
     cdef advance_position(self):
         self._ref_iter.advance_position()
@@ -50,7 +46,7 @@ cdef class QualityCounterRefIterator(RefIterator):
         
         column = self._ref_iter._current_column        
     
-        self._current_row = makeQualityCounterRow(column)  
+        self._current_row = makeQualityCounterRow(self._ref, column)
     
     
 cdef class QualityCounterRow(SingleSampleCounterRow):
@@ -110,12 +106,11 @@ cdef class QualityCounterRow(SingleSampleCounterRow):
 C level constructor for BaseCounterRow object.
 '''
 cdef class QualityCounterRow
-cdef QualityCounterRow makeQualityCounterRow(column_struct column):
+cdef QualityCounterRow makeQualityCounterRow(char * ref, column_struct column):
     cdef int i
 
     cdef QualityCounterRow row = QualityCounterRow.__new__(QualityCounterRow)
-    
-    row._ref = column.ref
+    row._ref = ref
     row._position = column.position     
     row._depth = column.depth
     
