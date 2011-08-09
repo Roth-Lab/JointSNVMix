@@ -88,7 +88,6 @@ cdef class SnvMixTwoSubsampler(PairedDataSubSampler):
         sample['normal'].append(normal_data)
         sample['tumour'].append(tumour_data)
 
-
 #=======================================================================================================================
 # Data
 #=======================================================================================================================
@@ -110,7 +109,6 @@ cdef SnvMixOneData makeSnvMixOneData(binary_counts_struct counts):
 #---------------------------------------------------------------------------------------------------------------------- 
 cdef class SnvMixTwoData(SnvMixData):
     def __dealloc__(self):
-        free(self.labels)
         free(self.q)
         free(self.r)
 
@@ -123,22 +121,18 @@ cdef SnvMixTwoData makeSnvMixTwoData(base_map_qualities_struct data_struct):
     
     data.depth = l
     
-    data.labels = < int *> malloc(l * sizeof(int))
     data.q = < double *> malloc(l * sizeof(double))
     data.r = < double *> malloc(l * sizeof(double))
     
     i = 0
     
     for read_index in range(data_struct.depth.A):
-        data.labels[i] = 1
         data.q[i] = get_phred_qual_to_prob(data_struct.base_quals.A[read_index])
         data.r[i] = get_phred_qual_to_prob(data_struct.map_quals.A[read_index])
         
         i += 1
     
-    for read_index in range(data_struct.depth.B):
-        data.labels[i] = 0
-        
+    for read_index in range(data_struct.depth.B):        
         temp_q = get_phred_qual_to_prob(data_struct.base_quals.B[read_index])
         data.q[i] = (1 - temp_q) / 3
                 
@@ -247,6 +241,14 @@ cdef class SnvMixParameters(object):
                                            self.pi[2])
         
         return s
+    
+    property mu:
+        def __get__(self):
+            return tuple([x for x in self.mu[:NUM_GENOTYPES]])
+    
+    property pi:
+        def __get__(self):
+            return tuple([x for x in self.pi[:NUM_GENOTYPES]])
 
     cdef update(self, double * n, double * a, double * b):
         self._update_mu(a, b)
@@ -296,15 +298,20 @@ cdef class SnvMixParameters(object):
 #---------------------------------------------------------------------------------------------------------------------- 
 cdef class PairedSnvMixParameters(object):
     def __init__(self, **kwargs):
+        cdef PairedSnvMixPriors priors
+        cdef SnvMixPriors normal_priors, tumour_priors
+        
         priors = kwargs.get('priors', PairedSnvMixPriors())
+        normal_priors = priors._normal_priors
+        tumour_priors = priors._tumour_priors
          
         mu_N = kwargs.get('mu_N', (0.99, 0.5, 0.01))
         mu_T = kwargs.get('mu_T', (0.99, 0.5, 0.01))
         pi_N = kwargs.get('pi_N', (0.99, 0.009, 0.001))
         pi_T = kwargs.get('pi_T', (0.99, 0.009, 0.001))
         
-        self._normal_params = SnvMixParameters(priors=priors._normal_priors, mu=mu_N, pi=pi_N)
-        self._tumour_params = SnvMixParameters(priors=priors._tumour_priors, mu=mu_T, pi=pi_T)
+        self._normal_params = SnvMixParameters(priors=normal_priors, mu=mu_N, pi=pi_N)
+        self._tumour_params = SnvMixParameters(priors=tumour_priors, mu=mu_T, pi=pi_T)
     
     property normal:
         def __get__(self):
@@ -325,9 +332,10 @@ cdef class SnvMixModel(object):
         trainer = SnvMixModelTrainer(self, convergence_threshold, max_iters)
         
         trainer.train(data)
-    
-    def predict(self, SnvMixData data):
-        pass
+        
+    property params:
+        def __get__(self):
+            return self.params
 
     cdef double _get_lower_bound(self, list data):
         cdef double lb
@@ -359,17 +367,17 @@ cdef class SnvMixModel(object):
         return log(likelihood)
 
 cdef class PairedSnvMixModel(object):
-    def __init__(self, SnvMixModel normal_model, SnvMixModel tumour_model):
-        self.normal_model = normal_model
-        self.tumour_model = tumour_model
+    def __init__(self, PairedSnvMixParameters params):
+        self._normal_model = SnvMixModel(params._normal_params)
+        self._tumour_model = SnvMixModel(params._tumour_params)
         
-    def fit(self, list normal_data, list tumour_data):
-        self.normal_model.fit(normal_data)
-        self.tumour_model.fit(tumour_data)
-    
+    def fit(self, list normal_data, list tumour_data, convergence_threshold=1e-6, max_iters=100):
+        self._normal_model.fit(normal_data, convergence_threshold, max_iters)
+        self._tumour_model.fit(tumour_data, convergence_threshold, max_iters)
+
     def predict(self, SnvMixData normal_data, SnvMixData tumour_data):
-        normal_resp = self.normal_model.predict(normal_data)
-        tumour_resp = self.tumour_model.predict(tumour_data)
+        normal_resp = self._normal_model.predict(normal_data)
+        tumour_resp = self._tumour_model.predict(tumour_data)
         
         joint_resp = self._get_joint_resp(normal_resp, tumour_resp)
 
@@ -641,32 +649,13 @@ cdef class SnvMixTwoCpt(SnvMixCpt):
         cdef double r, q, mu, pi, read_likelihood, norm_const
         cdef double ** read_marginals, * class_marginals
         
-        read_marginals = < double **> malloc(NUM_GENOTYPES * sizeof(double))
-
-        for g in range(NUM_GENOTYPES):
-            mu = params.mu[g]
-            pi = params.pi[g]
-            
-            read_marginals[g] = < double *> malloc(self._depth * sizeof(double))
-            
-            for d in range(self._depth):   
-                q = data.q[d]
-                r = data.r[d]
-                
-                read_marginals[g][d] = 0
-                
-                for a in range(2):
-                    for z in range(2):                        
-                        read_marginals[g][d] += self._get_read_complete_likelihood(a, z, q, r, mu)
+        read_marginals = self._get_read_marginals(data, params)
         
-        class_marginals = < double *> malloc(NUM_GENOTYPES * sizeof(double))
+        class_marginals = self._get_class_marginals(read_marginals, params)
+        
+        norm_const = 0
         
         for g in range(NUM_GENOTYPES):
-            class_marginals[g] = params.pi[g]
-            
-            for d in range(self._depth):
-                class_marginals[g] *= read_marginals[g][d]
-            
             norm_const += class_marginals[g]
         
         for g in range(NUM_GENOTYPES):
@@ -687,12 +676,54 @@ cdef class SnvMixTwoCpt(SnvMixCpt):
                         self._cpt_array[g][d][a][z] = read_likelihood / norm_const
 
         self._marginal = norm_const
-                    
+        
+        self._free_read_marginals(read_marginals)            
+        
+        free(class_marginals)                        
+    
+    cdef double ** _get_read_marginals(self, SnvMixTwoData data, SnvMixParameters params):
+        cdef int d, g, a, z
+        cdef double ** read_marginals
+        
+        read_marginals = < double **> malloc(NUM_GENOTYPES * sizeof(double))
+
+        for g in range(NUM_GENOTYPES):
+            mu = params.mu[g]
+            pi = params.pi[g]
+            
+            read_marginals[g] = < double *> malloc(self._depth * sizeof(double))
+            
+            for d in range(self._depth):   
+                q = data.q[d]
+                r = data.r[d]
+                
+                read_marginals[g][d] = 0
+                
+                for a in range(2):
+                    for z in range(2):                        
+                        read_marginals[g][d] += self._get_read_complete_likelihood(a, z, q, r, mu)
+        
+        return read_marginals
+    
+    cdef void _free_read_marginals(self, double ** read_marginals):
         for g in range(NUM_GENOTYPES):
             free(read_marginals[g])
         
         free(read_marginals)
-        free(class_marginals)                        
+    
+    cdef double * _get_class_marginals(self, double ** read_marginals, SnvMixParameters params):
+        cdef int d, g, a, z
+        cdef double * class_marginals
+        
+        class_marginals = < double *> malloc(NUM_GENOTYPES * sizeof(double))
+        
+        for g in range(NUM_GENOTYPES):
+            class_marginals[g] = params.pi[g]
+            
+            for d in range(self._depth):
+                class_marginals[g] *= read_marginals[g][d]
+        
+        return class_marginals
 
     cdef double _get_read_complete_likelihood(self, int a, int z, double q, double r, double mu):
         if a == 0 and z == 0:

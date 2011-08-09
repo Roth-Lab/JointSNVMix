@@ -28,7 +28,6 @@ cdef class SnvMixOneData(SnvMixData):
  
 cdef class SnvMixTwoData(SnvMixData):
     cdef int depth
-    cdef int * labels
     cdef double * q
     cdef double * r    
 
@@ -97,10 +96,12 @@ cdef class SnvMixTwoCpt(SnvMixCpt):
     cdef double * _get_expected_counts(self, int a)    
     cdef _init_cpt_array(self, SnvMixTwoData data, SnvMixParameters params)
     cdef _fill_cpt_array(self, SnvMixTwoData data, SnvMixParameters params)    
-    cdef _normalise_cpt_array(self)
     cdef double _get_read_complete_likelihood(self, int a, int z, double q, double r, double mu)        
     cdef void _make_cpt_array(self)
     cdef void _free_cpt_array(self)
+    cdef double ** _get_read_marginals(self, SnvMixTwoData data, SnvMixParameters params)
+    cdef void _free_read_marginals(self, double ** read_marginals)
+    cdef double * _get_class_marginals(self, double ** read_marginals, SnvMixParameters params)
     
 #---------------------------------------------------------------------------------------------------------------------- 
 cdef class SnvMixEss(object):
@@ -120,7 +121,8 @@ cdef class SnvMixModel(object):
     cdef double _get_log_likelihood(self, SnvMixData data)
     
 cdef class PairedSnvMixModel(object):
-    pass
+    cdef SnvMixModel _normal_model
+    cdef SnvMixModel _tumour_model
  
 cdef class SnvMixOneModel(SnvMixModel):
     pass
