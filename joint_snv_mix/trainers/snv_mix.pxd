@@ -91,6 +91,8 @@ cdef class SnvMixOneCpt(SnvMixCpt):
 cdef class SnvMixTwoCpt(SnvMixCpt):
     cdef int _depth
     cdef double **** _cpt_array
+    cdef double _marginal
+    cdef double _resp[NUM_GENOTYPES]
 
     cdef double * _get_expected_counts(self, int a)    
     cdef _init_cpt_array(self, SnvMixTwoData data, SnvMixParameters params)
