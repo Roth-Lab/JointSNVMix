@@ -260,7 +260,7 @@ cdef class SnvMixParameters(object):
             alpha = a[g] + self.priors.mu[g][0] - 1
             beta = b[g] + self.priors.mu[g][1] - 1
             denom = alpha + beta
-            
+
             self.mu[g] = alpha / denom
             
     cdef _update_pi(self, double * n):
@@ -416,7 +416,7 @@ cdef class SnvMixModelTrainer(object):
         ess = SnvMixEss()
     
         for pos_data in data:
-            cpt = self._model._get_complete_log_likelihood(pos_data)
+            cpt = self._model._get_complete_log_likelihood(pos_data)                   
         
             ess.update(cpt)
         
@@ -449,7 +449,6 @@ cdef class SnvMixModelTrainer(object):
             self._converged = 0
         
         self._iters += 1
-        self._converged = 0
 
 #=======================================================================================================================
 # ESS
@@ -594,28 +593,13 @@ cdef class SnvMixTwoCpt(SnvMixCpt):
         self._free_cpt_array()
     
     cdef double * get_resp(self):
-        cdef int d, g, a, z
-        cdef double read_prob
+        cdef int g
         cdef double * resp
-        cdef double norm_const
         
         resp = < double *> malloc(NUM_GENOTYPES * sizeof(double))
         
-        norm_const = 0
-        
-        for g in range(NUM_GENOTYPES):
-            resp[g] = 0
-        
-        # Marginalise each read over a and z.
         for g in range(NUM_GENOTYPES):     
-            for a in range(2):
-                for z in range(2):
-                    resp[g] += self._cpt_array[g][0][a][z]
-                                           
-            norm_const += resp[g]
-                
-        for g in range(NUM_GENOTYPES):
-            resp[g] = resp[g] / norm_const
+            resp[g] = self._resp[g]
         
         return resp
     
@@ -626,21 +610,7 @@ cdef class SnvMixTwoCpt(SnvMixCpt):
         return self._get_expected_counts(0)
     
     cdef double marginalise(self):
-        cdef int d, g, a, z
-        cdef double marginal, class_marginal
-        
-        marginal = 0
-
-        for g in range(NUM_GENOTYPES):
-            class_marginal = 0
-
-            for a in range(2):
-                for z in range(2):
-                    class_marginal += self._cpt_array[g][0][a][z]
-            
-            marginal += class_marginal
-        
-        return marginal 
+        return self._marginal
 
     cdef double * _get_expected_counts(self, int a):
         '''
@@ -665,12 +635,10 @@ cdef class SnvMixTwoCpt(SnvMixCpt):
     
     cdef _init_cpt_array(self, SnvMixTwoData data, SnvMixParameters params):
         self._fill_cpt_array(data, params)
-#        self._normalise_cpt_array()
     
     cdef _fill_cpt_array(self, SnvMixTwoData data, SnvMixParameters params):
         cdef int d, g, a, z
         cdef double r, q, mu, pi, read_likelihood, norm_const
-
         cdef double ** read_marginals, * class_marginals
         
         read_marginals = < double **> malloc(NUM_GENOTYPES * sizeof(double))
@@ -700,6 +668,9 @@ cdef class SnvMixTwoCpt(SnvMixCpt):
                 class_marginals[g] *= read_marginals[g][d]
             
             norm_const += class_marginals[g]
+        
+        for g in range(NUM_GENOTYPES):
+            self._resp[g] = class_marginals[g] / norm_const
     
         for g in range(NUM_GENOTYPES):          
             mu = params.mu[g]
@@ -714,31 +685,14 @@ cdef class SnvMixTwoCpt(SnvMixCpt):
                         read_likelihood = self._get_read_complete_likelihood(a, z, q, r, mu)           
                         read_likelihood = read_likelihood * (class_marginals[g] / read_marginals[g][d])
                         self._cpt_array[g][d][a][z] = read_likelihood / norm_const
-                        
+
+        self._marginal = norm_const
+                    
         for g in range(NUM_GENOTYPES):
             free(read_marginals[g])
         
         free(read_marginals)
-        free(class_marginals)
-    
-    cdef _normalise_cpt_array(self):
-        '''
-        Normalise entry in cpt for each read so the sum over a and z adds to 1.
-        '''
-        cdef int d, g, a, z
-        cdef double norm_const
-        
-        for g in range(NUM_GENOTYPES):
-            for d in range(self._depth):
-                norm_const = 0
-                for a in range(2):
-                    for z in range(2):
-                        norm_const += self._cpt_array[g][d][a][z]
-            
-                for a in range(2):
-                    for z in range(2):
-                        self._cpt_array[g][d][a][z] = self._cpt_array[g][d][a][z] / norm_const
-                        
+        free(class_marginals)                        
 
     cdef double _get_read_complete_likelihood(self, int a, int z, double q, double r, double mu):
         if a == 0 and z == 0:
