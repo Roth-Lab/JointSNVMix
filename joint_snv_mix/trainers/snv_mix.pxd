@@ -14,8 +14,7 @@ from joint_snv_mix.counters.ref_iterator cimport RefIterator
 
 from joint_snv_mix.counters.shared cimport binary_counts_struct, base_map_qualities_struct
 
-from joint_snv_mix.trainers.trainer cimport Trainer
-from joint_snv_mix.utils.log_pdf cimport multinomial_log_likelihood, dirichlet_log_likelihood, log_space_normalise_row
+from joint_snv_mix.utils.log_pdf cimport dirichlet_log_likelihood, log_space_normalise_row
 
 DEF NUM_GENOTYPES = 3
 DEF NUM_BASES = 2
@@ -29,7 +28,10 @@ cdef class SnvMixOneData(SnvMixData):
 cdef class SnvMixTwoData(SnvMixData):
     cdef int depth
     cdef double * q
-    cdef double * r    
+    cdef double * r
+
+cdef SnvMixOneData makeSnvMixOneData(binary_counts_struct counts)
+cdef SnvMixTwoData makeSnvMixTwoData(base_map_qualities_struct data_struct)
 
 #---------------------------------------------------------------------------------------------------------------------- 
 cdef class PairedDataSubSampler(object):

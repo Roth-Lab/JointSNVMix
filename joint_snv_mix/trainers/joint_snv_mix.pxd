@@ -88,42 +88,44 @@ cdef class JointSnvMixOneCpt(JointSnvMixCpt):
     cdef double * _get_tumour_marginal_resp(self)
     cdef double * _get_expected_counts(self, int counts, double * marginal_resp)
 
+cdef class SampleCpt(object):
+    cdef int _depth
+    cdef double **** _cpt_array
+    cdef double ** _read_marginals
+    cdef double * _class_marginals
+
+    cdef double * get_expected_counts_a(self, double * norm_const)
+    cdef double * get_expected_counts_b(self, double * norm_const)
+    
+    cdef double * _get_expected_counts(self, int a, double * norm_const)
+    
+    cdef void _init_cpt_array(self, SnvMixTwoData data, double * mu)
+    cdef double _get_read_complete_likelihood(self, int a, int z, double q, double r, double mu)
+    
+    cdef void _init_read_marginals(self)
+    
+    cdef void _init_class_marginals(self)
+    
+    cdef void _allocate_cpt_array(self)
+    cdef void _free_cpt_array(self)
+    
+    cdef void _allocate_read_marginals(self)
+    cdef void _free_read_marginals(self)
       
 cdef class JointSnvMixTwoCpt(JointSnvMixCpt):
     cdef double _marginal
     cdef double _resp[NUM_JOINT_GENOTYPES]
-    cdef double _normal_counts_a[NUM_GENOTYPES]
-    cdef double _normal_counts_b[NUM_GENOTYPES]
-    cdef double _tumour_counts_a[NUM_GENOTYPES]
-    cdef double _tumour_counts_b[NUM_GENOTYPES]
-    
-    cdef void _init_cpt(self, JointSnvMixTwoData data, JointSnvMixParameters params)
-    
-    cdef double **** _get_cpt_array(self, SnvMixTwoData data, double * mu)
-    
-    cdef double ** _get_read_marginals(self, double **** cpt_array, int depth)
-    
-    cdef double * _get_class_marginals(self, double ** read_marginals, int depth)
+    cdef double * _normal_counts_a
+    cdef double * _normal_counts_b
+    cdef double * _tumour_counts_a
+    cdef double * _tumour_counts_b
     
     cdef double * _get_joint_class_marginals(self, double * normal_marginals, double * tumour_marginals, double * pi)
     
-    cdef void _init_marginal(self, double * normal_marginals, double * tumour_marginals, double * pi)
-    
-    cdef void _init_resp(self, double * normal_marginals, double * tumour_marginals, double * pi)
-    
-    cdef void _init_normal_expected_counts(self, double **** cpt_array, double ** read_marginals,
-                                           double * joint_marginals, int depth)
-    
-    cdef void _init_tumour_expected_counts(self, double **** cpt_array, double ** read_marginals,
-                                           double * joint_marginals, int depth)
-    
-    cdef double _get_read_complete_likelihood(self, int a, int z, double q, double r, double mu)
-   
-    cdef double **** _make_cpt_array(self, int depth)    
-    cdef void _free_cpt_array(self, double **** cpt_array, int depth)
-    
-    cdef double ** _make_read_marginals(self, int depth)    
-    cdef void _free_read_marginals(self, double ** read_marginals)
+    cdef void _init_marginal(self, double * joint_marginals)
+    cdef void _init_resp(self, double * joint_marginals)
+    cdef void _init_normal_expected_counts(self, SampleCpt cpt, double * joint_marginals)   
+    cdef void _init_tumour_expected_counts(self, SampleCpt cpt, double * joint_marginals)
     
 #---------------------------------------------------------------------------------------------------------------------- 
 cdef class JointSnvMixEss(object):
