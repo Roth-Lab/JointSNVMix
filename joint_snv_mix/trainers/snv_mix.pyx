@@ -658,6 +658,9 @@ cdef class SnvMixTwoCpt(SnvMixCpt):
         for g in range(NUM_GENOTYPES):
             norm_const += class_marginals[g]
         
+        if norm_const == 0:
+            norm_const = EPS
+        
         for g in range(NUM_GENOTYPES):
             self._resp[g] = class_marginals[g] / norm_const
     
