@@ -739,20 +739,18 @@ cdef class JointSnvMixTwoCpt(JointSnvMixCpt):
     cdef double ** _get_read_marginals(self, double **** cpt_array, int depth):
         cdef int  g, d, a, z
         cdef double ** read_marginals
+        cdef double temp_marginal[4]
         
         read_marginals = self._make_read_marginals(depth)
 
         for g in range(NUM_GENOTYPES):
             for d in range(depth):
-                read_marginals[g][d] = 0
-                
                 for a in range(2):
                     for z in range(2):                        
-                        read_marginals[g][d] += cpt_array[g][d][a][z]
+                        temp_marginal[a * 2 + z] = cpt_array[g][d][a][z]
                 
-                if read_marginals[g][d] == 0:
-                    read_marginals[g][d] = EPS
-                
+                read_marginals[g][d] = log_sum_exp(temp_marginal, 4)
+
         return read_marginals
     
     cdef double * _get_class_marginals(self, double ** read_marginals, int depth):
@@ -762,10 +760,10 @@ cdef class JointSnvMixTwoCpt(JointSnvMixCpt):
         class_marginals = < double *> malloc(NUM_GENOTYPES * sizeof(double))
         
         for g in range(NUM_GENOTYPES):
-            class_marginals[g] = 1
+            class_marginals[g] = 0
             
             for d in range(depth):
-                class_marginals[g] *= read_marginals[g][d]
+                class_marginals[g] += read_marginals[g][d]
         
         return class_marginals
 
@@ -779,7 +777,7 @@ cdef class JointSnvMixTwoCpt(JointSnvMixCpt):
             for g_T in range(NUM_GENOTYPES):
                 g_J = NUM_GENOTYPES * g_N + g_T
                 
-                joint_marginals[g_J] = pi[g_J] * normal_marginals[g_N] * tumour_marginals[g_T]
+                joint_marginals[g_J] = log(pi[g_J]) + normal_marginals[g_N] + tumour_marginals[g_T]
     
         return joint_marginals
     
@@ -792,7 +790,7 @@ cdef class JointSnvMixTwoCpt(JointSnvMixCpt):
             for g_T in range(NUM_GENOTYPES):
                 g_J = NUM_GENOTYPES * g_N + g_T
                 
-                ll[g_J] = log(pi[g_J]) + log(normal_marginals[g_N]) + log(tumour_marginals[g_T])
+                ll[g_J] = log(pi[g_J]) + normal_marginals[g_N] + tumour_marginals[g_T]
         
         norm_const = log_sum_exp(ll, NUM_JOINT_GENOTYPES)
         norm_const = exp(norm_const)
@@ -809,9 +807,12 @@ cdef class JointSnvMixTwoCpt(JointSnvMixCpt):
             for g_T in range(NUM_GENOTYPES):
                 g_J = NUM_GENOTYPES * g_N + g_T
                 
-                self._resp[g_J] = log(pi[g_J]) + log(normal_marginals[g_N]) + log(tumour_marginals[g_T])
+                self._resp[g_J] = log(pi[g_J]) + normal_marginals[g_N] + tumour_marginals[g_T]
                 
         log_space_normalise_row(self._resp, NUM_JOINT_GENOTYPES)
+        
+        for g_J in range(NUM_JOINT_GENOTYPES):
+            self._resp[g_J] = exp(self._resp[g_J])
 
     cdef void _init_normal_expected_counts(self,
                                            double **** cpt_array,
@@ -820,24 +821,35 @@ cdef class JointSnvMixTwoCpt(JointSnvMixCpt):
                                            int depth):
         cdef int g_N, g_T, d
         cdef double norm_const[NUM_GENOTYPES]
+        cdef double temp[NUM_GENOTYPES]
+        cdef double x[2]
         
         for g_N in range(NUM_GENOTYPES):
             norm_const[g_N] = 0
             for g_T in range(NUM_GENOTYPES):
                 g_J = NUM_GENOTYPES * g_N + g_T
+                
+                temp[g_T] = joint_marginals[g_J]
                         
-                norm_const[g_N] += joint_marginals[g_J]
+            norm_const[g_N] = log_sum_exp(temp, NUM_GENOTYPES)
             
-            norm_const[g_N] = norm_const[g_N] / self._marginal 
+            norm_const[g_N] = norm_const[g_N] - log(self._marginal) 
 
         for g_N in range(NUM_GENOTYPES):
             self._normal_counts_a[g_N] = 0
             self._normal_counts_b[g_N] = 0
             
             for d in range(depth):   
-                read_prob = norm_const[g_N] / read_marginals[g_N][d]
-                self._normal_counts_a[g_N] += read_prob * (cpt_array[g_N][d][1][0] + cpt_array[g_N][d][1][1])
-                self._normal_counts_b[g_N] += read_prob * (cpt_array[g_N][d][0][0] + cpt_array[g_N][d][0][1])
+                read_prob = norm_const[g_N] - read_marginals[g_N][d]
+                
+                x[0] = cpt_array[g_N][d][1][0]
+                x[1] = cpt_array[g_N][d][1][1]
+                
+                self._normal_counts_a[g_N] += exp(read_prob + log_sum_exp(x, 2))
+                
+                x[0] = cpt_array[g_N][d][0][0]
+                x[1] = cpt_array[g_N][d][0][1]
+                self._normal_counts_b[g_N] += exp(read_prob + log_sum_exp(x, 2))
 
     cdef void _init_tumour_expected_counts(self,
                                            double **** cpt_array,
@@ -846,44 +858,54 @@ cdef class JointSnvMixTwoCpt(JointSnvMixCpt):
                                            int depth):
         cdef int g_N, g_T, d
         cdef double norm_const[NUM_GENOTYPES]
+        cdef double temp[NUM_GENOTYPES]
+        cdef double x[2]
         
         for g_T in range(NUM_GENOTYPES):
-            norm_const[g_T] = 0
+            norm_const[g_N] = 0
             for g_N in range(NUM_GENOTYPES):
                 g_J = NUM_GENOTYPES * g_N + g_T
+                
+                temp[g_N] = joint_marginals[g_J]
                         
-                norm_const[g_T] += joint_marginals[g_J]
+            norm_const[g_T] = log_sum_exp(temp, NUM_GENOTYPES)
             
-            norm_const[g_T] = norm_const[g_T] / self._marginal 
+            norm_const[g_T] = norm_const[g_T] - log(self._marginal) 
 
         for g_T in range(NUM_GENOTYPES):
             self._tumour_counts_a[g_T] = 0
             self._tumour_counts_b[g_T] = 0
             
-            for d in range(depth):   
-                read_prob = norm_const[g_T] / read_marginals[g_T][d]
-                self._tumour_counts_a[g_T] += read_prob * (cpt_array[g_T][d][1][0] + cpt_array[g_T][d][1][1])
-                self._tumour_counts_b[g_T] += read_prob * (cpt_array[g_T][d][0][0] + cpt_array[g_T][d][0][1])
+            for d in range(depth):
+                read_prob = norm_const[g_T] - read_marginals[g_T][d]
                 
+                x[0] = cpt_array[g_T][d][1][0]
+                x[1] = cpt_array[g_T][d][1][1]
+                
+                self._tumour_counts_a[g_T] += exp(read_prob + log_sum_exp(x, 2))
+                
+                x[0] = cpt_array[g_T][d][0][0]
+                x[1] = cpt_array[g_T][d][0][1]
+                self._tumour_counts_b[g_T] += exp(read_prob + log_sum_exp(x, 2))
 
-#    cdef double _get_read_complete_likelihood(self, int a, int z, double q, double r, double mu):
-#        if a == 0 and z == 0:
-#            return log(0.5) + log(1 - r) + log(1 - mu)
-#        elif a == 0 and z == 1:
-#            return log(1 - q) + log(r) + log(1 - mu)
-#        elif a == 1 and z == 0:
-#            return log(0.5) + log(1 - r) + log(mu)
-#        else:
-#            return log(q) + log(r) + log(mu)
     cdef double _get_read_complete_likelihood(self, int a, int z, double q, double r, double mu):
         if a == 0 and z == 0:
-            return 0.5 * (1 - r) * (1 - mu)
+            return log(0.5) + log(1 - r) + log(1 - mu)
         elif a == 0 and z == 1:
-            return (1 - q) * r * (1 - mu)
+            return log(1 - q) + log(r) + log(1 - mu)
         elif a == 1 and z == 0:
-            return 0.5 * (1 - r) * mu
+            return log(0.5) + log(1 - r) + log(mu)
         else:
-            return q * r * mu        
+            return log(q) + log(r) + log(mu)
+#    cdef double _get_read_complete_likelihood(self, int a, int z, double q, double r, double mu):
+#        if a == 0 and z == 0:
+#            return 0.5 * (1 - r) * (1 - mu)
+#        elif a == 0 and z == 1:
+#            return (1 - q) * r * (1 - mu)
+#        elif a == 1 and z == 0:
+#            return 0.5 * (1 - r) * mu
+#        else:
+#            return q * r * mu        
 
     cdef double **** _make_cpt_array(self, int depth):
         cdef int g, d, a, z
