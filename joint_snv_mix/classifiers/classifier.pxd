@@ -1,10 +1,6 @@
 from joint_snv_mix.counters.counter cimport Counter
 from joint_snv_mix.counters.counter_row cimport PairedSampleBinomialCounterRow
 
-cdef class Classifier(object):
-    cdef ClassifierRow _classify(self, PairedSampleBinomialCounterRow row)    
-    cdef tuple _get_labels(self, PairedSampleBinomialCounterRow row)
-
 cdef class ClassifierRow(object):
     # Ref for the row
     cdef char * _ref
@@ -18,4 +14,8 @@ cdef class ClassifierRow(object):
     
     cdef tuple _counts
     
-    cdef tuple _labels  
+    cdef tuple _labels 
+
+cdef class Classifier(object):
+    cdef ClassifierRow _classify(self, PairedSampleBinomialCounterRow row)    
+    cdef tuple _get_labels(self, PairedSampleBinomialCounterRow row)
