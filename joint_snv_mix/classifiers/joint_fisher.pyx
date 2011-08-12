@@ -1,39 +1,23 @@
 cdef class JointFisherClassifier(Classifier):    
-    def iter_ref(self, ref, **kwargs):
-        if ref not in self._refs:
-            raise Exception("Invalid reference passed.")
-        
-        return JointFisherClassifierRefIterator(
-                                                ref,
-                                                self._counter.iter_ref(ref),
-                                                **kwargs
-                                                )
-             
-cdef class JointFisherClassifierRefIterator(ClassifierRefIterator):
-    def __init__(self, char * ref, JointBinaryBaseCounterIterator iter, **kwargs):
-        ClassifierRefIterator.__init__(self, ref, iter, **kwargs)
-        
+    def __init__(self, ** kwargs):
         self._p_value_threshold = kwargs.get('p_value_threshold', 0.05)
         
-        self._indep_iter = IndependentFisherClassifierRefIterator(ref, iter, **kwargs)
+        self._indep_classifier = IndependentFisherClassifier(**kwargs)
 
-    cdef tuple _get_labels(self):
+    cdef tuple _get_labels(self, PairedSampleBinomialCounterRow row):
         cdef PValues pv
         cdef tuple indep_labels
         cdef list corrected_labels
-        cdef JointBinaryCounterRow row
         
-        indep_labels = self._indep_iter._get_labels()
-        
-        row = self._iter._current_row
+        indep_labels = self._indep_classifier._get_labels(row)
         
         # Correct somatic calls by using fisher exact test to see if normal/tumour counts are significantly different.
         if indep_labels[1] == 1 or indep_labels[2] == 1:
             pv = fisher_exact_test(
-                                   row._normal_counts.A,
-                                   row._normal_counts.B,
-                                   row._tumour_counts.A,
-                                   row._tumour_counts.B
+                                   (< JointBinaryCounterRow > row)._normal_counts.A,
+                                   (< JointBinaryCounterRow > row)._normal_counts.B,
+                                   (< JointBinaryCounterRow > row)._tumour_counts.A,
+                                   (< JointBinaryCounterRow > row)._tumour_counts.B
                                    )
 
             # Counts are not significantly different
@@ -41,8 +25,6 @@ cdef class JointFisherClassifierRefIterator(ClassifierRefIterator):
                 corrected_labels = [0] * 9
                 corrected_labels[0] = 1
                 
-                return tuple(corrected_labels)
-                
-                
-        
+                indep_labels = tuple(corrected_labels)
+
         return indep_labels
