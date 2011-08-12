@@ -1,21 +1,8 @@
 DEF NUM_GENOTYPES = 3
 DEF NUM_JOINT_GENOTYPES = 9
 
-cdef class JointSnvMix2Classifier(Classifier):
-    def iter_ref(self, ref, **kwargs):
-        if ref not in self._refs:
-            raise Exception("Invalid reference passed.")
-        
-        return JointSnvMix2ClassifierRefIterator(
-                                                 ref,
-                                                 self._counter.iter_ref(ref),
-                                                 **kwargs
-                                                 )
-             
-cdef class JointSnvMix2ClassifierRefIterator(ClassifierRefIterator):
-    def __init__(self, char * ref, JointBinaryQualityCounterIterator iter, **kwargs):
-        ClassifierRefIterator.__init__(self, ref, iter, **kwargs)
-        
+cdef class JointSnvMixTwoClassifier(Classifier):
+    def __init__(self, **kwargs):
         self._qual_map = get_phred_to_prob_qual_map(256)
         
         self._init_params(**kwargs)
@@ -36,17 +23,21 @@ cdef class JointSnvMix2ClassifierRefIterator(ClassifierRefIterator):
         for i in range(NUM_JOINT_GENOTYPES):            
             self._log_pi[i] = log(< double > pi[i] / nc)        
 
-    cdef tuple _get_labels(self):
+    cdef tuple _get_labels(self, PairedSampleBinomialCounterRow row):
         cdef double x
         cdef double * normal_log_likelihood, * tumour_log_likelihood
         cdef double * joint_probabilities 
-        cdef JointBinaryQualityCounterRow row
         cdef tuple labels
         
-        row = self._iter._current_row
+        normal_log_likelihood = snv_mix_2_log_likelihood((< JointBinaryQualityCounterRow > row)._normal_data, 
+                                                         self._mu_N, 
+                                                         self._qual_map, 
+                                                         NUM_GENOTYPES)
         
-        normal_log_likelihood = snv_mix_2_log_likelihood(row._normal_data, self._mu_N, self._qual_map, NUM_GENOTYPES)
-        tumour_log_likelihood = snv_mix_2_log_likelihood(row._tumour_data, self._mu_T, self._qual_map, NUM_GENOTYPES)
+        tumour_log_likelihood = snv_mix_2_log_likelihood((< JointBinaryQualityCounterRow > row)._tumour_data, 
+                                                         self._mu_T, 
+                                                         self._qual_map, 
+                                                         NUM_GENOTYPES)
         
         joint_probabilities = get_joint_posterior(normal_log_likelihood,
                                                   tumour_log_likelihood,
