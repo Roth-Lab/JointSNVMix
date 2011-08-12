@@ -2,21 +2,8 @@ DEF NUM_GENOTYPES = 3
 DEF NUM_JOINT_GENOTYPES = 9
 DEF NUM_BASES = 2
 
-cdef class JointSnvMixClassifier(Classifier):
-    def iter_ref(self, ref, **kwargs):
-        if ref not in self._refs:
-            raise Exception("Invalid reference passed.")
-        
-        return JointSnvMixClassifierRefIterator(
-                                               ref,
-                                               self._counter.iter_ref(ref),
-                                               **kwargs
-                                               )
-             
-cdef class JointSnvMixClassifierRefIterator(ClassifierRefIterator):
-    def __init__(self, char * ref, JointBinaryBaseCounterIterator iter, **kwargs):
-        ClassifierRefIterator.__init__(self, ref, iter, **kwargs)
-    
+cdef class JointSnvMixOneClassifier(Classifier):
+    def __init__(self, **kwargs):
         self._init_params(**kwargs)
         
     def _init_params(self, **kwargs):
@@ -37,23 +24,19 @@ cdef class JointSnvMixClassifierRefIterator(ClassifierRefIterator):
             self._log_pi[i] = log(< double > pi[i] / nc)
 
 
-    cdef tuple _get_labels(self):
+    cdef tuple _get_labels(self, PairedSampleBinomialCounterRow row):
         cdef int  g
         cdef int normal_counts[2], tumour_counts[2]
-        cdef double x
-        cdef double normal_log_likelihood[NUM_GENOTYPES], tumour_log_likelihood[NUM_GENOTYPES]
-        cdef double * normal_probabilities, * tumour_probabilities
-        cdef double * joint_probabilities 
-        cdef JointBinaryCounterRow row
+        cdef double x        
+        cdef double normal_log_likelihood[NUM_GENOTYPES], tumour_log_likelihood[NUM_GENOTYPES]        
+        cdef double * joint_probabilities        
         cdef tuple labels
         
-        row = self._iter._current_row
+        normal_counts[0] = (< JointBinaryCounterRow > row)._normal_counts.A
+        normal_counts[1] = (< JointBinaryCounterRow > row)._normal_counts.B
         
-        normal_counts[0] = row._normal_counts.A
-        normal_counts[1] = row._normal_counts.B
-        
-        tumour_counts[0] = row._tumour_counts.A
-        tumour_counts[1] = row._tumour_counts.B
+        tumour_counts[0] = (< JointBinaryCounterRow > row)._tumour_counts.A
+        tumour_counts[1] = (< JointBinaryCounterRow > row)._tumour_counts.B
         
         for g in range(NUM_GENOTYPES):      
             normal_log_likelihood[g] = multinomial_log_likelihood(normal_counts, self._log_mu_N[g], NUM_BASES)
