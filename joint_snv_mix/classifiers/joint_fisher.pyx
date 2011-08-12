@@ -13,16 +13,9 @@ cdef class JointFisherClassifierRefIterator(ClassifierRefIterator):
     def __init__(self, char * ref, JointBinaryBaseCounterIterator iter, **kwargs):
         ClassifierRefIterator.__init__(self, ref, iter, **kwargs)
         
-        self._min_var_freq = kwargs.get('min_var_freq', 0.1)
-        self._hom_var_freq = kwargs.get('hom_var_freq', 0.9)
         self._p_value_threshold = kwargs.get('p_value_threshold', 0.05)
-        self._expected_error_rate = kwargs.get('expected_error_rate', 0.001)
         
-        self._indep_iter = IndependentFisherClassifierRefIterator(
-                                                                  ref,
-                                                                  iter,
-                                                                  **kwargs
-                                                                  )
+        self._indep_iter = IndependentFisherClassifierRefIterator(ref, iter, **kwargs)
 
     cdef tuple _get_labels(self):
         cdef PValues pv
