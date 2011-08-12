@@ -1,30 +1,19 @@
 cdef class ThresholdClassifier(Classifier):    
-    def iter_ref(self, ref, **kwargs):
-        if ref not in self._refs:
-            raise Exception("Invalid reference passed.")
-        
-        return ThresholdClassifierRefIterator(
-                                              ref,
-                                              self._counter.iter_ref(ref),
-                                              **kwargs
-                                              )
-             
-cdef class ThresholdClassifierRefIterator(ClassifierRefIterator):
-    def __init__(self, char * ref, JointBinaryBaseCounterIterator iter, **kwargs):
-        ClassifierRefIterator.__init__(self, ref, iter, **kwargs)
-        
+    def __init__(self, **kwargs):
         self._normal_threshold = kwargs.get('normal_threshold', 0.05)
-        self._tumour_threshold = kwargs.get('tumour_threshold', 0.1)
+        self._tumour_threshold = kwargs.get('tumour_threshold', 0.05)
 
     cdef tuple _get_labels(self):
         cdef int normal_genotype, tumour_genotype, joint_genotype 
         cdef list labels
-        cdef JointBinaryCounterRow row
         
-        row = self._iter._current_row
+        normal_genotype = self._get_genotype((< JointBinaryCounterRow > row)._normal_counts.A, 
+                                             (< JointBinaryCounterRow > row)._normal_counts.B, 
+                                             self._normal_threshold)
         
-        normal_genotype = self._get_genotype(row._normal_counts.A, row._normal_counts.B, self._normal_threshold)
-        tumour_genotype = self._get_genotype(row._tumour_counts.A, row._tumour_counts.B, self._tumour_threshold)        
+        tumour_genotype = self._get_genotype((< JointBinaryCounterRow > row)._tumour_counts.A, 
+                                             (< JointBinaryCounterRow > row)._tumour_counts.B, 
+                                             self._tumour_threshold)        
         
         joint_genotype = 3 * normal_genotype + tumour_genotype
         
