@@ -1,33 +1,20 @@
 cdef class IndependentFisherClassifier(Classifier):    
-    def iter_ref(self, ref, **kwargs):
-        if ref not in self._refs:
-            raise Exception("Invalid reference passed.")
-        
-        return IndependentFisherClassifierRefIterator(
-                                                      ref,
-                                                      self._counter.iter_ref(ref),
-                                                      **kwargs
-                                                      )
-             
-cdef class IndependentFisherClassifierRefIterator(ClassifierRefIterator):
-    def __init__(self, char * ref, JointBinaryBaseCounterIterator iter, **kwargs):
-        ClassifierRefIterator.__init__(self, ref, iter, **kwargs)
-        
+    def __init__(self, **kwargs):        
         self._min_var_freq = kwargs.get('min_var_freq', 0.1)
         self._hom_var_freq = kwargs.get('hom_var_freq', 0.9)
         self._p_value_threshold = kwargs.get('p_value_threshold', 0.05)
         self._expected_error_rate = kwargs.get('expected_error_rate', 0.001)
         self._min_var_depth = kwargs.get('min_var_depth', 4)
 
-    cdef tuple _get_labels(self):
+    cdef tuple _get_labels(self, PairedSampleBinomialCounterRow row):
         cdef int normal_genotype, tumour_genotype, joint_genotype 
         cdef list labels
-        cdef JointBinaryCounterRow row
         
-        row = self._iter._current_row
+        normal_genotype = self._get_genotype((< JointBinaryCounterRow > row)._normal_counts.A,
+                                             (< JointBinaryCounterRow > row)._normal_counts.B)
         
-        normal_genotype = self._get_genotype(row._normal_counts.A, row._normal_counts.B)
-        tumour_genotype = self._get_genotype(row._tumour_counts.A, row._tumour_counts.B)        
+        tumour_genotype = self._get_genotype((< JointBinaryCounterRow > row)._tumour_counts.A,
+                                             (< JointBinaryCounterRow > row)._tumour_counts.B)        
         
         joint_genotype = 3 * normal_genotype + tumour_genotype
         
@@ -42,7 +29,7 @@ cdef class IndependentFisherClassifierRefIterator(ClassifierRefIterator):
         Given count data call genotype. 0 - No variant, 1 - Het variant, 2 - Homozygous variant.
         '''
         cdef int d, genotype
-        cdef float pv, var_freq, 
+        cdef float pv, var_freq,
         
         d = a + b
         
