@@ -61,6 +61,7 @@ cdef class JointSnvMixParameters(object):
 
     cdef update(self, double * n, double * a_N, double * a_T, double * b_N, double * b_T)
     
+    cdef _normalise_pi(self)
     cdef _update_mu(self, double * mu, double mu_prior[NUM_GENOTYPES][2], double * a, double * b)            
     cdef _update_pi(self, double * n)
     cdef double _get_prior_log_likelihood(self)
