@@ -12,9 +12,6 @@ cdef class JointFisherClassifier(Classifier):
     pass
              
 cdef class JointFisherClassifierRefIterator(ClassifierRefIterator):
-    cdef float _min_var_freq
-    cdef float _hom_var_freq
     cdef float _p_value_threshold
-    cdef float _expected_error_rate 
     
     cdef IndependentFisherClassifierRefIterator _indep_iter

@@ -16,6 +16,7 @@ cdef class IndependentFisherClassifierRefIterator(ClassifierRefIterator):
     cdef float _hom_var_freq
     cdef float _p_value_threshold
     cdef float _expected_error_rate 
+    cdef int _min_var_depth
 
     cdef float _get_significance(self, int a, int b)
     cdef int _get_genotype(self, int a, int b)
