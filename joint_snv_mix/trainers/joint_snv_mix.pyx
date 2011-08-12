@@ -3,6 +3,8 @@ Created on 2011-08-04
 
 @author: Andrew Roth
 '''
+import ConfigParser
+
 DEF FLOAT_INFN = float('-inf')
 
 DEF NUM_GENOTYPES = 3
@@ -142,27 +144,48 @@ cdef class JointSnvMixPriors(object):
             self._pi[g] = pi[g]
 
     def __str__(self):
-        s = "mu_N_alpha : {0}, {1}, {2}\n".format(self.mu_N[0][0],
-                                                  self.mu_N[1][0],
-                                                  self.mu_N[2][0])
+        s = "mu_N_alpha : {0}\t{1}\t{2}\n".format(self._mu_N[0][0],
+                                                  self._mu_N[1][0],
+                                                  self._mu_N[2][0])
         
-        s += "mu_N_beta : {0}, {1}, {2}\n".format(self.mu_N[0][1],
-                                                  self.mu_N[1][1],
-                                                  self.mu_N[2][1])
+        s += "mu_N_beta : {0}\t{1}\t{2}\n".format(self._mu_N[0][1],
+                                                  self._mu_N[1][1],
+                                                  self._mu_N[2][1])
         
-        s = "mu_T_alpha : {0}, {1}, {2}\n".format(self.mu_T[0][0],
-                                                  self.mu_T[1][0],
-                                                  self.mu_T[2][0])
+        s = "mu_T_alpha : {0}\t{1}\t{2}\n".format(self._mu_T[0][0],
+                                                  self._mu_T[1][0],
+                                                  self._mu_T[2][0])
         
-        s += "mu_T_beta : {0}, {1}, {2}\n".format(self.mu_T[0][1],
-                                                  self.mu_T[1][1],
-                                                  self.mu_T[2][1])
+        s += "mu_T_beta : {0}\t{1}\t{2}\n".format(self._mu_T[0][1],
+                                                  self._mu_T[1][1],
+                                                  self._mu_T[2][1])
         
         s += "pi : "
-        s += "\t".join([str(x) for x in self.pi[:NUM_JOINT_GENOTYPES]])
+        s += "\t".join([str(x) for x in self._pi[:NUM_JOINT_GENOTYPES]])
         s += "\n"
         
         return s
+
+    def read_from_file(self, file_name):
+        genotypes = ['AA', 'AB', 'BB']
+        joint_genotypes = []
+        
+        for g_N in genotypes:
+            for g_T in genotypes:
+                joint_genotypes.append("_".join((g_N, g_T)))
+        
+        config = ConfigParser.SafeConfigParser()
+        config.read(file_name)
+        
+        for g in range(NUM_GENOTYPES):
+            self._mu_N[g][0] = float(config.get('mu_N_alpha', genotypes[g]))
+            self._mu_T[g][0] = float(config.get('mu_T_alpha', genotypes[g]))
+            
+            self._mu_N[g][1] = float(config.get('mu_N_beta', genotypes[g]))
+            self._mu_T[g][1] = float(config.get('mu_T_beta', genotypes[g]))
+        
+        for g in range(NUM_JOINT_GENOTYPES):
+            self._pi[g] = float(config.get('pi', joint_genotypes[g]))
 
 
 #=======================================================================================================================
@@ -184,11 +207,10 @@ cdef class JointSnvMixParameters(object):
             self._mu_N[g] = mu_N[g]            
             self._mu_T[g] = mu_T[g]
         
-        norm_const = sum(pi)
-        
         for g in range(NUM_JOINT_GENOTYPES):
-            self._pi[g] = pi[g] / norm_const
-            
+            self._pi[g] = pi[g]
+        
+        self._normalise_pi()            
         
     def __str__(self):
         s = "mu_N : "
@@ -205,6 +227,53 @@ cdef class JointSnvMixParameters(object):
         
         return s
     
+    def write_to_file(self, file_name):
+        genotypes = ['AA', 'AB', 'BB']
+        joint_genotypes = []
+        
+        for g_N in genotypes:
+            for g_T in genotypes:
+                joint_genotypes.append("_".join((g_N, g_T)))
+        
+        config = ConfigParser.SafeConfigParser()
+        
+        config.add_section('pi')
+        config.add_section('mu_N')
+        config.add_section('mu_T')
+        
+        for g_N, mu_N in zip(genotypes, self.mu_N):
+            config.set('mu_N', g_N, "{0:.10f}".format(mu_N))
+        
+        for g_T, mu_T in zip(genotypes, self.mu_T):
+            config.set('mu_T', g_T, "{0:.10f}".format(mu_T))
+            
+        for g_J, pi in zip(joint_genotypes, self.pi):
+            config.set('pi', g_J, "{0:.10f}".format(pi))
+        
+        fh = open(file_name, 'w')
+        config.write(fh)
+        fh.close()
+        
+    def read_from_file(self, file_name):
+        genotypes = ['AA', 'AB', 'BB']
+        joint_genotypes = []
+        
+        for g_N in genotypes:
+            for g_T in genotypes:
+                joint_genotypes.append("_".join((g_N, g_T)))
+        
+        config = ConfigParser.SafeConfigParser()
+        config.read(file_name)
+        
+        for g in range(NUM_GENOTYPES):
+            self._mu_N[g] = float(config.get('mu_N', genotypes[g]))
+            self._mu_T[g] = float(config.get('mu_T', genotypes[g]))
+        
+        for g in range(NUM_JOINT_GENOTYPES):
+            self._pi[g] = float(config.get('pi', joint_genotypes[g]))
+        
+        self._normalise_pi()
+        
     property mu_N:
         def __get__(self):
             return tuple([x for x in self._mu_N[:NUM_GENOTYPES]])
@@ -216,6 +285,18 @@ cdef class JointSnvMixParameters(object):
     property pi:
         def __get__(self):
             return tuple([x for x in self._pi[:NUM_JOINT_GENOTYPES]])
+    
+    cdef _normalise_pi(self):
+        cdef int g
+        cdef double norm_const
+        
+        norm_const = 0
+        
+        for g in range(NUM_JOINT_GENOTYPES):
+            norm_const += self._pi[g]
+        
+        for g in range(NUM_JOINT_GENOTYPES):
+            self._pi[g] = self._pi[g] / norm_const
 
     cdef update(self, double * n, double * a_N, double * a_T, double * b_N, double * b_T):
         self._update_mu(self._mu_N, self._priors._mu_N, a_N, b_N)
