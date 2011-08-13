@@ -48,6 +48,12 @@ joint_quality_counter = Extension(
                                   include_dirs=counter_includes
                                   )
 
+positions_counter = Extension(
+                              "joint_snv_mix.counters.positions_counter",
+                              ["joint_snv_mix/counters/positions_counter.pyx"],
+                              include_dirs=counter_includes
+                              )
+
 classifier_includes = [
                        'joint_snv_mix/counters',
                        'joint_snv_mix/utils',
@@ -133,7 +139,7 @@ log_pdf = Extension(
                     )
 
 trainers_include = [
-                    'joint_snv_mix/trainers', 'include/gsl'
+                    'joint_snv_mix/trainers',
                     ]
 trainers_include.extend(counter_includes)
 
@@ -147,9 +153,14 @@ trainer = Extension(
 snv_mix_trainer = Extension(
                             "joint_snv_mix.trainers.snv_mix",
                             ["joint_snv_mix/trainers/snv_mix.pyx"],
-                            include_dirs=trainers_include,
-                            libraries=['gsl', 'gslcblas']
+                            include_dirs=trainers_include
                             )
+
+joint_snv_mix_trainer = Extension(
+                                  "joint_snv_mix.trainers.joint_snv_mix",
+                                  ["joint_snv_mix/trainers/joint_snv_mix.pyx"],
+                                  include_dirs=trainers_include
+                                  )
 ext_modules = [
                counter,
                ref_iterator,
@@ -169,9 +180,11 @@ ext_modules = [
                joint_snv_mix_qualities_classifier,
                log_pdf,
                trainer,
-               snv_mix_trainer
-#               fisher_exact_test,
-#               special_functions
+               snv_mix_trainer,
+               joint_snv_mix_trainer,
+               positions_counter,
+               fisher_exact_test,
+               special_functions
                ]
 
 setup(
@@ -183,7 +196,11 @@ setup(
       url='http://compbio.bccrc.ca',
       
       packages=[ 
-                'bam_counter'              
+                'joint_snv_mix',
+                'joint_snv_mix.counters',
+                'joint_snv_mix.classifiers',
+                'joint_snv_mix.trainers',
+                'joint_snv_mix.utils'
                 ],
       
       cmdclass={'build_ext': build_ext},

@@ -3,6 +3,8 @@ Created on 2011-08-04
 
 @author: Andrew Roth
 '''
+import ConfigParser
+
 DEF FLOAT_INFN = float('-inf')
 
 DEF NUM_GENOTYPES = 3
@@ -169,24 +171,36 @@ cdef class SnvMixPriors(object):
         pi = kwargs.get('pi', default_pi)
         
         for g in range(NUM_GENOTYPES):
-            self.mu[g][0] = mu[g][0]
-            self.mu[g][1] = mu[g][1]
-            self.pi[g] = pi[g]
+            self._mu[g][0] = mu[g][0]
+            self._mu[g][1] = mu[g][1]
+            self._pi[g] = pi[g]
 
     def __str__(self):
-        s = "mu_alpha : {0}, {1}, {2}\n".format(self.mu[0][0],
-                                                self.mu[1][0],
-                                                self.mu[2][0])
+        s = "mu_alpha : "
+        s += "\t".join([str(x) for x in self.mu_alpha])
+        s += "\n"
         
-        s += "mu_beta : {0}, {1}, {2}\n".format(self.mu[0][1],
-                                                self.mu[1][1],
-                                                self.mu[2][1])
+        s += "mu_beta : "
+        s += "\t".join([str(x) for x in self.mu_beta])
+        s += "\n"
         
-        s += "pi : {0}, {1}, {2}\n".format(self.pi[0],
-                                           self.pi[1],
-                                           self.pi[2])
+        s += "pi : "
+        s += "\t".join([str(x) for x in self.pi])
+        s += "\n"
         
         return s
+    
+    property mu_alpha:
+        def __get__(self):
+            return (self._mu[0][0], self._mu[1][0], self._mu[2][0])
+    
+    property mu_beta:
+        def __get__(self):
+            return (self._mu[0][1], self._mu[1][1], self._mu[2][1])
+    
+    property pi:
+        def __get__(self):
+            return (self._pi[0], self._pi[1], self._pi[2])
 
 #---------------------------------------------------------------------------------------------------------------------- 
 cdef class PairedSnvMixPriors(object):
@@ -216,39 +230,68 @@ cdef class PairedSnvMixPriors(object):
         def __get__(self):
             return self._tumour_priors
 
+    def read_from_file(self, file_name):
+        genotypes = ['AA', 'AB', 'BB']
+        joint_genotypes = []
+        
+        config = ConfigParser.SafeConfigParser()
+        config.read(file_name)
+        
+        for g in range(NUM_GENOTYPES):
+            self._normal_priors._mu[g][0] = float(config.get('mu_N_alpha', genotypes[g]))
+            self._tumour_priors._mu[g][0] = float(config.get('mu_T_alpha', genotypes[g]))
+            
+            self._normal_priors._mu[g][1] = float(config.get('mu_N_beta', genotypes[g]))
+            self._tumour_priors._mu[g][1] = float(config.get('mu_T_beta', genotypes[g]))
+        
+            self._normal_priors._pi[g] = float(config.get('pi_N', genotypes[g]))
+            self._tumour_priors._pi[g] = float(config.get('pi_T', genotypes[g]))
+
 
 #=======================================================================================================================
 # Parameters
 #=======================================================================================================================
 cdef class SnvMixParameters(object):
     def __init__(self, **kwargs):        
-        self.priors = kwargs.get('priors', SnvMixPriors())
+        self._priors = kwargs.get('priors', SnvMixPriors())
         
         mu = kwargs.get('mu', (0.99, 0.5, 0.01))
         pi = kwargs.get('pi', (0.99, 0.009, 0.001))
         
         for g in range(NUM_GENOTYPES):
-            self.mu[g] = mu[g]
-            self.pi[g] = pi[g]
+            self._mu[g] = mu[g]
+            self._pi[g] = pi[g]
         
     def __str__(self):
-        s = "mu : {0}, {1}, {2}\n".format(self.mu[0],
-                                          self.mu[1],
-                                          self.mu[2])
+        s = "mu : "
+        s += "\t".join([str(x) for x in self.mu]) 
+        s += "\n"
         
-        s += "pi : {0}, {1}, {2}\n".format(self.pi[0],
-                                           self.pi[1],
-                                           self.pi[2])
+        s += "pi : "
+        s += "\t".join([str(x) for x in self.pi])
+        s += "\n"
         
         return s
     
     property mu:
         def __get__(self):
-            return tuple([x for x in self.mu[:NUM_GENOTYPES]])
+            return tuple([x for x in self._mu[:NUM_GENOTYPES]])
     
     property pi:
         def __get__(self):
-            return tuple([x for x in self.pi[:NUM_GENOTYPES]])
+            return tuple([x for x in self._pi[:NUM_GENOTYPES]])
+
+    cdef _normalise_pi(self):
+        cdef int g
+        cdef double norm_const
+        
+        norm_const = 0
+        
+        for g in range(NUM_GENOTYPES):
+            norm_const += self._pi[g]
+        
+        for g in range(NUM_GENOTYPES):
+            self._pi[g] = self._pi[g] / norm_const
 
     cdef update(self, double * n, double * a, double * b):
         self._update_mu(a, b)
@@ -259,11 +302,11 @@ cdef class SnvMixParameters(object):
         cdef double alpha, beta, denom
     
         for g in range(NUM_GENOTYPES):
-            alpha = a[g] + self.priors.mu[g][0] - 1
-            beta = b[g] + self.priors.mu[g][1] - 1
+            alpha = a[g] + self._priors._mu[g][0] - 1
+            beta = b[g] + self._priors._mu[g][1] - 1
             denom = alpha + beta
 
-            self.mu[g] = alpha / denom
+            self._mu[g] = alpha / denom
             
     cdef _update_pi(self, double * n):
         cdef int g
@@ -273,11 +316,11 @@ cdef class SnvMixParameters(object):
         denom = 0
         
         for g in range(NUM_GENOTYPES):
-            pi[g] = n[g] + self.priors.pi[g] - 1
+            pi[g] = n[g] + self._priors._pi[g] - 1
             denom += pi[g]
         
         for g in range(NUM_GENOTYPES):
-            self.pi[g] = pi[g] / denom
+            self._pi[g] = pi[g] / denom
     
     cdef double _get_prior_log_likelihood(self):
         cdef double ll
@@ -286,12 +329,12 @@ cdef class SnvMixParameters(object):
         ll = 0
         
         for g in range(NUM_GENOTYPES):
-            x[0] = self.mu[g]
-            x[1] = 1 - self.mu[g]
+            x[0] = self._mu[g]
+            x[1] = 1 - self._mu[g]
             
-            ll += dirichlet_log_likelihood(x, self.priors.mu[g], NUM_BASES)
+            ll += dirichlet_log_likelihood(x, self._priors._mu[g], NUM_BASES)
         
-        ll += dirichlet_log_likelihood(self.pi, self.priors.pi, NUM_GENOTYPES)
+        ll += dirichlet_log_likelihood(self._pi, self._priors._pi, NUM_GENOTYPES)
         
         return ll
             
@@ -320,13 +363,76 @@ cdef class PairedSnvMixParameters(object):
     property tumour:
         def __get__(self):
             return self._tumour_params
+    
+    property mu_N:
+        def __get__(self):
+            return self._normal_params.mu
 
+    property mu_T:
+        def __get__(self):
+            return self._tumour_params.mu
+        
+    property pi_N:
+        def __get__(self):
+            return self._normal_params.pi
+
+    property pi_T:
+        def __get__(self):
+            return self._tumour_params.pi
+
+    def write_to_file(self, file_name):
+        genotypes = ['AA', 'AB', 'BB']
+        
+        config = ConfigParser.SafeConfigParser()
+        
+        config.add_section('pi_N')
+        config.add_section('pi_T')
+        config.add_section('mu_N')
+        config.add_section('mu_T')
+        
+        for g_N, mu_N in zip(genotypes, self.mu_N):
+            config.set('mu_N', g_N, "{0:.10f}".format(mu_N))
+        
+        for g_T, mu_T in zip(genotypes, self.mu_T):
+            config.set('mu_T', g_T, "{0:.10f}".format(mu_T))
+        
+        for g_N, pi_N in zip(genotypes, self.pi_N):
+            config.set('pi_N', g_N, "{0:.10f}".format(pi_N))
+        
+        for g_T, pi_T in zip(genotypes, self.pi_T):
+            config.set('pi_T', g_T, "{0:.10f}".format(pi_T))
+        
+        fh = open(file_name, 'w')
+        config.write(fh)
+        fh.close()
+        
+    def read_from_file(self, file_name):
+        genotypes = ['AA', 'AB', 'BB']
+        joint_genotypes = []
+        
+        for g_N in genotypes:
+            for g_T in genotypes:
+                joint_genotypes.append("_".join((g_N, g_T)))
+        
+        config = ConfigParser.SafeConfigParser()
+        config.read(file_name)
+        
+        for g in range(NUM_GENOTYPES):
+            self._normal_params._mu[g] = float(config.get('mu_N', genotypes[g]))
+            self._tumour_params._mu[g] = float(config.get('mu_T', genotypes[g]))
+        
+            self._normal_params._pi[g] = float(config.get('pi_N', genotypes[g]))
+            self._tumour_params._pi[g] = float(config.get('pi_T', genotypes[g]))
+        
+        self._normal_params._normalise_pi()
+        self._tumour_params._normalise_pi()
+        
 #=======================================================================================================================
 # Models
 #=======================================================================================================================       
 cdef class SnvMixModel(object):
     def __init__(self, SnvMixParameters params):
-        self.params = params
+        self._params = params
     
     def fit(self, list data, convergence_threshold=1e-6, max_iters=100):
         trainer = SnvMixModelTrainer(self, convergence_threshold, max_iters)
@@ -346,7 +452,7 @@ cdef class SnvMixModel(object):
         for pos_data in data:
             lb += self._get_log_likelihood(pos_data)
         
-        lb += self.params._get_prior_log_likelihood()
+        lb += self._params._get_prior_log_likelihood()
         
         return lb
         
@@ -366,30 +472,38 @@ cdef class SnvMixModel(object):
         
         return log(likelihood)
 
-cdef class PairedSnvMixModel(object):
-    def __init__(self, PairedSnvMixParameters params):
-        self._normal_model = SnvMixModel(params._normal_params)
-        self._tumour_model = SnvMixModel(params._tumour_params)
-        
-    def fit(self, list normal_data, list tumour_data, convergence_threshold=1e-6, max_iters=100):
-        self._normal_model.fit(normal_data, convergence_threshold, max_iters)
-        self._tumour_model.fit(tumour_data, convergence_threshold, max_iters)
+cdef class PairedSnvMixModel(object):        
+    def fit(self, dict data, convergence_threshold=1e-6, max_iters=100):
+        self._normal_model.fit(data['normal'], convergence_threshold, max_iters)
+        self._tumour_model.fit(data['tumour'], convergence_threshold, max_iters)
+    
+    property params:
+        def __get__(self):
+            return self._params
 
-    def predict(self, SnvMixData normal_data, SnvMixData tumour_data):
-        normal_resp = self._normal_model.predict(normal_data)
-        tumour_resp = self._tumour_model.predict(tumour_data)
+cdef class PairedSnvMixOneModel(PairedSnvMixModel):
+    def __init__(self, PairedSnvMixParameters params):
+        self._params = params
         
-        joint_resp = self._get_joint_resp(normal_resp, tumour_resp)
+        self._normal_model = SnvMixOneModel(params._normal_params)
+        self._tumour_model = SnvMixOneModel(params._tumour_params)
+
+cdef class PairedSnvMixTwoModel(PairedSnvMixModel):
+    def __init__(self, PairedSnvMixParameters params):
+        self._params = params
+        
+        self._normal_model = SnvMixTwoModel(params._normal_params)
+        self._tumour_model = SnvMixTwoModel(params._tumour_params)
 
 #---------------------------------------------------------------------------------------------------------------------- 
 cdef class SnvMixOneModel(SnvMixModel):
     cdef SnvMixCpt _get_complete_log_likelihood(self, SnvMixData data):
-        return SnvMixOneCpt(data, self.params)
+        return SnvMixOneCpt(data, self._params)
     
 #---------------------------------------------------------------------------------------------------------------------- 
 cdef class SnvMixTwoModel(SnvMixModel):
     cdef SnvMixCpt _get_complete_log_likelihood(self, SnvMixData data):
-        return SnvMixTwoCpt(data, self.params)
+        return SnvMixTwoCpt(data, self._params)
     
 #=======================================================================================================================
 # Trainer
@@ -409,12 +523,13 @@ cdef class SnvMixModelTrainer(object):
         
         while not self._converged:
             ess = self._do_e_step(data)
+
             self._do_m_step(ess)
             
             self._check_convergence(data)
             
             print self._iters, self._lower_bounds[-1]
-            print self._model.params
+            print self._model._params
 
     cdef SnvMixEss _do_e_step(self, list data):                              
         cdef SnvMixData pos_data
@@ -425,13 +540,12 @@ cdef class SnvMixModelTrainer(object):
     
         for pos_data in data:
             cpt = self._model._get_complete_log_likelihood(pos_data)                   
-        
             ess.update(cpt)
         
         return ess
     
     cdef void _do_m_step(self, SnvMixEss ess):       
-        self._model.params.update(ess.n, ess.a, ess.b)
+        self._model._params.update(ess._n, ess._a, ess._b)
 
     cdef _check_convergence(self, list data):
         cdef double rel_change, lb, ll, prev_ll
@@ -469,9 +583,9 @@ cdef class SnvMixEss(object):
         cdef int g
         
         for g in range(NUM_GENOTYPES):
-            self.a[g] = 0
-            self.b[g] = 0
-            self.n[g] = 0
+            self._a[g] = 0
+            self._b[g] = 0
+            self._n[g] = 0
     
     cdef update(self, SnvMixCpt cpt):
         cdef double * a, *b, * resp
@@ -481,9 +595,9 @@ cdef class SnvMixEss(object):
         b = cpt.get_expected_counts_b()
     
         for g in range(NUM_GENOTYPES):
-            self.n[g] += resp[g]
-            self.a[g] += a[g]
-            self.b[g] += b[g]
+            self._n[g] += resp[g]
+            self._a[g] += a[g]
+            self._b[g] += b[g]
         
         free(resp)
         free(a)
@@ -582,8 +696,8 @@ cdef class SnvMixOneCpt(SnvMixCpt):
         for g in range(NUM_GENOTYPES):
             a = data.counts[0]
             b = data.counts[1]
-            mu = params.mu[g]
-            log_pi = log(params.pi[g])
+            mu = params._mu[g]
+            log_pi = log(params._pi[g])
             
             self._cpt_array[g] = log_pi + self._binomial_log_likelihood(a, b, mu)
         
@@ -665,8 +779,8 @@ cdef class SnvMixTwoCpt(SnvMixCpt):
             self._resp[g] = class_marginals[g] / norm_const
     
         for g in range(NUM_GENOTYPES):          
-            mu = params.mu[g]
-            pi = params.pi[g]
+            mu = params._mu[g]
+            pi = params._pi[g]
 
             for d in range(self._depth):
                 q = data.q[d]
@@ -691,8 +805,8 @@ cdef class SnvMixTwoCpt(SnvMixCpt):
         read_marginals = < double **> malloc(NUM_GENOTYPES * sizeof(double))
 
         for g in range(NUM_GENOTYPES):
-            mu = params.mu[g]
-            pi = params.pi[g]
+            mu = params._mu[g]
+            pi = params._pi[g]
             
             read_marginals[g] = < double *> malloc(self._depth * sizeof(double))
             
@@ -721,7 +835,7 @@ cdef class SnvMixTwoCpt(SnvMixCpt):
         class_marginals = < double *> malloc(NUM_GENOTYPES * sizeof(double))
         
         for g in range(NUM_GENOTYPES):
-            class_marginals[g] = params.pi[g]
+            class_marginals[g] = params._pi[g]
             
             for d in range(self._depth):
                 class_marginals[g] *= read_marginals[g][d]

@@ -49,8 +49,8 @@ cdef class SnvMixTwoSubsampler(PairedDataSubSampler):
 
 #---------------------------------------------------------------------------------------------------------------------- 
 cdef class SnvMixPriors(object):
-    cdef double mu[NUM_GENOTYPES][2]
-    cdef double pi[NUM_GENOTYPES]
+    cdef double _mu[NUM_GENOTYPES][2]
+    cdef double _pi[NUM_GENOTYPES]
  
 cdef class PairedSnvMixPriors(object):
     cdef SnvMixPriors _normal_priors
@@ -58,13 +58,14 @@ cdef class PairedSnvMixPriors(object):
 
 #---------------------------------------------------------------------------------------------------------------------- 
 cdef class SnvMixParameters(object):
-    cdef SnvMixPriors priors
+    cdef SnvMixPriors _priors
     
-    cdef double mu[NUM_GENOTYPES]
-    cdef double pi[NUM_GENOTYPES]
+    cdef double _mu[NUM_GENOTYPES]
+    cdef double _pi[NUM_GENOTYPES]
 
-    cdef update(self, double * n, double * a, double *)
+    cdef update(self, double * n, double * a, double * b)
     
+    cdef _normalise_pi(self)
     cdef _update_mu(self, double * a, double * b)            
     cdef _update_pi(self, double * n)
     cdef double _get_prior_log_likelihood(self)
@@ -107,24 +108,32 @@ cdef class SnvMixTwoCpt(SnvMixCpt):
     
 #---------------------------------------------------------------------------------------------------------------------- 
 cdef class SnvMixEss(object):
-    cdef double a[NUM_GENOTYPES]
-    cdef double b[NUM_GENOTYPES]
-    cdef double n[NUM_GENOTYPES]
+    cdef double _a[NUM_GENOTYPES]
+    cdef double _b[NUM_GENOTYPES]
+    cdef double _n[NUM_GENOTYPES]
    
     cdef void reset(self)
     cdef update(self, SnvMixCpt cpt)
     
 #---------------------------------------------------------------------------------------------------------------------- 
 cdef class SnvMixModel(object):
-    cdef SnvMixParameters params
+    cdef SnvMixParameters _params
 
     cdef double _get_lower_bound(self, list data)
     cdef SnvMixCpt _get_complete_log_likelihood(self, SnvMixData data)
     cdef double _get_log_likelihood(self, SnvMixData data)
     
 cdef class PairedSnvMixModel(object):
+    cdef PairedSnvMixParameters _params
+    
     cdef SnvMixModel _normal_model
     cdef SnvMixModel _tumour_model
+    
+cdef class PairedSnvMixOneModel(PairedSnvMixModel):
+    pass
+
+cdef class PairedSnvMixTwoModel(PairedSnvMixModel):
+    pass
  
 cdef class SnvMixOneModel(SnvMixModel):
     pass

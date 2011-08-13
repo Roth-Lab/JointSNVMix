@@ -11,28 +11,29 @@ from joint_snv_mix.counters.positions_counter import PositionsCounter
 
 from joint_snv_mix.trainers.joint_snv_mix import JointSnvMixOneModel, JointSnvMixTwoModel, JointSnvMixOneSubsampler, \
     JointSnvMixTwoSubsampler, JointSnvMixParameters, JointSnvMixPriors
-from joint_snv_mix.trainers.snv_mix import SnvMixOneModel, SnvMixTwoModel, SnvMixOneSubsampler, SnvMixTwoSubsampler, \
-    SnvMixParameters, SnvMixPriors
 
+from joint_snv_mix.trainers.snv_mix import PairedSnvMixOneModel, PairedSnvMixTwoModel, SnvMixOneSubsampler, \
+    SnvMixTwoSubsampler, PairedSnvMixParameters, PairedSnvMixPriors
 
 def snv_mix_one_train(args):
     counter = get_base_counter(args)
     ss = SnvMixOneSubsampler(args.skip_size, args.min_normal_depth, args.min_tumour_depth)
     sample = ss.subsample(counter, refs=['Y', ])
     
-    params = get_indep_params(args) 
-    model = SnvMixOneModel(params)
+    params = get_indep_params(args)
+    
+    model = PairedSnvMixOneModel(params)
     
     train(model, sample, args)
     
-
 def snv_mix_two_train(args): 
     counter = get_qual_counter(args)
     ss = SnvMixTwoSubsampler(args.skip_size, args.min_normal_depth, args.min_tumour_depth)
-    sample = ss.subsample(counter)
+    sample = ss.subsample(counter, refs=['Y', ])
     
-    params = get_indep_params(args)    
-    model = SnvMixTwoModel(params)
+    params = get_indep_params(args)
+    
+    model = PairedSnvMixTwoModel(params)
     
     train(model, sample, args)
 
@@ -88,10 +89,10 @@ def get_qual_counter(args):
     return counter
 
 def get_indep_params(args):
-    priors = SnvMixPriors()
+    priors = PairedSnvMixPriors()
     priors.read_from_file(args.priors_file_name)
     
-    params = SnvMixParameters(priors=priors)
+    params = PairedSnvMixParameters(priors=priors)
     params.read_from_file(args.initial_parameter_file_name)
     
     return params
