@@ -32,11 +32,11 @@ cdef class JointSnvMixOneClassifier(Classifier):
         cdef double * joint_probabilities        
         cdef tuple labels
         
-        normal_counts[0] = (< JointBinaryCounterRow > row)._normal_counts.A
-        normal_counts[1] = (< JointBinaryCounterRow > row)._normal_counts.B
+        normal_counts[0] = row._counts[0]
+        normal_counts[1] = row._counts[1]
         
-        tumour_counts[0] = (< JointBinaryCounterRow > row)._tumour_counts.A
-        tumour_counts[1] = (< JointBinaryCounterRow > row)._tumour_counts.B
+        tumour_counts[0] = row._counts[2]
+        tumour_counts[1] = row._counts[3]
         
         for g in range(NUM_GENOTYPES):      
             normal_log_likelihood[g] = multinomial_log_likelihood(normal_counts, self._log_mu_N[g], NUM_BASES)
