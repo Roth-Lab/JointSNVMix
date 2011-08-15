@@ -23,11 +23,10 @@ cdef class JointSnvMixTwoClassifier(Classifier):
         for i in range(NUM_JOINT_GENOTYPES):            
             self._log_pi[i] = log(< double > pi[i] / nc)        
 
-    cdef tuple _get_labels(self, PairedSampleBinomialCounterRow row):
+    cdef double * _get_labels(self, PairedSampleBinomialCounterRow row):
         cdef double x
         cdef double * normal_log_likelihood, * tumour_log_likelihood
         cdef double * joint_probabilities 
-        cdef tuple labels
         
         normal_log_likelihood = snv_mix_2_log_likelihood((< JointBinaryQualityCounterRow > row)._normal_data, 
                                                          self._mu_N, 
@@ -45,11 +44,8 @@ cdef class JointSnvMixTwoClassifier(Classifier):
                                                   NUM_GENOTYPES,
                                                   NUM_GENOTYPES)
         
-        labels = tuple([x for x in joint_probabilities[:NUM_JOINT_GENOTYPES]])
-        
         # Cleanup allocated arrays.
         free(normal_log_likelihood)
         free(tumour_log_likelihood)
-        free(joint_probabilities)
         
-        return labels
+        return joint_probabilities

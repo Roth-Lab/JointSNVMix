@@ -1,3 +1,5 @@
+DEF NUM_JOINT_GENOTYPES = 9
+
 cdef class IndependentFisherClassifier(Classifier):    
     def __init__(self, **kwargs):        
         self._min_var_freq = kwargs.get('min_var_freq', 0.1)
@@ -6,9 +8,9 @@ cdef class IndependentFisherClassifier(Classifier):
         self._expected_error_rate = kwargs.get('expected_error_rate', 0.001)
         self._min_var_depth = kwargs.get('min_var_depth', 4)
 
-    cdef tuple _get_labels(self, PairedSampleBinomialCounterRow row):
-        cdef int normal_genotype, tumour_genotype, joint_genotype 
-        cdef list labels
+    cdef double * _get_labels(self, PairedSampleBinomialCounterRow row):
+        cdef int normal_genotype, tumour_genotype, joint_genotype, g 
+        cdef double * labels
         
         normal_genotype = self._get_genotype((< JointBinaryCounterRow > row)._normal_counts.A,
                                              (< JointBinaryCounterRow > row)._normal_counts.B)
@@ -18,11 +20,15 @@ cdef class IndependentFisherClassifier(Classifier):
         
         joint_genotype = 3 * normal_genotype + tumour_genotype
         
-        labels = [0] * 9
+        labels = < double *> malloc(NUM_JOINT_GENOTYPES * sizeof(double))
         
-        labels[joint_genotype] = 1        
+        for g in range(NUM_JOINT_GENOTYPES):
+            if g == joint_genotype:
+                labels[g] = 1
+            else:
+                labels[g] = 0
         
-        return tuple(labels)
+        return labels
                 
     cdef int _get_genotype(self, int a, int b):
         '''

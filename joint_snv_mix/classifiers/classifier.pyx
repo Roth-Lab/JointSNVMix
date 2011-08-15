@@ -84,19 +84,22 @@ cdef class Classifier(object):
         return self._classify(row)
         
     cdef ClassifierRow _classify(self, PairedSampleBinomialCounterRow row):
-        cdef tuple labels
+        cdef double * labels
         
         labels = self._get_labels(row)
         
         return makeClassifierRow(row, labels)
     
-    cdef tuple _get_labels(self, PairedSampleBinomialCounterRow row):
+    cdef double * _get_labels(self, PairedSampleBinomialCounterRow row):
         pass
 
 cdef class ClassifierRow(object):
     '''
     Base class for all counts row objects.
     '''
+    def __dealloc__(self):
+        free(self._labels)
+    
     def __str__(self):
         '''
         Method to display row object. Outputs in format tab delmited format
@@ -137,7 +140,7 @@ cdef class ClassifierRow(object):
         def __get__(self):
             return [x for x in self._labels[:NUM_JOINT_GENOTYPES]]
         
-cdef inline ClassifierRow makeClassifierRow(PairedSampleBinomialCounterRow counter_row, tuple labels):
+cdef inline ClassifierRow makeClassifierRow(PairedSampleBinomialCounterRow counter_row, double * labels):
     '''
     Constructor method for creating a ClassifierRow from C.
     '''
@@ -157,7 +160,6 @@ cdef inline ClassifierRow makeClassifierRow(PairedSampleBinomialCounterRow count
     for i in range(4):
         row._counts[i] = counts[i]
     
-    for i in range(NUM_JOINT_GENOTYPES):
-        row._labels[i] = labels[i]
+    row._labels = labels
     
     return row   

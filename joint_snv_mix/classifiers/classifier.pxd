@@ -19,8 +19,8 @@ cdef class ClassifierRow(object):
     
     cdef int _counts[4]
     
-    cdef double _labels[NUM_JOINT_GENOTYPES] 
+    cdef double * _labels
 
 cdef class Classifier(object):
     cdef ClassifierRow _classify(self, PairedSampleBinomialCounterRow row)    
-    cdef tuple _get_labels(self, PairedSampleBinomialCounterRow row)
+    cdef double * _get_labels(self, PairedSampleBinomialCounterRow row)

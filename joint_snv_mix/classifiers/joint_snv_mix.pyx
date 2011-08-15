@@ -24,7 +24,7 @@ cdef class JointSnvMixOneClassifier(Classifier):
             self._log_pi[i] = log(< double > pi[i] / nc)
 
 
-    cdef tuple _get_labels(self, PairedSampleBinomialCounterRow row):
+    cdef double * _get_labels(self, PairedSampleBinomialCounterRow row):
         cdef int  g
         cdef int normal_counts[2], tumour_counts[2]
         cdef double x        
@@ -49,9 +49,4 @@ cdef class JointSnvMixOneClassifier(Classifier):
                                                   NUM_GENOTYPES,
                                                   NUM_GENOTYPES)
         
-        labels = tuple([x for x in joint_probabilities[:NUM_JOINT_GENOTYPES]])
-        
-        # Cleanup allocated arrays.
-        free(joint_probabilities)
-        
-        return labels
+        return joint_probabilities
