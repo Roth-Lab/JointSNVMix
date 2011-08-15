@@ -16,10 +16,10 @@ cdef class JointFisherClassifier(Classifier):
         # Correct somatic calls by using fisher exact test to see if normal/tumour counts are significantly different.
         if labels[1] == 1 or labels[2] == 1:
             pv = fisher_exact_test(
-                                   (< JointBinaryCounterRow > row)._normal_counts.A,
-                                   (< JointBinaryCounterRow > row)._normal_counts.B,
-                                   (< JointBinaryCounterRow > row)._tumour_counts.A,
-                                   (< JointBinaryCounterRow > row)._tumour_counts.B
+                                   row._counts[0],
+                                   row._counts[1],
+                                   row._counts[2],
+                                   row._counts[3]
                                    )
 
             # Counts are not significantly different

@@ -12,11 +12,11 @@ cdef class IndependentFisherClassifier(Classifier):
         cdef int normal_genotype, tumour_genotype, joint_genotype, g 
         cdef double * labels
         
-        normal_genotype = self._get_genotype((< JointBinaryCounterRow > row)._normal_counts.A,
-                                             (< JointBinaryCounterRow > row)._normal_counts.B)
+        normal_genotype = self._get_genotype(row._counts[0],
+                                             row._counts[1])
         
-        tumour_genotype = self._get_genotype((< JointBinaryCounterRow > row)._tumour_counts.A,
-                                             (< JointBinaryCounterRow > row)._tumour_counts.B)        
+        tumour_genotype = self._get_genotype(row._counts[2],
+                                             row._counts[3])        
         
         joint_genotype = 3 * normal_genotype + tumour_genotype
         

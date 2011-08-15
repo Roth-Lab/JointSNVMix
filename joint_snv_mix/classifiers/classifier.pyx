@@ -156,9 +156,8 @@ cdef inline ClassifierRow makeClassifierRow(PairedSampleBinomialCounterRow count
     row._ref_base = counter_row._ref_base
     row._non_ref_base = counter_row._non_ref_base
     
-    counts = counter_row.counts
     for i in range(4):
-        row._counts[i] = counts[i]
+        row._counts[i] = counter_row._counts[i]
     
     row._labels = labels
     
