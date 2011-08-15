@@ -18,7 +18,7 @@ from joint_snv_mix.trainers.snv_mix import PairedSnvMixOneModel, PairedSnvMixTwo
 def snv_mix_one_train(args):
     counter = get_base_counter(args)
     ss = SnvMixOneSubsampler(args.skip_size, args.min_normal_depth, args.min_tumour_depth)
-    sample = ss.subsample(counter, refs=['Y', ])
+    sample = ss.subsample(counter)
     
     params = get_indep_params(args)
     
@@ -29,7 +29,7 @@ def snv_mix_one_train(args):
 def snv_mix_two_train(args): 
     counter = get_qual_counter(args)
     ss = SnvMixTwoSubsampler(args.skip_size, args.min_normal_depth, args.min_tumour_depth)
-    sample = ss.subsample(counter, refs=['Y', ])
+    sample = ss.subsample(counter)
     
     params = get_indep_params(args)
     
@@ -40,7 +40,7 @@ def snv_mix_two_train(args):
 def joint_snv_mix_one_train(args): 
     counter = get_base_counter(args)
     ss = JointSnvMixOneSubsampler(args.skip_size, args.min_normal_depth, args.min_tumour_depth)
-    sample = ss.subsample(counter, refs=['Y', ])
+    sample = ss.subsample(counter)
     
     params = get_joint_params(args)
     model = JointSnvMixOneModel(params)
@@ -56,7 +56,7 @@ def joint_snv_mix_two_train(args):
     model = JointSnvMixTwoModel(params)
     
     ss = JointSnvMixTwoSubsampler(args.skip_size, args.min_normal_depth, args.min_tumour_depth)
-    sample = ss.subsample(counter, refs=['Y', ])
+    sample = ss.subsample(counter)
     
     train(model, sample, args)
 

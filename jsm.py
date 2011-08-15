@@ -8,12 +8,10 @@ import argparse
 
 from joint_snv_mix.runners.train import snv_mix_one_train, snv_mix_two_train, joint_snv_mix_one_train, \
     joint_snv_mix_two_train
-
-
-
-#from joint_snv_mix.classifiers.runners import snv_mix_one_classify, snv_mix_two_classify, joint_snv_mix_one_classify, \
-#    joint_snv_mix_two_classify, independent_fisher_classify, joint_fisher_classify, threshold_classify
-
+    
+from joint_snv_mix.runners.classify import snv_mix_one_classify, snv_mix_two_classify, joint_snv_mix_one_classify, \
+    joint_snv_mix_two_classify, threshold_classify , independent_fisher_classify, joint_fisher_classify 
+    
 
 parser = argparse.ArgumentParser(prog='JointSNVMix')
 subparsers = parser.add_subparsers()
@@ -159,65 +157,65 @@ train_jsm2_parser.set_defaults(func=joint_snv_mix_two_train)
 #=======================================================================================================================
 # Parsers for classify subcommand
 #=======================================================================================================================
-#classify_parser = subparsers.add_parser('classify',
-#                                        help='''Classify the data from two BAM files from normal/tumour pair using one
-#                                        of the several strategies.''')
-#
-#classify_subparsers = classify_parser.add_subparsers()
-#
-##---------------------------------------------------------------------------------------------------------------------- 
-#classify_sm1_parser = classify_subparsers.add_parser('snv_mix_one', parents=[sm_classifier_parent, count_parent],
-#                                                     help='''Classify paired data using the independent SnvMix1
-#                                                     model.''')
-#
-#classify_sm1_parser.set_defaults(func=snv_mix_one_classify)
-#
-##---------------------------------------------------------------------------------------------------------------------- 
-#classify_sm2_parser = classify_subparsers.add_parser('snv_mix_two', parents=[sm_classifier_parent],
-#                                                     help='''Classify paired data using the independent SnvMix2
-#                                                     model.''')
-#
-#classify_sm2_parser.set_defaults(func=snv_mix_two_classify)
-#
-##---------------------------------------------------------------------------------------------------------------------- 
-#classify_jsm1_parser = classify_subparsers.add_parser('joint_snv_mix_one', parents=[sm_classifier_parent, count_parent],
-#                                                      help='''Classify paired data using the JointSnvMix1 model.''')
-#
-#classify_jsm1_parser.set_defaults(func=joint_snv_mix_one_classify)
-#
-##---------------------------------------------------------------------------------------------------------------------- 
-#classify_jsm2_parser = classify_subparsers.add_parser('joint_snv_mix_two', parents=[sm_classifier_parent],
-#                                                      help='''Classify paired data using the JointSnvMix2 model.''')
-#
-#classify_jsm2_parser.set_defaults(func=joint_snv_mix_two_classify)
-#
-##---------------------------------------------------------------------------------------------------------------------- 
-#classify_if_parser = classify_subparsers.add_parser('independent_fisher', parents=[fisher_parent],
-#                                                    help='''Classify paired data using the independent Fisher model.''')
-#
-#classify_if_parser.set_defaults(func=independent_fisher_classify)
-#
-##---------------------------------------------------------------------------------------------------------------------- 
-#classify_jf_parser = classify_subparsers.add_parser('joint_fisher', parents=[fisher_parent],
-#                                                    help='''Classify paired data using the joint Fisher model.''')
-#
-#classify_jf_parser.set_defaults(func=joint_fisher_classify)
-#
-##---------------------------------------------------------------------------------------------------------------------- 
-#classify_th_parser = classify_subparsers.add_parser('threshold', parents=[classify_parent, count_parent],
-#                                                    help='''Classify paired data using the threshold model.''')
-#
-#classify_th_parser.add_argument('--normal_threshold', default=0.05, type=float,
-#                                help='''Threshold for declaring a site homozygous in normal. Default is 0.05.''')
-#
-#classify_th_parser.add_argument('--tumour_threshold', default=0.05, type=float,
-#                                help='''Threshold for declaring a site homozygous in tumour. Default is 0.05.''')
+classify_parser = subparsers.add_parser('classify',
+                                        help='''Classify the data from two BAM files from normal/tumour pair using one
+                                        of the several strategies.''')
+
+classify_subparsers = classify_parser.add_subparsers()
+
+#---------------------------------------------------------------------------------------------------------------------- 
+classify_sm1_parser = classify_subparsers.add_parser('snv_mix_one', parents=[sm_classifier_parent, count_parent],
+                                                     help='''Classify paired data using the independent SnvMix1
+                                                     model.''')
+
+classify_sm1_parser.set_defaults(func=snv_mix_one_classify)
+
+#---------------------------------------------------------------------------------------------------------------------- 
+classify_sm2_parser = classify_subparsers.add_parser('snv_mix_two', parents=[sm_classifier_parent],
+                                                     help='''Classify paired data using the independent SnvMix2
+                                                     model.''')
+
+classify_sm2_parser.set_defaults(func=snv_mix_two_classify)
+
+#---------------------------------------------------------------------------------------------------------------------- 
+classify_jsm1_parser = classify_subparsers.add_parser('joint_snv_mix_one', parents=[sm_classifier_parent, count_parent],
+                                                      help='''Classify paired data using the JointSnvMix1 model.''')
+
+classify_jsm1_parser.set_defaults(func=joint_snv_mix_one_classify)
+
+#---------------------------------------------------------------------------------------------------------------------- 
+classify_jsm2_parser = classify_subparsers.add_parser('joint_snv_mix_two', parents=[sm_classifier_parent],
+                                                      help='''Classify paired data using the JointSnvMix2 model.''')
+
+classify_jsm2_parser.set_defaults(func=joint_snv_mix_two_classify)
+
+#---------------------------------------------------------------------------------------------------------------------- 
+classify_if_parser = classify_subparsers.add_parser('independent_fisher', parents=[fisher_parent],
+                                                    help='''Classify paired data using the independent Fisher model.''')
+
+classify_if_parser.set_defaults(func=independent_fisher_classify)
+
+#---------------------------------------------------------------------------------------------------------------------- 
+classify_jf_parser = classify_subparsers.add_parser('joint_fisher', parents=[fisher_parent],
+                                                    help='''Classify paired data using the joint Fisher model.''')
+
+classify_jf_parser.set_defaults(func=joint_fisher_classify)
+
+#---------------------------------------------------------------------------------------------------------------------- 
+classify_th_parser = classify_subparsers.add_parser('threshold', parents=[classify_parent, count_parent],
+                                                    help='''Classify paired data using the threshold model.''')
+
+classify_th_parser.add_argument('--normal_threshold', default=0.05, type=float,
+                                help='''Threshold for declaring a site homozygous in normal. Default is 0.05.''')
+
+classify_th_parser.add_argument('--tumour_threshold', default=0.05, type=float,
+                                help='''Threshold for declaring a site homozygous in tumour. Default is 0.05.''')
 #
 #classify_th_parser.add_argument('--min_var_depth', default=4, type=int,
 #                                help='''Sites with fewer variant reads in the tumour than this will always be called
 #                                reference. Default is 4.''')
 #
-#classify_th_parser.set_defaults(func=threshold_classify)
+classify_th_parser.set_defaults(func=threshold_classify)
 
 #---------------------------------------------------------------------------------------------------------------------- 
 args = parser.parse_args()
