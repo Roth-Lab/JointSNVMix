@@ -37,11 +37,8 @@ cdef class PairedSampleBinomialCounterRow(CounterRow):
         return "\t".join(out_row)
     
     property counts:
-        '''
-        Implement this in sub-class.
-        '''
         def __get__(self):
-            pass
+            return [x for x in self._counts[:4]]
 
     property normal_depth:
         def __get__(self):

@@ -23,5 +23,7 @@ cdef class PairedSampleBinomialCounterRow(CounterRow):
     cdef char * _ref_base
     cdef char * _non_ref_base
     
+    cdef int _counts[4]
+    
 cdef char * get_non_ref_base(char * ref_base, SingleSampleCounterRow normal_row, SingleSampleCounterRow tumour_row)
 cdef binary_counts_struct get_binary_counts(char * ref_base, char * non_ref_base, SingleSampleCounterRow row)
