@@ -116,6 +116,11 @@ cdef JointBinaryCounterRow makeJointBinaryCounterRow(char * ref_base,
     row._tumour_counts = get_binary_counts(ref_base, non_ref_base, tumour_row)
     
     row._normal_depth = row._normal_counts.A + row._normal_counts.B
-    row._tumour_depth = row._tumour_counts.A + row._tumour_counts.B   
+    row._tumour_depth = row._tumour_counts.A + row._tumour_counts.B
+    
+    row._counts[0] = row._normal_counts.A
+    row._counts[1] = row._normal_counts.B
+    row._counts[2] = row._tumour_counts.A
+    row._counts[3] = row._tumour_counts.B
      
     return row

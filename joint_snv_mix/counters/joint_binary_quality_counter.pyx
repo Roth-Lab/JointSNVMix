@@ -113,6 +113,11 @@ cdef JointBinaryQualityCounterRow makeJointBinaryQualityCounterRow(char * ref_ba
     
     row._normal_depth = row._normal_data.depth.A + row._normal_data.depth.B
     row._tumour_depth = row._tumour_data.depth.A + row._tumour_data.depth.B
+    
+    row._counts[0] = row._normal_data.depth.A
+    row._counts[1] = row._normal_data.depth.B
+    row._counts[2] = row._tumour_data.depth.A
+    row._counts[3] = row._tumour_data.depth.B
      
     return row
 
