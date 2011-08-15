@@ -24,14 +24,13 @@ cdef class SnvMixOneClassifier(Classifier):
             self._log_pi_N[i] = log(pi_N[i])            
             self._log_pi_T[i] = log(pi_T[i])
 
-    cdef tuple _get_labels(self, PairedSampleBinomialCounterRow row):
+    cdef double * _get_labels(self, PairedSampleBinomialCounterRow row):
         cdef int  g
         cdef int normal_counts[2], tumour_counts[2]
         cdef double x
         cdef double normal_log_likelihood[NUM_GENOTYPES], tumour_log_likelihood[NUM_GENOTYPES]
         cdef double * normal_probabilities, * tumour_probabilities
-        cdef double * joint_probabilities 
-        cdef tuple labels
+        cdef double * joint_probabilities
         
         normal_counts[0] = (< JointBinaryCounterRow > row)._normal_counts.A
         normal_counts[1] = (< JointBinaryCounterRow > row)._normal_counts.B
@@ -52,11 +51,8 @@ cdef class SnvMixOneClassifier(Classifier):
                                                         NUM_GENOTYPES,
                                                         NUM_GENOTYPES)
         
-        labels = tuple([x for x in joint_probabilities[:NUM_JOINT_GENOTYPES]])
-        
         # Cleanup allocated arrays.
         free(normal_probabilities)
         free(tumour_probabilities)
-        free(joint_probabilities)
         
-        return labels
+        return joint_probabilities

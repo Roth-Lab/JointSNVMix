@@ -1,4 +1,5 @@
 #cython: cdivision=True
+from libc.stdlib cimport malloc
 
 from joint_snv_mix.counters.counter_row cimport PairedSampleBinomialCounterRow
 from joint_snv_mix.counters.joint_binary_counter cimport JointBinaryCounterRow
