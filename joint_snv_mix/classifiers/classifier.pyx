@@ -23,7 +23,7 @@ def classify_counter(Counter counter, Classifier classifier, char * file_name):
             fprintf(file_p,
                     "%s\t%d\t%s\t%s\t%d\t%d\t%d\t%d\t%.4f\t%.4f\t%.4f\t%.4f\t%.4f\t%.4f\t%.4f\t%.4f\t%.4f\n",
                     cl_row._ref,
-                    cl_row._position,
+                    cl_row._position + 1,
                     cl_row._ref_base,
                     cl_row._non_ref_base,
                     < int > cl_row._counts[0],
