@@ -15,15 +15,16 @@ cdef class PositionsCounter(Counter):
         def __get__(self):
             return self._refs
     
-    def iter_refs(self, ref):
+    def iter_ref(self, ref):
         if ref not in self.refs:
             raise Exception('Invalid reference.')
-        
+
         i = self._refs.index(ref)
         start = self._starts[i]
         stop = self._starts[i + 1]
         
         pos_iter = PositionsIterator(self._pos_file_name, start, stop)
+        
         counter_iter = self._counter.iter_ref(ref)
         
         return PositionsCounterRefIterator(ref, counter_iter, pos_iter)
@@ -40,7 +41,7 @@ cdef class PositionsCounter(Counter):
         file_p = fopen(self._pos_file_name, "r")
         
         if file_p == NULL:
-            raise Exception("Couldn't open the spam file")
+            raise Exception("Couldn't open positions file")
         
         pos = 0
         
