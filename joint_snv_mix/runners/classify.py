@@ -119,7 +119,7 @@ def get_base_counter(args):
                                      min_map_qual=args.min_map_qual)
 
     if args.positions_file is not None:
-        counter = PositionsCounter(counter)
+        counter = PositionsCounter(counter, args.positions_file)
     
     return counter
     
@@ -131,6 +131,6 @@ def get_qual_counter(args):
     counter = JointBinaryQualityCounter(normal_bam, tumour_bam, ref_genome)
     
     if args.positions_file is not None:
-        counter = PositionsCounter(counter)
+        counter = PositionsCounter(counter, args.positions_file)
     
     return counter
