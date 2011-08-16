@@ -169,3 +169,5 @@ cdef class JointSnvMixModelTrainer(object):
     cdef void _do_m_step(self, JointSnvMixEss ess)
     cdef _check_convergence(self, list data)
 
+cdef JointSnvMixOneData makeJointSnvMixOneData(JointBinaryCounterRow row)
+cdef JointSnvMixTwoData makeJointSnvMixTwoData(JointBinaryQualityCounterRow row)
