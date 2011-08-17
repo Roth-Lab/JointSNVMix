@@ -9,12 +9,8 @@ from joint_snv_mix.counters.joint_binary_quality_counter cimport JointBinaryQual
                                                                  
 from joint_snv_mix.classifiers.classifier cimport Classifier
 
-from joint_snv_mix.classifiers.shared cimport snv_mix_2_log_likelihood, get_joint_posterior, \
-                                              get_phred_to_prob_qual_map
+from joint_snv_mix.trainers.joint_snv_mix cimport JointSnvMixParameters, JointSnvMixTwoCpt, JointSnvMixTwoData, \
+                                                  makeJointSnvMixTwoData
 
 cdef class JointSnvMixTwoClassifier(Classifier):
-    cdef double * _qual_map
-       
-    cdef double _mu_N[NUM_GENOTYPES]
-    cdef double _mu_T[NUM_GENOTYPES]
-    cdef double _log_pi[NUM_JOINT_GENOTYPES]
+    cdef JointSnvMixParameters _params

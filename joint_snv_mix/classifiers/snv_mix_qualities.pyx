@@ -5,55 +5,28 @@ DEF NUM_JOINT_GENOTYPES = 9
 
 cdef class SnvMixTwoClassifier(Classifier):
     def __init__(self, **kwargs):       
-        self._qual_map = get_phred_to_prob_qual_map(256)
-        
-        self._init_params(**kwargs)
-
-    def __dealloc__(self):
-        free(self._qual_map)
-    
-    def _init_params(self, **kwargs):
-        mu_N = kwargs.get('mu_N', (0.99, 0.5, 0.01))
-        mu_T = kwargs.get('mu_T', (0.99, 0.5, 0.01))
-        pi_N = kwargs.get('pi_N', (0.99, 0.009, 0.001))
-        pi_T = kwargs.get('pi_T', (0.99, 0.009, 0.001))
-        
-        for i in range(NUM_GENOTYPES):
-            self._mu_N[i] = mu_N[i]            
-            self._mu_T[i] = mu_T[i]
-            
-            self._log_pi_N[i] = log(pi_N[i])            
-            self._log_pi_T[i] = log(pi_T[i])
+        self._params = PairedSnvMixParameters(**kwargs)
 
     cdef double * _get_labels(self, PairedSampleBinomialCounterRow row):
-        cdef double x
-        cdef double * normal_log_likelihood, * tumour_log_likelihood
-        cdef double * normal_probabilities, * tumour_probabilities
-        cdef double * joint_probabilities
+        cdef SnvMixTwoData normal_data, tumour_data
+        cdef SnvMixTwoCpt normal_cpt, tumour_cpt
+        cdef double * normal_resp, * tumour_resp, * joint_resp
         
-        normal_log_likelihood = snv_mix_2_log_likelihood((< JointBinaryQualityCounterRow > row)._normal_data, 
-                                                         self._mu_N, 
-                                                         self._qual_map, 
-                                                         NUM_GENOTYPES)
+        normal_data = makeSnvMixTwoData((< JointBinaryQualityCounterRow > row)._normal_data)
+        tumour_data = makeSnvMixTwoData((< JointBinaryQualityCounterRow > row)._tumour_data)
         
-        tumour_log_likelihood = snv_mix_2_log_likelihood((< JointBinaryQualityCounterRow > row)._tumour_data, 
-                                                         self._mu_T, 
-                                                         self._qual_map, 
-                                                         NUM_GENOTYPES)
+        normal_cpt = SnvMixTwoCpt(normal_data, self._params._normal_params)
+        tumour_cpt = SnvMixTwoCpt(tumour_data, self._params._tumour_params)
         
-        normal_probabilities = get_mixture_posterior(normal_log_likelihood, self._log_pi_N, NUM_GENOTYPES)
-        tumour_probabilities = get_mixture_posterior(tumour_log_likelihood, self._log_pi_T, NUM_GENOTYPES)
-        
-        joint_probabilities = combine_independent_probs(normal_probabilities,
-                                                        tumour_probabilities,
-                                                        NUM_GENOTYPES,
-                                                        NUM_GENOTYPES)
-        
-        # Cleanup allocated arrays.
-        free(normal_log_likelihood)
-        free(tumour_log_likelihood)
-        free(normal_probabilities)
-        free(tumour_probabilities)
-        
-        return joint_probabilities
+        normal_resp = normal_cpt.get_resp()
+        tumour_resp = tumour_cpt.get_resp()
+                        
+        joint_resp = combine_independent_probs(normal_resp,
+                                               tumour_resp,
+                                               NUM_GENOTYPES,
+                                               NUM_GENOTYPES)        
+        free(normal_resp)
+        free(tumour_resp)
+               
+        return joint_resp
         
