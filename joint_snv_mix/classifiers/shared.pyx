@@ -115,11 +115,6 @@ cdef double * combine_independent_probs(double * normal_probs,
             joint_index = num_normal_genotypes * normal_index + tumour_index
             
             joint_probs[joint_index] = normal_probs[normal_index] * tumour_probs[tumour_index]
-
-            total += joint_probs[joint_index]
-            
-    for joint_index in range(num_joint_genotypes):
-        joint_probs[joint_index] = joint_probs[joint_index] / total
     
     return joint_probs
 
