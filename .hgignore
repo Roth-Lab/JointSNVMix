@@ -34,3 +34,7 @@ syntax: regexp
 \.so$
 syntax: regexp
 \.html$
+syntax: regexp
+^debug\.txt$
+syntax: regexp
+^\.hgignore$
