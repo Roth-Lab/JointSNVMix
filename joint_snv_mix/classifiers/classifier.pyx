@@ -68,7 +68,8 @@ cdef FILE * get_out_file(char * file_name):
               'p_AB_BB',
               'p_BB_AA',
               'p_BB_AB',
-              'p_BB_BB'
+              'p_BB_BB',
+              '\n'
               ]
     
     header = "\t".join(header)
