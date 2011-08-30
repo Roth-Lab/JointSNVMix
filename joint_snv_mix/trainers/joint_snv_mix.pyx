@@ -693,7 +693,7 @@ cdef class JointSnvMixOneCpt(JointSnvMixCpt):
                                        self._binomial_log_likelihood(a_T, b_T, mu_T)
         
     cdef double _binomial_log_likelihood(self, int a, int b, double mu):
-        return a * log(mu) + b * log(1 - mu)
+        return lncombination(a + b, a) + a * log(mu) + b * log(1 - mu)
         
 #---------------------------------------------------------------------------------------------------------------------- 
 cdef class JointSnvMixTwoCpt(JointSnvMixCpt):
