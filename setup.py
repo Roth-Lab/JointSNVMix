@@ -139,13 +139,6 @@ trainers_include = [
                     ]
 trainers_include.extend(counter_includes)
 
-trainer = Extension(
-                    "joint_snv_mix.trainers.trainer",
-                    ["joint_snv_mix/trainers/trainer.c"],
-                    include_dirs=trainers_include,
-                    libraries=['gsl', 'gslcblas']
-                    )
-
 snv_mix_trainer = Extension(
                             "joint_snv_mix.trainers.snv_mix",
                             ["joint_snv_mix/trainers/snv_mix.c"],
@@ -175,7 +168,6 @@ ext_modules = [
                joint_snv_mix_classifier,
                joint_snv_mix_qualities_classifier,
                log_pdf,
-               trainer,
                snv_mix_trainer,
                joint_snv_mix_trainer,
                positions_counter,
