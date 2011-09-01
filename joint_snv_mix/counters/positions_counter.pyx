@@ -10,6 +10,9 @@ cdef class PositionsCounter(Counter):
         self._counter = counter
         
         self._load_index()
+        
+        # Restrict to refs present if both positions file and counter
+        self._refs = tuple(set(self.refs) & set(counter.refs))
     
     property refs:
         def __get__(self):
