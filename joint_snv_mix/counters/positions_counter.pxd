@@ -10,7 +10,7 @@ from joint_snv_mix.counters.counter cimport Counter
 from joint_snv_mix.counters.ref_iterator cimport RefIterator
 
 cdef class PositionsCounter(Counter):
-    cdef list _starts
+    cdef dict _intervals
     cdef char * _pos_file_name
     cdef Counter _counter
 

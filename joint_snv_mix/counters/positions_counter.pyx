@@ -5,7 +5,8 @@ Created on 2011-08-11
 '''
 cdef class PositionsCounter(Counter):
     def __init__(self, Counter counter, char * pos_file_name):
-        self._starts = []
+        self._intervals = {}
+        
         self._pos_file_name = pos_file_name
         self._counter = counter
         
@@ -22,9 +23,7 @@ cdef class PositionsCounter(Counter):
         if ref not in self.refs:
             raise Exception('Invalid reference.')
 
-        i = self._refs.index(ref)
-        start = self._starts[i]
-        stop = self._starts[i + 1]
+        start, stop = self._intervals[ref]
         
         pos_iter = PositionsIterator(self._pos_file_name, start, stop)
         
@@ -47,6 +46,7 @@ cdef class PositionsCounter(Counter):
             raise Exception("Couldn't open positions file")
         
         pos = 0
+        start = pos
         
         while True:
             ref_result = fscanf(file_p, "%s" , ref)
@@ -56,18 +56,19 @@ cdef class PositionsCounter(Counter):
                 break                        
             
             if strcmp(prev_ref, ref) != 0:
-                refs.append(ref)
-                self._starts.append(pos)
-                
+                if pos > 0:
+                    self._intervals[prev_ref] = (start, pos)
+                    start = pos
+                                              
                 strcpy(prev_ref, ref)
             
             pos = ftell(file_p)
         
-        self._starts.append(pos)
+        self._intervals[ref] = (start, pos)
         
         fclose(file_p)
-        
-        self._refs = tuple(refs)
+
+        self._refs = tuple(self._intervals.keys())
         
 cdef class PositionsCounterRefIterator(RefIterator):
     def __init__(self, char * ref, RefIterator ref_iter, PositionsIterator pos_iter):
