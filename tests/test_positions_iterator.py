@@ -65,6 +65,21 @@ class Test(unittest.TestCase):
         for ref in counter.refs:
             for row in counter.iter_ref(ref):
                 pass
+            
+    def test_start_and_ends(self):
+        positions_file = "data/positions/missing_chrom.txt"
+        
+        counter = self.get_positions_counter(positions_file)
+        
+        iter = counter.iter_ref('3')
+        
+        row = iter.next()
+        self.assertEqual(row.position, 100)
+        
+        row = iter.next()
+        row = iter.next()
+        self.assertEqual(row.position, 108)
+             
 
 if __name__ == "__main__":
     #import sys;sys.argv = ['', 'Test.testName']
