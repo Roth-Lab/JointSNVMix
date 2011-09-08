@@ -1,3 +1,5 @@
+#cython: cdivision=True
+
 DEF NUM_JOINT_GENOTYPES = 9
 
 cdef class ThresholdClassifier(Classifier):
