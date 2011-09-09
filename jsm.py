@@ -32,7 +32,8 @@ train_classify_parent.add_argument('tumour_bam',
 
 train_classify_parent.add_argument('--positions_file', default=None,
                                    help='''Path to a file containing a list of positions to create use for analysis.
-                                   Should be space separated chrom pos. The same format as samtools.''')
+                                   Should be space separated chrom pos. Additionally for each chromosome the positions
+                                   should be sorted. The same format as samtools.''')
 
 #=======================================================================================================================
 # Parent parser for train
