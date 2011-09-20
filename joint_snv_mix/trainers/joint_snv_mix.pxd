@@ -69,7 +69,7 @@ cdef class JointSnvMixParameters(object):
 
 #---------------------------------------------------------------------------------------------------------------------- 
 cdef class JointSnvMixCpt(object):
-    cdef double marginalise(self)
+    cdef double get_log_sum(self)
     cdef double * get_resp(self)
     cdef double * get_expected_counts_a_N(self)
     cdef double * get_expected_counts_a_T(self)
