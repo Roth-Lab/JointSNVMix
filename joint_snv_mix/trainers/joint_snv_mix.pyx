@@ -381,7 +381,7 @@ cdef class JointSnvMixModel(object):
     
     cdef double _get_log_likelihood(self, JointSnvMixData data):
         cdef JointSnvMixCpt cpt
-        cdef double likelihood
+        cdef double log_likelihood
         
         cpt = self._get_complete_log_likelihood(data)
         
