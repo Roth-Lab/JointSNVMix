@@ -613,7 +613,7 @@ cdef class SnvMixCpt(object):
     cdef double * get_expected_counts_b(self):
         pass
     
-    cdef double marginalise(self):
+    cdef double get_log_sum(self):
         pass
 
 #---------------------------------------------------------------------------------------------------------------------- 
