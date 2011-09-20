@@ -385,12 +385,9 @@ cdef class JointSnvMixModel(object):
         
         cpt = self._get_complete_log_likelihood(data)
         
-        likelihood = cpt.marginalise()
+        log_likelihood = cpt.get_log_sum()
         
-        if likelihood == 0:
-            likelihood = EPS
-        
-        return log(likelihood)
+        return log_likelihood
 
 #---------------------------------------------------------------------------------------------------------------------- 
 cdef class JointSnvMixOneModel(JointSnvMixModel):
@@ -532,7 +529,7 @@ cdef class JointSnvMixCpt(object):
     cdef double * get_expected_counts_b_T(self):
         pass
     
-    cdef double marginalise(self):
+    cdef double get_log_sum(self):
         pass
 
 #---------------------------------------------------------------------------------------------------------------------- 
@@ -610,14 +607,13 @@ cdef class JointSnvMixOneCpt(JointSnvMixCpt):
         
         return b
 
-    cdef double marginalise(self):
+    cdef double get_log_sum(self):
         cdef int g
-        cdef double marginal
+        cdef double log_marginal
         
         marginal = 0
         
-        for g in range(NUM_JOINT_GENOTYPES):
-            marginal += exp(self._cpt_array[g])
+        log_marginal = log_sum_exp(& self._cpt_array[0], NUM_JOINT_GENOTYPES)        
         
         return marginal
 
@@ -776,8 +772,8 @@ cdef class JointSnvMixTwoCpt(JointSnvMixCpt):
         
         return counts
     
-    cdef double marginalise(self):
-        return self._marginal
+    cdef double get_log_sum(self):
+        return log(self._marginal)
     
     cdef double * _get_joint_class_marginals(self, double * normal_marginals, double * tumour_marginals, double * pi):
         cdef int g_N, g_T, g_J
