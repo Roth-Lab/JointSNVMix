@@ -14,7 +14,7 @@ from joint_snv_mix.counters.ref_iterator cimport RefIterator
 
 from joint_snv_mix.counters.shared cimport binary_counts_struct, base_map_qualities_struct
 
-from joint_snv_mix.utils.log_pdf cimport dirichlet_log_likelihood, log_space_normalise_row
+from joint_snv_mix.utils.log_pdf cimport dirichlet_log_likelihood, log_space_normalise_row, log_sum_exp
 
 DEF NUM_GENOTYPES = 3
 DEF NUM_BASES = 2
@@ -79,7 +79,7 @@ cdef class SnvMixCpt(object):
     cdef double * get_resp(self)
     cdef double * get_expected_counts_a(self)
     cdef double * get_expected_counts_b(self)
-    cdef double marginalise(self)
+    cdef double get_log_sum(self)
  
 cdef class SnvMixOneCpt(SnvMixCpt):
     cdef int _a
