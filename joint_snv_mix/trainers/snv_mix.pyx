@@ -461,16 +461,13 @@ cdef class SnvMixModel(object):
     
     cdef double _get_log_likelihood(self, SnvMixData data):
         cdef SnvMixCpt cpt
-        cdef double likelihood
+        cdef double log_likelihood
         
         cpt = self._get_complete_log_likelihood(data)
         
-        likelihood = cpt.marginalise()
+        log_likelihood = cpt.get_log_sum()
         
-        if likelihood == 0:
-            likelihood = EPS
-        
-        return log(likelihood)
+        return log_likelihood
 
 cdef class PairedSnvMixModel(object):        
     def fit(self, dict data, convergence_threshold=1e-6, max_iters=100):
@@ -676,16 +673,13 @@ cdef class SnvMixOneCpt(SnvMixCpt):
         
         return b
     
-    cdef double marginalise(self):
+    cdef double get_log_sum(self):
         cdef int g
-        cdef double marginal
+        cdef double log_marginal
         
-        marginal = 0
+        log_marginal = log_sum_exp(& self._cpt_array[0], NUM_GENOTYPES)
         
-        for g in range(NUM_GENOTYPES):
-            marginal += exp(self._cpt_array[g])
-        
-        return marginal
+        return log_marginal
     
     cdef _init_cpt_array(self, SnvMixOneData data, SnvMixParameters params):
         cdef int a, b, g
@@ -731,8 +725,8 @@ cdef class SnvMixTwoCpt(SnvMixCpt):
     cdef double * get_expected_counts_b(self):
         return self._get_expected_counts(0)
     
-    cdef double marginalise(self):
-        return self._marginal
+    cdef double get_log_sum(self):
+        return log(self._marginal)
 
     cdef double * _get_expected_counts(self, int a):
         '''
