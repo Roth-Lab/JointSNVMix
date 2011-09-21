@@ -1,8 +1,6 @@
 '''
 Created on 2011-08-04
 
-Code for jsm
-
 @author: Andrew Roth
 '''
 from libc.stdlib cimport free, malloc
@@ -15,7 +13,6 @@ from joint_snv_mix.counters.joint_binary_counter cimport JointBinaryCounterRow
 from joint_snv_mix.counters.joint_binary_quality_counter cimport JointBinaryQualityCounterRow
 
 from joint_snv_mix.utils.log_pdf cimport dirichlet_log_likelihood, log_space_normalise_row, log_sum_exp
-from joint_snv_mix.utils.special_functions cimport lncombination
 
 from joint_snv_mix.trainers.snv_mix cimport SnvMixOneData, SnvMixTwoData, makeSnvMixOneData, makeSnvMixTwoData
 
