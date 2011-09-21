@@ -1,6 +1,8 @@
 '''
 Created on 2011-08-04
 
+Code for jsm
+
 @author: Andrew Roth
 '''
 from libc.stdlib cimport free, malloc
