@@ -13,61 +13,13 @@ from joint_snv_mix.counters.joint_binary_counter cimport JointBinaryCounterRow
 from joint_snv_mix.counters.joint_binary_quality_counter cimport JointBinaryQualityCounterRow
 
 from joint_snv_mix.utils.log_pdf cimport dirichlet_log_likelihood, log_space_normalise_row, log_sum_exp
-from joint_snv_mix.utils.special_functions cimport lncombination
 
-from joint_snv_mix.trainers.snv_mix cimport SnvMixOneData, SnvMixTwoData, makeSnvMixOneData, makeSnvMixTwoData
+from joint_snv_mix.trainers.snv_mix cimport SnvMixOneData, SnvMixTwoData
 
 DEF NUM_GENOTYPES = 3
 DEF NUM_JOINT_GENOTYPES = 9
 DEF NUM_BASES = 2
 
-cdef class JointSnvMixData(object):
-    pass
- 
-cdef class JointSnvMixOneData(JointSnvMixData):
-    cdef SnvMixOneData _normal
-    cdef SnvMixOneData _tumour
- 
-cdef class JointSnvMixTwoData(JointSnvMixData):
-    cdef SnvMixTwoData _normal
-    cdef SnvMixTwoData _tumour
-
-#----------------------------------------------------------------------------------------------------------------------
-cdef class PairedDataSubSampler(object):
-    cdef int _skip_size
-    cdef int _min_normal_depth
-    cdef int _min_tumour_depth
-    
-    cdef _add_row_to_sample(self, list sample, PairedSampleBinomialCounterRow row)
- 
-cdef class JointSnvMixOneSubsampler(PairedDataSubSampler):
-    pass
- 
-cdef class JointSnvMixTwoSubsampler(PairedDataSubSampler):
-    pass
-
-#---------------------------------------------------------------------------------------------------------------------- 
-cdef class JointSnvMixPriors(object):
-    cdef double _mu_N[NUM_GENOTYPES][2]
-    cdef double _mu_T[NUM_GENOTYPES][2]
-    cdef double _pi[NUM_JOINT_GENOTYPES]
-
-#---------------------------------------------------------------------------------------------------------------------- 
-cdef class JointSnvMixParameters(object):
-    cdef JointSnvMixPriors _priors
-    
-    cdef double _mu_N[NUM_GENOTYPES]
-    cdef double _mu_T[NUM_GENOTYPES]
-    cdef double _pi[NUM_JOINT_GENOTYPES]
-
-    cdef update(self, double * n, double * a_N, double * a_T, double * b_N, double * b_T)
-    
-    cdef _normalise_pi(self)
-    cdef _update_mu(self, double * mu, double mu_prior[NUM_GENOTYPES][2], double * a, double * b)            
-    cdef _update_pi(self, double * n)
-    cdef double _get_prior_log_likelihood(self)
-
-#---------------------------------------------------------------------------------------------------------------------- 
 cdef class JointSnvMixCpt(object):
     cdef double get_log_sum(self)
     cdef double * get_resp(self)
