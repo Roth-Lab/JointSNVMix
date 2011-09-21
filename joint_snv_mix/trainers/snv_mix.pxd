@@ -18,63 +18,7 @@ from joint_snv_mix.utils.log_pdf cimport dirichlet_log_likelihood, log_space_nor
 
 DEF NUM_GENOTYPES = 3
 DEF NUM_BASES = 2
-
-cdef class SnvMixData(object):
-    pass
  
-cdef class SnvMixOneData(SnvMixData):
-    cdef int counts[2]
- 
-cdef class SnvMixTwoData(SnvMixData):
-    cdef int depth
-    cdef double * q
-    cdef double * r
-
-cdef SnvMixOneData makeSnvMixOneData(binary_counts_struct counts)
-cdef SnvMixTwoData makeSnvMixTwoData(base_map_qualities_struct data_struct)
-
-#---------------------------------------------------------------------------------------------------------------------- 
-cdef class PairedDataSubSampler(object):
-    cdef int _skip_size
-    cdef int _min_normal_depth
-    cdef int _min_tumour_depth
-    
-    cdef _add_row_to_sample(self, dict sample, PairedSampleBinomialCounterRow row)
-     
-cdef class SnvMixOneSubsampler(PairedDataSubSampler):
-    pass
- 
-cdef class SnvMixTwoSubsampler(PairedDataSubSampler):
-    pass
-
-#---------------------------------------------------------------------------------------------------------------------- 
-cdef class SnvMixPriors(object):
-    cdef double _mu[NUM_GENOTYPES][2]
-    cdef double _pi[NUM_GENOTYPES]
- 
-cdef class PairedSnvMixPriors(object):
-    cdef SnvMixPriors _normal_priors
-    cdef SnvMixPriors _tumour_priors
-
-#---------------------------------------------------------------------------------------------------------------------- 
-cdef class SnvMixParameters(object):
-    cdef SnvMixPriors _priors
-    
-    cdef double _mu[NUM_GENOTYPES]
-    cdef double _pi[NUM_GENOTYPES]
-
-    cdef update(self, double * n, double * a, double * b)
-    
-    cdef _normalise_pi(self)
-    cdef _update_mu(self, double * a, double * b)            
-    cdef _update_pi(self, double * n)
-    cdef double _get_prior_log_likelihood(self)
- 
-cdef class PairedSnvMixParameters(object):
-    cdef SnvMixParameters _normal_params
-    cdef SnvMixParameters _tumour_params
-
-#---------------------------------------------------------------------------------------------------------------------- 
 cdef class SnvMixCpt(object):
     cdef double * get_resp(self)
     cdef double * get_expected_counts_a(self)
