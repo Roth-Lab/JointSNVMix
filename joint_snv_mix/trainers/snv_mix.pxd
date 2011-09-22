@@ -155,4 +155,5 @@ cdef class SnvMixModelTrainer(object):
     cdef SnvMixEss _do_e_step(self, list data)
     cdef void _do_m_step(self, SnvMixEss ess)
     cdef _check_convergence(self, list data)
+    cdef _print_status(self)
 

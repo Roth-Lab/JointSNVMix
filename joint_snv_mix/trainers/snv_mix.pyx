@@ -451,7 +451,7 @@ cdef class SnvMixModel(object):
         
     property params:
         def __get__(self):
-            return self.params
+            return self._params
 
     cdef double _get_lower_bound(self, list data):
         cdef double lb
@@ -535,8 +535,7 @@ cdef class SnvMixModelTrainer(object):
             
             self._check_convergence(data)
             
-            print self._iters, self._lower_bounds[-1]
-            print self._model._params
+            self._print_status()
 
     cdef SnvMixEss _do_e_step(self, list data):                              
         cdef SnvMixData pos_data
@@ -554,8 +553,10 @@ cdef class SnvMixModelTrainer(object):
     cdef void _do_m_step(self, SnvMixEss ess):       
         self._model._params.update(ess._n, ess._a, ess._b)
 
-    cdef _check_convergence(self, list data):
+    cdef _check_convergence(self, list data):    
         cdef double rel_change, lb, ll, prev_ll
+        
+        self._iters += 1
         
         lb = self._model._get_lower_bound(data)        
         self._lower_bounds.append(lb)
@@ -564,19 +565,22 @@ cdef class SnvMixModelTrainer(object):
         prev_ll = self._lower_bounds[-2]
         
         rel_change = (ll - prev_ll) / abs(prev_ll)
-    
+
         if rel_change < 0:
-            raise Exception("Lower bound decreased exiting.")
+            self._print_status()
+            raise Exception("Lower bound decreased exiting.")    
         elif rel_change < self._convergence_threshold:
             print "Converged"
-            self._converged = 1        
+            self._converged = 1
         elif self._iters >= self._max_iters:
             print "Maximum number of iters exceeded exiting."
             self._converged = 1
         else:
             self._converged = 0
-        
-        self._iters += 1
+    
+    cdef _print_status(self):
+        print self._iters, self._lower_bounds[-1]
+        print self._model.params
 
 #=======================================================================================================================
 # ESS
@@ -696,9 +700,10 @@ cdef class SnvMixOneCpt(SnvMixCpt):
         
         self._cpt_array = < double *> malloc(NUM_GENOTYPES * sizeof(double))
         
+        a = data.counts[0]
+        b = data.counts[1]
+        
         for g in range(NUM_GENOTYPES):
-            a = data.counts[0]
-            b = data.counts[1]
             mu = params._mu[g]
             log_pi = log(params._pi[g])
             
