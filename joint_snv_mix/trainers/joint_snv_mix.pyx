@@ -32,7 +32,8 @@ cdef class PairedDataSubSampler(object):
         print '''Randomly sub-sampling every {0}th position with normal depth {1} and tumour depth {2} the data set.'''.format(self._skip_size, self._min_normal_depth, self._min_tumour_depth)
         
         if refs == None:
-            refs = counter.refs
+#            refs = counter.refs
+            refs = ['22',]
         
         for ref in refs:
             print "Subsampling ref {0}.".format(ref)
@@ -612,8 +613,11 @@ cdef class JointSnvMixOneCpt(JointSnvMixCpt):
         
         marginal = 0
         
-        log_marginal = log_sum_exp(& self._cpt_array[0], NUM_JOINT_GENOTYPES)        
+        log_marginal = log_sum_exp(& self._cpt_array[0], NUM_JOINT_GENOTYPES)
         
+        if log_marginal  < -1:
+            print log_marginal
+
         return marginal
 
     cdef double * _get_normal_marginal_resp(self):
@@ -668,20 +672,21 @@ cdef class JointSnvMixOneCpt(JointSnvMixCpt):
     cdef _init_cpt_array(self, JointSnvMixOneData data, JointSnvMixParameters params):
         cdef int a_N, b_N, a_T, b_T, g_N, g_T, g_J
         cdef double mu_N, mu_T, log_pi
+
+        a_N = data._normal.counts[0]
+        b_N = data._normal.counts[1]
+        a_T = data._tumour.counts[0]
+        b_T = data._tumour.counts[1]   
         
-        for g_N in range(NUM_GENOTYPES):
-            a_N = data._normal.counts[0]
-            b_N = data._normal.counts[1]            
-            mu_N = params.mu_N[g_N]
+        for g_N in range(NUM_GENOTYPES):      
+            mu_N = params._mu_N[g_N]
             
-            for g_T in range(NUM_GENOTYPES):
-                a_T = data._tumour.counts[0]
-                b_T = data._tumour.counts[1]            
-                mu_T = params.mu_T[g_T]
+            for g_T in range(NUM_GENOTYPES):         
+                mu_T = params._mu_T[g_T]
             
                 g_J = NUM_GENOTYPES * g_N + g_T
             
-                log_pi = log(params.pi[g_J])
+                log_pi = log(params._pi[g_J])
             
                 self._cpt_array[g_J] = log_pi + \
                                        self._binomial_log_likelihood(a_N, b_N, mu_N) + \
