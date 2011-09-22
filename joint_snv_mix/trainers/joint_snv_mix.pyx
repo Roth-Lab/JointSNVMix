@@ -32,8 +32,7 @@ cdef class PairedDataSubSampler(object):
         print '''Randomly sub-sampling every {0}th position with normal depth {1} and tumour depth {2} the data set.'''.format(self._skip_size, self._min_normal_depth, self._min_tumour_depth)
         
         if refs == None:
-#            refs = counter.refs
-            refs = ['22', ]
+            refs = counter.refs
         
         for ref in refs:
             print "Subsampling ref {0}.".format(ref)
@@ -546,6 +545,20 @@ cdef class JointSnvMixEss(object):
 # CPT
 #=======================================================================================================================
 cdef class JointSnvMixCpt(object):
+    property resp:
+        def __get__(self):
+            cdef double * c_resp
+            
+            c_resp = self.get_resp()            
+            resp = tuple([x for x in c_resp[:NUM_JOINT_GENOTYPES]])
+            free(c_resp)
+            
+            return resp
+        
+    property marginal:
+        def __get__(self):
+            return self.get_log_sum()
+
     cdef double * get_resp(self):
         pass
     
@@ -643,11 +656,11 @@ cdef class JointSnvMixOneCpt(JointSnvMixCpt):
         cdef int g
         cdef double log_marginal
         
-        marginal = 0
+        log_marginal = 0
         
         log_marginal = log_sum_exp(& self._cpt_array[0], NUM_JOINT_GENOTYPES)
         
-        return marginal
+        return log_marginal
 
     cdef double * _get_normal_marginal_resp(self):
         cdef int g_N, g_T, g_J
