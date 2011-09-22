@@ -555,11 +555,11 @@ cdef class SnvMixModelTrainer(object):
         
         rel_change = (ll - prev_ll) / abs(prev_ll)
     
-        if rel_change < self._convergence_threshold:
-            print "Converged"
-            self._converged = 1
-        elif rel_change < 0:
+        if rel_change < 0:
             raise Exception("Lower bound decreased exiting.")
+        elif rel_change < self._convergence_threshold:
+            print "Converged"
+            self._converged = 1        
         elif self._iters >= self._max_iters:
             print "Maximum number of iters exceeded exiting."
             self._converged = 1
@@ -831,7 +831,7 @@ cdef class SnvMixTwoCpt(SnvMixCpt):
             class_marginals[g] = params._pi[g]
             
             for d in range(self._depth):
-                class_marginals[g] * = read_marginals[g][d]
+                class_marginals[g] *= read_marginals[g][d]
         
         return class_marginals
 
