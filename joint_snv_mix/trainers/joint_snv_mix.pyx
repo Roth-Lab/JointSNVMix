@@ -33,7 +33,7 @@ cdef class PairedDataSubSampler(object):
         
         if refs == None:
 #            refs = counter.refs
-            refs = ['22',]
+            refs = ['22', ]
         
         for ref in refs:
             print "Subsampling ref {0}.".format(ref)
@@ -94,7 +94,17 @@ cdef class JointSnvMixData(object):
     pass
  
 cdef class JointSnvMixOneData(JointSnvMixData):
-    pass
+    def __init__(self, normal_counts, tumour_counts):
+        self._normal = SnvMixOneData(normal_counts[0], normal_counts[1])
+        self._tumour = SnvMixOneData(tumour_counts[0], tumour_counts[1])
+    
+    property normal:
+        def __get__(self):
+            return (self._normal.A, self._normal.B)
+    
+    property tumour:
+        def __get__(self):
+            return (self._tumour.A, self._tumour.B)    
 
 cdef JointSnvMixOneData makeJointSnvMixOneData(JointBinaryCounterRow row):
     cdef JointSnvMixOneData data = JointSnvMixOneData.__new__(JointSnvMixOneData)
@@ -145,24 +155,24 @@ cdef class JointSnvMixPriors(object):
             self._pi[g] = pi[g]
 
     def __str__(self):
-        s = "mu_N_alpha : {0}\t{1}\t{2}\n".format(self._mu_N[0][0],
-                                                  self._mu_N[1][0],
-                                                  self._mu_N[2][0])
+        s = "mu_N_alpha : "        
+        s += "\t".join([str(x[0]) for x in self.mu_N])
+        s += "\n"
+
+        s += "mu_N_beta : "        
+        s += "\t".join([str(x[1]) for x in self.mu_N])
+        s += "\n"
         
-        s += "mu_N_beta : {0}\t{1}\t{2}\n".format(self._mu_N[0][1],
-                                                  self._mu_N[1][1],
-                                                  self._mu_N[2][1])
-        
-        s = "mu_T_alpha : {0}\t{1}\t{2}\n".format(self._mu_T[0][0],
-                                                  self._mu_T[1][0],
-                                                  self._mu_T[2][0])
-        
-        s += "mu_T_beta : {0}\t{1}\t{2}\n".format(self._mu_T[0][1],
-                                                  self._mu_T[1][1],
-                                                  self._mu_T[2][1])
+        s += "mu_T_alpha : "        
+        s += "\t".join([str(x[0]) for x in self.mu_T])
+        s += "\n"
+
+        s += "mu_T_beta : "        
+        s += "\t".join([str(x[1]) for x in self.mu_T])
+        s += "\n"                   
         
         s += "pi : "
-        s += "\t".join([str(x) for x in self._pi[:NUM_JOINT_GENOTYPES]])
+        s += "\t".join([str(x) for x in self.pi])
         s += "\n"
         
         return s
@@ -187,6 +197,26 @@ cdef class JointSnvMixPriors(object):
         
         for g in range(NUM_JOINT_GENOTYPES):
             self._pi[g] = float(config.get('pi', joint_genotypes[g]))
+    
+    property mu_N:
+        def __get__(self):
+            return self._get_mu_as_tuple(self._mu_N)
+
+    property mu_T:
+        def __get__(self):
+            return self._get_mu_as_tuple(self._mu_T)
+    
+    property pi:
+        def __get__(self):
+            return tuple([x for x in self._pi[:NUM_JOINT_GENOTYPES]])
+    
+    cdef _get_mu_as_tuple(self, double c_mu[3][2]):
+            mu = []
+            
+            for g in range(NUM_GENOTYPES):
+                mu.append((c_mu[g][0], c_mu[g][1]))
+            
+            return tuple(mu) 
 
 
 #=======================================================================================================================
@@ -215,15 +245,15 @@ cdef class JointSnvMixParameters(object):
         
     def __str__(self):
         s = "mu_N : "
-        s += "\t".join([str(x) for x in self._mu_N[:NUM_GENOTYPES]])
+        s += "\t".join([str(x) for x in self.mu_N])
         s += "\n"
         
         s += "mu_T : "
-        s += "\t".join([str(x) for x in self._mu_T[:NUM_GENOTYPES]])
+        s += "\t".join([str(x) for x in self.mu_T])
         s += "\n"
 
         s += "pi : "
-        s += "\t".join([str(x) for x in self._pi[:NUM_JOINT_GENOTYPES]])
+        s += "\t".join([str(x) for x in self._pi])
         s += "\n"
         
         return s
@@ -324,10 +354,8 @@ cdef class JointSnvMixParameters(object):
         
         for g in range(NUM_JOINT_GENOTYPES):
             pi[g] = n[g] + self._priors._pi[g] - 1
-            denom += pi[g]
-        
-        for g in range(NUM_JOINT_GENOTYPES):
-            self._pi[g] = pi[g] / denom
+
+        self._normalise_pi()
     
     cdef double _get_prior_log_likelihood(self):
         cdef double ll
@@ -422,8 +450,7 @@ cdef class JointSnvMixModelTrainer(object):
             
             self._check_convergence(data)
             
-            print self._iters, self._lower_bounds[-1]
-            print self._model.params
+            self._print_status()
 
     cdef JointSnvMixEss _do_e_step(self, list data):                              
         cdef JointSnvMixData pos_data
@@ -442,8 +469,10 @@ cdef class JointSnvMixModelTrainer(object):
     cdef void _do_m_step(self, JointSnvMixEss ess):       
         self._model._params.update(ess._n, ess._a_N, ess._a_T, ess._b_N, ess._b_T)
 
-    cdef _check_convergence(self, list data):
+    cdef _check_convergence(self, list data):    
         cdef double rel_change, lb, ll, prev_ll
+        
+        self._iters += 1
         
         lb = self._model._get_lower_bound(data)        
         self._lower_bounds.append(lb)
@@ -454,6 +483,7 @@ cdef class JointSnvMixModelTrainer(object):
         rel_change = (ll - prev_ll) / abs(prev_ll)
 
         if rel_change < 0:
+            self._print_status()
             raise Exception("Lower bound decreased exiting.")    
         elif rel_change < self._convergence_threshold:
             print "Converged"
@@ -463,8 +493,10 @@ cdef class JointSnvMixModelTrainer(object):
             self._converged = 1
         else:
             self._converged = 0
-        
-        self._iters += 1
+    
+    cdef _print_status(self):
+        print self._iters, self._lower_bounds[-1]
+        print self._model.params
 
 #=======================================================================================================================
 # ESS
@@ -615,9 +647,6 @@ cdef class JointSnvMixOneCpt(JointSnvMixCpt):
         
         log_marginal = log_sum_exp(& self._cpt_array[0], NUM_JOINT_GENOTYPES)
         
-        if log_marginal  < -1:
-            print log_marginal
-
         return marginal
 
     cdef double * _get_normal_marginal_resp(self):

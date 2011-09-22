@@ -98,7 +98,17 @@ cdef class SnvMixData(object):
 
 #---------------------------------------------------------------------------------------------------------------------- 
 cdef class SnvMixOneData(SnvMixData):
-    pass
+    def __init__(self, A, B):
+        self.counts[0] = A
+        self.counts[1] = B
+    
+    property A:
+        def __get__(self):
+            return self.counts[0]
+    
+    property B:
+        def __get__(self):
+            return self.counts[1]
 
 cdef SnvMixOneData makeSnvMixOneData(binary_counts_struct counts):
     cdef SnvMixOneData data = SnvMixOneData.__new__(SnvMixOneData)
