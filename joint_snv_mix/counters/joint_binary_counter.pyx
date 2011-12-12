@@ -65,6 +65,8 @@ cdef class JointBinaryBaseCounterIterator(JointRefIterator):
                                                  normal_row._position + 1,
                                                  & region_length
                                                  )
+        
+        ref_base[0] = < char > toupper(< int > ref_base[0])
     
         self._current_row = makeJointBinaryCounterRow(ref_base, normal_row, tumour_row)
     
