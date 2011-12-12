@@ -1,5 +1,8 @@
 cdef extern from "stdlib.h":
     int strcmp (char * , char *)
+    
+cdef extern from "ctype.h":
+    int toupper(int c)
 
 #=======================================================================================================================
 # Generic counts structs
