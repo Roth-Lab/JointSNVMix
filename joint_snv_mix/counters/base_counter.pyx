@@ -125,11 +125,11 @@ C level constructor for BaseCounterRow object.
 '''
 cdef class BaseCounterRow
 cdef BaseCounterRow makeBaseCounterRow(char * ref, int position, counts_struct counts):
-     cdef BaseCounterRow row = BaseCounterRow.__new__(BaseCounterRow)
+    cdef BaseCounterRow row = BaseCounterRow.__new__(BaseCounterRow)
     
-     row._ref = ref
-     row._position = position
-     row._counts = counts     
-     row._depth = counts.A + counts.C + counts.G + counts.T
-     
-     return row
+    row._ref = ref
+    row._position = position
+    row._counts = counts     
+    row._depth = counts.A + counts.C + counts.G + counts.T
+    
+    return row
