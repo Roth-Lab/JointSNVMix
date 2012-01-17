@@ -7,6 +7,11 @@ Created on 2012-01-17
 @author: Andrew Roth
 '''
 #=======================================================================================================================
+# Global constants
+#=======================================================================================================================
+cdef int max_pos = 2 << 29
+
+#=======================================================================================================================
 # Fasta file
 #=======================================================================================================================
 cdef class Fastafile:
@@ -128,6 +133,13 @@ cdef class BamFile:
                 raise Excpetion('BamFile.pileup : End out of numerical range {0}'.format(end))
 
         rtid = reference_to_tid(self._bam_file.header, reference)
+
+        if start != None and end != None:
+            region = "{0}:{1}-{2}".format(reference, start + 1, end)
+        else:
+            region = reference
+
+        bam_parse_region(self.samfile.header, region, & rtid, & rstart, & rend)        
         
         if rtid < 0: 
             raise Exception('BamFile.pileup : Invalid reference {0}.'.format(reference))
@@ -364,18 +376,3 @@ cdef int __advance_all(void * data, bam1_t * b):
     d = < __iterdata *> data
     
     return bam_iter_read(d.bam_file_ptr.x.bam, d.iter, b)
-
-cdef int reference_to_tid(bam_header_t * header, char * s)
-    cdef khiter_t iter
-    cdef khash_t(s) * h
-    
-    bam_init_header_hash(header)
-    
-    h = < khash_t(s) *> header.hash
-    
-    iter = kh_get(s, h, s) 
-    
-    if iter == kh_end(h):
-        return -1
-    
-    return kh_value(h, iter)
