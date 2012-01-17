@@ -5,13 +5,12 @@ Created on 2011-06-21
 '''
 import unittest
 
-import pysam
-
+from joint_snv_mix.samtools import BamFile
 from joint_snv_mix.counters.base_counter import BaseCounter
 
 class Test(unittest.TestCase):
     def get_counter(self, bam_file_name, min_base_qual=10, min_map_qual=10):
-        bam_file = pysam.Samfile(bam_file_name, 'rb')        
+        bam_file = BamFile(bam_file_name)        
         counter = BaseCounter(bam_file, min_base_qual, min_map_qual)
 
         return counter

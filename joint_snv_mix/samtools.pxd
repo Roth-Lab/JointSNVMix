@@ -79,6 +79,9 @@ cdef extern from "bam.h":
         uint64_t curr_off
         pair64_t * off
 
+    uint8_t * bam1_seq( bam1_t * b)
+    uint8_t * bam1_qual( bam1_t * b)
+    
     bam1_t * bam_dup1(bam1_t * src)
 
     bam1_t * bam_init1()
@@ -186,7 +189,7 @@ cdef class IteratorColumnRegion:
     cdef int _mask
     
     cdef BamFile _bam_file
-    cdef FastaFile _fasta_file
+#    cdef FastaFile _fasta_file
     
     cdef const_bam_pileup1_t_ptr _plp    
     cdef bam_plp_t _pileup_iter    

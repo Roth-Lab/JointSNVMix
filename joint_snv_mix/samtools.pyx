@@ -6,6 +6,8 @@ Created on 2012-01-17
 
 @author: Andrew Roth
 '''
+import os
+
 #=======================================================================================================================
 # Global constants
 #=======================================================================================================================
@@ -76,15 +78,18 @@ cdef class BamFile:
         if self._bam_file.header == NULL:
             raise Exception("File {0} does not have valid header - is it SAM/BAM format?".format(self._file_name))
 
+        self._load_index(file_name)
+            
+    def __dealloc__(self):
+        bam_index_destroy(self._index)
+        
+    def _load_index(self, file_name):
         index_file_name = self._file_name + ".bai"
         
         if not os.path.exists(index_file_name):
             raise Exception("Index not found for BAM file {0}".format(file_name))
         
         self._index = bam_index_load(file_name)
-            
-    def __dealloc__(self):
-        bam_index_destroy(self._index)
     
     cdef samfile_t * get_file_pointer(self):
         return self._bam_file
@@ -151,6 +156,15 @@ cdef class BamFile:
 
         return rtid, rstart, rend
 
+    property references:
+        def __get__(self):
+            t = []
+            
+            for x in range(self._bam_file.header.n_targets):
+                t.append(self._bam_file.header.target_name[x])
+            
+            return tuple(t)    
+
 #=======================================================================================================================
 # Aligned Read
 #=======================================================================================================================
@@ -169,7 +183,7 @@ cdef makeAlignedRead(bam1_t * src):
 # Iterators
 #=======================================================================================================================
 cdef class IteratorRowRegion(object):
-    def __cinit__(self, BamFile bam_file, int tid, int start, int end, int reopen=True):        
+    def __cinit__(self, BamFile bam_file, int tid, int start, int end):        
         # Makes sure that samfile stays alive as long as the iterator is alive.
         self._bam_file = bam_file
 
@@ -204,10 +218,10 @@ cdef class IteratorRowRegion(object):
         return makeAlignedRead(self._bam_struct)
 
 cdef class IteratorColumnRegion:
-    def __cinit__(self, BamFile bam_file, FastaFile fasta_file, int tid=0, int start=0, int end=max_pos):        
+    def __cinit__(self, BamFile bam_file, int tid=0, int start=0, int end=max_pos):        
         self._bam_file = bam_file
         
-        self._fasta_file = fasta_file
+#        self._fasta_file = fasta_file
                                 
         self._mask = BAM_DEF_MASK
 
@@ -246,10 +260,10 @@ cdef class IteratorColumnRegion:
             if self._plp == NULL:
                 raise StopIteration
             
-            return makePileupProxy(< bam_pileup1_t *> self.plp,
-                                     self.tid,
-                                     self.pos,
-                                     self.n_plp)    
+            return makePileupProxy(< bam_pileup1_t *> self._plp,
+                                     self._tid,
+                                     self._pos,
+                                     self._n_plp)    
     
     cdef cnext(self):
         '''
@@ -270,7 +284,7 @@ cdef class IteratorColumnRegion:
         self._iter = IteratorRowRegion(self._bam_file, tid, start, end)
         
         self._iter_data.bam_file_ptr = self._bam_file.get_file_pointer()
-        self._iter_data.fasta_file_ptr = self._fasta_file.get_file_pointer()
+        self._iter_data.fasta_file_ptr = NULL
         self._iter_data.iter = self._iter._iter
         self._iter_data.seq = NULL
         self._iter_data.tid = -1
@@ -296,7 +310,7 @@ cdef makePileupProxy(bam_pileup1_t * plp, int tid, int pos, int n):
     dest._plp = plp
     dest._tid = tid
     dest._pos = pos
-    dest._n = n
+    dest._n_pu = n
     
     return dest
 
