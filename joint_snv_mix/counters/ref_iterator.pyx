@@ -77,7 +77,7 @@ cdef class CRefIterator(object):
         self.current_column is in an undefined state unless self.parse_current_position() is called.
         '''
         self._current_pileup_column = self._pileup_iter.next()        
-        self._position = self._current_pileup_column.pos
+        self._position = self._current_pileup_column._pos
     
     cdef parse_current_position(self):
         '''
@@ -99,8 +99,8 @@ cdef class CRefIterator(object):
         
         index = 0
 
-        for i in range(pileup_column.n_pu):
-            pileup = & pileup_column.plp[i]
+        for i in range(pileup_column._n_pu):
+            pileup = & pileup_column._plp[i]
             
             if pileup.is_del:
                 continue
@@ -126,8 +126,8 @@ cdef class CRefIterator(object):
         
         depth = 0
         
-        for i in range(pileup_column.n_pu):
-            pileup = & pileup_column.plp[i]
+        for i in range(pileup_column._n_pu):
+            pileup = & pileup_column._plp[i]
             
             if pileup.is_del:
                 continue

@@ -7,7 +7,7 @@ cdef class BaseCounter(Counter):
     '''
     Class for counting all four bases at each position in a bam file.
     '''
-    def __init__(self, Samfile bam_file, int min_base_qual=10, int min_map_qual=10):
+    def __init__(self, BamFile bam_file, int min_base_qual=10, int min_map_qual=10):
         self._bam_file = bam_file
         
         self._min_base_qual = min_base_qual
