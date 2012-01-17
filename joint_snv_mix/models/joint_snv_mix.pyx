@@ -70,9 +70,7 @@ class JointSnvMix(object):
     
     def _E_step(self, data):
         ess = JointSnvMixEss(self.params)
-        
-        log_mix_weights = [log(pi) for pi in self.params.pi]
-        
+
         for data_point in data:
             ess.update(data_point)
 
