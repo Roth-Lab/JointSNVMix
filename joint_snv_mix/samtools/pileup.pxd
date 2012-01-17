@@ -3,6 +3,13 @@ Created on 2012-01-17
 
 @author: Andrew Roth
 '''
+from libc.stdint cimport int32_t, uint8_t, uint32_t, uint64_t
+from libc.stdlib cimport free
+
+from joint_snv_mix.samtools.samtools_clib import bam_destroy1, bam_iter_read, bam_plp_reset, bam_plp_init, \
+                                                 bam_plp_destroy, bam_plp_auto, bam_plp_set_mask, BAM_DEF_MASK, \
+                                                 bam_dup1, bam_iter_t, bam1_t, samfile_t, const_bam_pileup1_t_ptr, \
+                                                 bam_plp_t, bam_pileup1_t
 
 cdef class AlignedRead:
     cdef  bam1_t * _delegate
@@ -11,6 +18,7 @@ cdef class IteratorRowRegion(object):
     cdef int _return_value    
     
     cdef bam_iter_t _iter
+    
     cdef bam1_t * _bam_struct
     cdef samfile_t * _bam_file_ptr
     

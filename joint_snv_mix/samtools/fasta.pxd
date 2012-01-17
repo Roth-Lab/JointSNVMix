@@ -6,7 +6,7 @@ Created on 2012-01-17
 from libc.stdlib cimport free
 from libc.string cimport strdup
 
-from joint_snv_mix.samtools.samtools_clib cimport fai_load, fai_destroy, faidx_fetch_seq
+from joint_snv_mix.samtools.samtools_clib cimport fai_load, fai_destroy, faidx_fetch_seq, faidx_t
 
 cdef extern from "ctype.h":
     int toupper(int c)
