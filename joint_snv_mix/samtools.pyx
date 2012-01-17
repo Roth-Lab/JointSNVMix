@@ -14,10 +14,7 @@ cdef int max_pos = 2 << 29
 #=======================================================================================================================
 # Fasta file
 #=======================================================================================================================
-cdef class Fastafile:
-    cdef char * _file_name
-    cdef faidx_t * _fasta_file
-
+cdef class FastaFile:
     def __cinit__(self, char * file_name):
         self._file_name = strdup(file_name)
         
@@ -51,7 +48,7 @@ cdef class Fastafile:
         
         len = 1
         
-        ref_base = self._fetch(reference, int position, int position + 1, & len)
+        ref_base = self._fetch(reference, position, position + 1, & len)
         
         ref_base[0] = < char > toupper(< int > ref_base[0])
 
@@ -68,12 +65,10 @@ cdef class BamFile:
     Heavily simplified version of pysam Samfile class. Tailored specifically for extracting data from BAM files for
     JointSNVMix.
     '''
-    cdef bam_index_t * _index
-
     def __cinit__(self, char * file_name):
         self._file_name = file_name
         
-        self._bam_file = samopen(filename, mode, NULL)
+        self._bam_file = samopen(file_name, 'rb', NULL)
         
         if self._bam_file == NULL:
             raise Exception("Could not open file {0} - is it SAM/BAM format?".format(self._file_name))
@@ -93,13 +88,16 @@ cdef class BamFile:
     
     cdef samfile_t * get_file_pointer(self):
         return self._bam_file
+    
+    cdef bam_index_t * get_index(self):
+        return self._index
         
     def pileup(self, reference, start=None, end=None):
         cdef int region_tid, region_start, region_end
 
         region_tid, region_start, region_end = self._parseRegion(reference, start, end)
 
-        return IteratorColumnRegion(self, tid=rtid, start=rstart, end=rend)
+        return IteratorColumnRegion(self, tid=region_tid, start=region_start, end=region_end)
 
     def _parseRegion(self, reference=None, start=None, end=None):
         '''
@@ -113,8 +111,8 @@ cdef class BamFile:
         Note that regions are 1-based, while start,end are python coordinates.
         '''
         cdef int rtid
-        cdef long long rstart
-        cdef long long rend
+        cdef int rstart
+        cdef int rend
 
         rtid = -1
         rstart = 0
@@ -130,16 +128,14 @@ cdef class BamFile:
             try:
                 rend = end
             except OverflowError:
-                raise Excpetion('BamFile.pileup : End out of numerical range {0}'.format(end))
-
-        rtid = reference_to_tid(self._bam_file.header, reference)
+                raise Exception('BamFile.pileup : End out of numerical range {0}'.format(end))
 
         if start != None and end != None:
             region = "{0}:{1}-{2}".format(reference, start + 1, end)
         else:
             region = reference
 
-        bam_parse_region(self.samfile.header, region, & rtid, & rstart, & rend)        
+        bam_parse_region(self._bam_file.header, region, & rtid, & rstart, & rend)        
         
         if rtid < 0: 
             raise Exception('BamFile.pileup : Invalid reference {0}.'.format(reference))
@@ -173,14 +169,6 @@ cdef makeAlignedRead(bam1_t * src):
 # Iterators
 #=======================================================================================================================
 cdef class IteratorRowRegion(object):
-    cdef int _return_value    
-    
-    cdef bam_iter_t _iter
-    cdef bam1_t * _bam_struct
-    cdef samfile_t * _bam_file_ptr
-    
-    cdef BamFile _bam_file
-
     def __cinit__(self, BamFile bam_file, int tid, int start, int end, int reopen=True):        
         # Makes sure that samfile stays alive as long as the iterator is alive.
         self._bam_file = bam_file
@@ -202,7 +190,7 @@ cdef class IteratorRowRegion(object):
     cdef bam1_t * getCurrent(self):
         return self._bam_struct
 
-    cdef int cnext(self):
+    cdef cnext(self):
         self._return_value = bam_iter_read(self._bam_file_ptr.x.bam,
                                            self._iter,
                                            self._bam_struct)
@@ -215,20 +203,8 @@ cdef class IteratorRowRegion(object):
         
         return makeAlignedRead(self._bam_struct)
 
-cdef class IteratorColumn:
-    cdef int _tid
-    cdef int _pos
-    cdef int _n_plp
-    cdef int _mask
-    
-    cdef BamFile _bam_file
-    cdef FastaFile _fasta_file
-    
-    cdef const_bam_pileup1_t_ptr _plp    
-    cdef bam_plp_t _pileup_iter    
-    cdef __iterdata _iter_data 
-
-    def __cinit__(self, BamFile bam_file, FastaFile fasta_file):        
+cdef class IteratorColumnRegion:
+    def __cinit__(self, BamFile bam_file, FastaFile fasta_file, int tid=0, int start=0, int end=max_pos):        
         self._bam_file = bam_file
         
         self._fasta_file = fasta_file
@@ -240,7 +216,7 @@ cdef class IteratorColumn:
         self._n_plp = 0
         self._plp = NULL
                 
-        self._setup_iterator_data(tid, start, end, 1)
+        self._setup_iterator_data(self._tid, start, end)
 
     def __dealloc__(self):
         # reset in order to avoid memory leak messages for iterators that have
@@ -275,7 +251,7 @@ cdef class IteratorColumn:
                                      self.pos,
                                      self.n_plp)    
     
-    cdef int cnext(self):
+    cdef cnext(self):
         '''
         Perform next iteration.
     
@@ -293,9 +269,9 @@ cdef class IteratorColumn:
         '''    
         self._iter = IteratorRowRegion(self._bam_file, tid, start, end)
         
-        self._iter_data.bam_file_prt = self._bam_file.get_file_ptr()
-        self._iter_data.fasta_file_prt = self._fasta_file.get_file_ptr()
-        self._iter_data.iter = self._iter
+        self._iter_data.bam_file_ptr = self._bam_file.get_file_pointer()
+        self._iter_data.fasta_file_ptr = self._fasta_file.get_file_pointer()
+        self._iter_data.iter = self._iter._iter
         self._iter_data.seq = NULL
         self._iter_data.tid = -1
             
@@ -307,25 +283,10 @@ cdef class IteratorColumn:
 # Pileup objects
 #=======================================================================================================================
 cdef class PileupProxy:
-    cdef bam_pileup1_t * _plp
-    cdef int _tid
-    cdef int _pos
-    cdef int _n_pu
-   
+    pass
+
 cdef class PileupRead:
-    '''
-    A read aligned to a column.
-    '''
-    cdef int _indel
-    cdef int _level
-    
-    cdef int32_t  _qpos
-   
-    cdef uint32_t _is_del
-    cdef uint32_t _is_head
-    cdef uint32_t _is_tail
-    
-    cdef AlignedRead _alignment
+    pass
 
 # Factory methods
 #---------------------------------------------------------------------------------------------------------------------- 
@@ -355,24 +316,12 @@ cdef makePileupRead(bam_pileup1_t * src):
 #=======================================================================================================================
 # Utility functions and structs
 #=======================================================================================================================
-ctypedef struct __iter_data:
-    int tid
-    int seq_len
-    
-    char * seq
-    
-    bam_iter_t iter
-    
-    faidx_t * fasta_file_ptr
-    
-    samfile_t * bam_file_ptr
-
 cdef int __advance_all(void * data, bam1_t * b):
     '''
     Advance without any read filtering.
     '''
     cdef __iter_data * d
     
-    d = < __iterdata *> data
+    d = < __iter_data *> data
     
     return bam_iter_read(d.bam_file_ptr.x.bam, d.iter, b)
