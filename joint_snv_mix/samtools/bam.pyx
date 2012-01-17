@@ -14,43 +14,45 @@ cdef class BamFile:
     JointSNVMix.
     '''
     def __cinit__(self, char * file_name):
-        self._file_name = file_name
+        self._file_name = strdup(file_name)
+
+        self._load_index(file_name)
+            
+    def __dealloc__(self):
+        if self._file_name != NULL:
+            free(self._file_name)
         
-        self._bam_file = samopen(file_name, 'rb', NULL)
+        if self._index != NULL:
+            bam_index_destroy(self._index)
+        
+        if self._bam_file != NULL:
+            samclose(self._bam_file)
+    
+    def _open_file(self):
+        self._bam_file = samopen(self._file_name, 'rb', NULL)
         
         if self._bam_file == NULL:
             raise Exception("Could not open file {0} - is it SAM/BAM format?".format(self._file_name))
 
         if self._bam_file.header == NULL:
-            raise Exception("File {0} does not have valid header - is it SAM/BAM format?".format(self._file_name))
-
-        self._load_index(file_name)
-            
-    def __dealloc__(self):
-        bam_index_destroy(self._index)
+            raise Exception("File {0} does not have valid header - is it SAM/BAM format?".format(self._file_name))        
         
-    def _load_index(self, file_name):
-        index_file_name = self._file_name + ".bai"
+    def _load_index(self):
+        self._index = bam_index_load(self._file_name)
         
-        if not os.path.exists(index_file_name):
+        if self._index == NULL:
             raise Exception("Index not found for BAM file {0}".format(file_name))
         
-        self._index = bam_index_load(file_name)
-    
-    cdef samfile_t * get_file_pointer(self):
-        return self._bam_file
-    
-    cdef bam_index_t * get_index(self):
-        return self._index
         
+
     def pileup(self, reference, start=None, end=None):
         cdef int region_tid, region_start, region_end
 
         region_tid, region_start, region_end = self._parseRegion(reference, start, end)
 
-        return IteratorColumnRegion(self, tid=region_tid, start=region_start, end=region_end)
+        return IteratorColumnRegion(self, tid=region_tid, start=region_start, end=region_end)    
 
-    def _parseRegion(self, reference=None, start=None, end=None):
+    def _parseRegion(self, reference, start=None, end=None):
         '''
         Parse region information.
 
@@ -100,7 +102,13 @@ cdef class BamFile:
         if not 0 <= rend <= max_pos: 
             raise ValueError('BamFile.pileup : End out of range {0}'.format(rend))
 
-        return rtid, rstart, rend
+        return rtid, rstart, rend    
+    
+    cdef samfile_t * get_file_pointer(self):
+        return self._bam_file
+    
+    cdef bam_index_t * get_index(self):
+        return self._index
 
     property references:
         def __get__(self):
