@@ -15,8 +15,12 @@ cdef class BamFile:
     '''
     def __cinit__(self, char * file_name):
         self._file_name = strdup(file_name)
+        
+        self._open_file()
 
-        self._load_index(file_name)
+        self._load_index()
+        
+        self._load_references()
             
     def __dealloc__(self):
         if self._file_name != NULL:
@@ -41,68 +45,45 @@ cdef class BamFile:
         self._index = bam_index_load(self._file_name)
         
         if self._index == NULL:
-            raise Exception("Index not found for BAM file {0}".format(file_name))
-        
-        
-
-    def pileup(self, reference, start=None, end=None):
-        cdef int region_tid, region_start, region_end
-
-        region_tid, region_start, region_end = self._parseRegion(reference, start, end)
-
-        return IteratorColumnRegion(self, tid=region_tid, start=region_start, end=region_end)    
-
-    def _parseRegion(self, reference, start=None, end=None):
-        '''
-        Parse region information.
-
-        raise ValueError for for invalid regions.
-
-        returns a tuple of flag, tid, start and end. Flag indicates
-        whether some coordinates were supplied.
-
-        Note that regions are 1-based, while start,end are python coordinates.
-        '''
-        cdef int rtid
-        cdef int rstart
-        cdef int rend
-
-        rtid = -1
-        rstart = 0
-        rend = max_pos
-        
-        if start != None: 
-            try:
-                rstart = start
-            except OverflowError:
-                raise Exception('BamFile.pileup : Start out of numerical range {0}'.format(start))
+            raise Exception("Index not found for BAM file {0}".format(self._file_name))
+    
+    def _load_references(self):        
+        self._refs = []
+        self._tids = {}
             
-        if end != None: 
-            try:
-                rend = end
-            except OverflowError:
-                raise Exception('BamFile.pileup : End out of numerical range {0}'.format(end))
+        for i in range(self._bam_file.header.n_targets):
+            self._refs.append(self._bam_file.header.target_name[i])
+        
+        for ref in self._refs:
+            tid = self._get_tid(ref)
+            
+            print ref, tid
+            
+            self._tids[ref] = tid
+            
+    def get_counts_iterator(self, reference, start=None, stop=None):
+        if reference not in self._refs:
+            raise Exception("Invalid reference given `{0}`".format(reference))
+        
+        tid = self._tids[reference]
 
-        if start != None and end != None:
-            region = "{0}:{1}-{2}".format(reference, start + 1, end)
+        if start is not None and stop is not None:
+            return PileupRegionIterator(self, tid=tid, start=start, stop=stop)
         else:
-            region = reference
+            return PileupRegionIterator(self, tid=tid) 
 
-        bam_parse_region(self._bam_file.header, region, & rtid, & rstart, & rend)        
+    def _get_tid(self, reference):
+        '''
+        Use bam_parse_region to extract the tid, start and end of a reference.
+        '''
+        cdef int tid, start, end
+
+        bam_parse_region(self._bam_file.header, reference, & tid, & start, & end)        
         
-        if rtid < 0: 
+        if tid < 0: 
             raise Exception('BamFile.pileup : Invalid reference {0}.'.format(reference))
-        
-        if rstart > rend: 
-            raise Exception('BamFile.pileup : Invalid coordinates: start {0} > end {1}.'.format(rstart, rend))
-        
-        if not 0 <= rstart < max_pos: 
-            raise Exception('BamFile.pileup : Start out of range {0}'.format(rstart))
-        
-        if not 0 <= rend <= max_pos: 
-            raise ValueError('BamFile.pileup : End out of range {0}'.format(rend))
 
-        return rtid, rstart, rend    
+        return tid    
     
     cdef samfile_t * get_file_pointer(self):
         return self._bam_file
@@ -112,9 +93,4 @@ cdef class BamFile:
 
     property references:
         def __get__(self):
-            t = []
-            
-            for x in range(self._bam_file.header.n_targets):
-                t.append(self._bam_file.header.target_name[x])
-            
-            return tuple(t)
+            return tuple(self._refs)

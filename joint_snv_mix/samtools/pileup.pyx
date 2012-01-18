@@ -7,10 +7,6 @@ Created on 2012-01-17
 cdef int max_pos = 2 << 29
 cdef char * bam_nt16_rev_table = "=ACMGRSVTWYHKDBN"
 
-#cdef class AlignedRead:
-#    def __dealloc__(self):
-#        bam_destroy1(self._delegate)
-
 cdef class PileupRegionIterator:
     def __cinit__(self, BamFile bam_file, int tid=0, int start=0, int stop=max_pos):        
         self._bam_file = bam_file
@@ -44,30 +40,42 @@ cdef class PileupRegionIterator:
     def __next__(self): 
         while True:
             self.cnext()
-            
-            if self._n_plp < 0:
-                raise Exception("IteratorColumn : error during iteration.")
-        
-            if self._plp == NULL:
+
+            if self._column is None:
                 raise StopIteration
-            
-            return makePileupColumn(< bam_pileup1_t *> self._plp,
-                                    self._tid,
-                                    self._pos,
-                                    self._n_plp)
-#            return self._tid, self._pos, self._n_plp
+            else:
+                return self._column
     
     cdef cnext(self):
         '''
-        Perform next iteration.
+        C-level iterator function. Moves current_column to next position.
+        '''
+        self.advance_position()
+        self.parse_current_position()
     
-        This method is analogous to the samtools bam_plp_auto method.
-        It has been re-implemented to permit for filtering.
+    cdef advance_position(self):
+        '''
+        This function moves the underlying pileup pointer along.
         '''
         self._plp = bam_plp_auto(self._pileup_iter,
                                  & self._tid,
                                  & self._pos,
                                  & self._n_plp)
+    
+    cdef parse_current_position(self):
+        '''
+        This function parses the current position to create a pileup column.
+        '''
+        if self._n_plp < 0:
+            raise Exception("IteratorColumn : error during iteration.")        
+        
+        if self._plp == NULL:
+            self._column = None
+        else:
+            self._column = makePileupColumn(< bam_pileup1_t *> self._plp,
+                                            self._tid,
+                                            self._pos,
+                                            self._n_plp)
         
     cdef _setup_iterator_data(self, int tid, int start, int stop):
         '''
@@ -88,9 +96,6 @@ cdef class PileupRegionIterator:
         
         print self._iter_data.tid
 
-#cdef class PileupProxy:
-#    pass
-
 cdef class PileupColumn:
     def __dealloc__(self):
         free(self._bases)
@@ -98,49 +103,11 @@ cdef class PileupColumn:
         free(self._map_quals)
     
     def __str__(self):
-        return self._tid, self._pos
-
-#cdef class PileupRead:
-#    pass
+        return "{0}, {1}, {2}".format(self._tid, self._pos, self._depth)
 
 #=======================================================================================================================
 # Factory methods
 #=======================================================================================================================
-#cdef makeAlignedRead(bam1_t * src):
-#    cdef AlignedRead dest = AlignedRead.__new__(AlignedRead)
-#    
-#    dest._delegate = bam_dup1(src)
-#    
-#    return dest
- 
-#cdef makePileupProxy(bam_pileup1_t * plp, int tid, int pos, int n):
-#    cdef PileupProxy dest = PileupProxy.__new__(PileupProxy)
-#    
-#    dest._num_reads = n
-#    dest._pileup_ptr = plp
-#    
-#    dest._tid = tid
-#    dest._pos = pos
-#
-#    return dest
-
-#cdef makePileupRead(bam_pileup1_t * src):
-#    cdef PileupRead dest = PileupRead.__new__(PileupRead)
-#    
-#    dest._alignment = makeAlignedRead(src.b)
-#    
-#    dest._query_pos = src.qpos
-#    
-#    dest._indel_size = src.indel
-#
-#    dest._level_in_viewer = src.level
-#
-#    dest._is_del = src.is_del
-#    dest._is_head = src.is_head
-#    dest._is_tail = src.is_tail
-#    
-#    return dest
-
 cdef makePileupColumn(bam_pileup1_t * plp, int tid, int pos, int n):
     cdef int i, depth, index, qpos
     cdef bam1_t * alignment
@@ -149,7 +116,9 @@ cdef makePileupColumn(bam_pileup1_t * plp, int tid, int pos, int n):
     cdef PileupColumn column = PileupColumn.__new__(PileupColumn)
                     
     column._tid = tid
-    column._pos = pos
+    
+    # Shift to Sam format 1-based coordinates.
+    column._pos = pos + 1
     
     # Find out how many non deletion reads there are.
     depth = get_covered_depth(plp, n)    
@@ -198,7 +167,6 @@ cdef int advance_all(void * data, bam1_t * b):
     return bam_iter_read(d.bam_file_ptr.x.bam, d.iter, b)
 
 cdef char get_base(bam1_t * src, int pos):
-    cdef uint8_t * p
     cdef char base
 
     if src.core.l_qseq == 0: 
@@ -217,6 +185,7 @@ cdef int get_qual(bam1_t * src, int pos):
     cdef uint8_t * p
 
     p = bam1_qual(src)
+    
     if p[0] == 0xff:
         return None
 
