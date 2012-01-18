@@ -51,3 +51,11 @@ cdef class PileupColumn:
     
     cdef int * _base_quals
     cdef int * _map_quals
+    
+    cdef int get_depth(self)
+    
+    cdef get_nucleotide_counts(self, int * counts, int min_base_qual=0, int min_map_qual=0)
+    cdef get_nucleotide_probabilities(self, double ** q, double * r)
+    
+    cdef double convert_phred_qual_to_prob(self, int qual)    
+    cdef _fill_base_prob_array(self, char base, int base_qual, double * array)
