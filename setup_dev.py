@@ -181,7 +181,7 @@ ext_modules = [
 
 setup(
       name='JointSNVMix',
-      version='0.7.3',
+      version='0.7.4',
       description='A collection of tools for calling somatic mutations in paired tumour normal data.',
       author='Andrew Roth',
       author_email='andrewjlroth@gmail.com',

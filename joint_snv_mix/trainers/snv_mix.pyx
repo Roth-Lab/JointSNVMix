@@ -98,7 +98,17 @@ cdef class SnvMixData(object):
 
 #---------------------------------------------------------------------------------------------------------------------- 
 cdef class SnvMixOneData(SnvMixData):
-    pass
+    def __init__(self, A, B):
+        self.counts[0] = A
+        self.counts[1] = B
+    
+    property A:
+        def __get__(self):
+            return self.counts[0]
+    
+    property B:
+        def __get__(self):
+            return self.counts[1]
 
 cdef SnvMixOneData makeSnvMixOneData(binary_counts_struct counts):
     cdef SnvMixOneData data = SnvMixOneData.__new__(SnvMixOneData)
@@ -441,7 +451,7 @@ cdef class SnvMixModel(object):
         
     property params:
         def __get__(self):
-            return self.params
+            return self._params
 
     cdef double _get_lower_bound(self, list data):
         cdef double lb
@@ -461,16 +471,13 @@ cdef class SnvMixModel(object):
     
     cdef double _get_log_likelihood(self, SnvMixData data):
         cdef SnvMixCpt cpt
-        cdef double likelihood
+        cdef double log_likelihood
         
         cpt = self._get_complete_log_likelihood(data)
         
-        likelihood = cpt.marginalise()
+        log_likelihood = cpt.get_log_sum()
         
-        if likelihood == 0:
-            likelihood = EPS
-        
-        return log(likelihood)
+        return log_likelihood
 
 cdef class PairedSnvMixModel(object):        
     def fit(self, dict data, convergence_threshold=1e-6, max_iters=100):
@@ -528,8 +535,7 @@ cdef class SnvMixModelTrainer(object):
             
             self._check_convergence(data)
             
-            print self._iters, self._lower_bounds[-1]
-            print self._model._params
+            self._print_status()
 
     cdef SnvMixEss _do_e_step(self, list data):                              
         cdef SnvMixData pos_data
@@ -547,8 +553,10 @@ cdef class SnvMixModelTrainer(object):
     cdef void _do_m_step(self, SnvMixEss ess):       
         self._model._params.update(ess._n, ess._a, ess._b)
 
-    cdef _check_convergence(self, list data):
+    cdef _check_convergence(self, list data):    
         cdef double rel_change, lb, ll, prev_ll
+        
+        self._iters += 1
         
         lb = self._model._get_lower_bound(data)        
         self._lower_bounds.append(lb)
@@ -557,10 +565,10 @@ cdef class SnvMixModelTrainer(object):
         prev_ll = self._lower_bounds[-2]
         
         rel_change = (ll - prev_ll) / abs(prev_ll)
-    
+
         if rel_change < 0:
-            print "Lower bound decreased exiting."
-            self._converged = 1
+            self._print_status()
+            raise Exception("Lower bound decreased exiting.")    
         elif rel_change < self._convergence_threshold:
             print "Converged"
             self._converged = 1
@@ -569,8 +577,10 @@ cdef class SnvMixModelTrainer(object):
             self._converged = 1
         else:
             self._converged = 0
-        
-        self._iters += 1
+    
+    cdef _print_status(self):
+        print self._iters, self._lower_bounds[-1]
+        print self._model.params
 
 #=======================================================================================================================
 # ESS
@@ -616,7 +626,7 @@ cdef class SnvMixCpt(object):
     cdef double * get_expected_counts_b(self):
         pass
     
-    cdef double marginalise(self):
+    cdef double get_log_sum(self):
         pass
 
 #---------------------------------------------------------------------------------------------------------------------- 
@@ -676,16 +686,13 @@ cdef class SnvMixOneCpt(SnvMixCpt):
         
         return b
     
-    cdef double marginalise(self):
+    cdef double get_log_sum(self):
         cdef int g
-        cdef double marginal
+        cdef double log_marginal
         
-        marginal = 0
+        log_marginal = log_sum_exp(& self._cpt_array[0], NUM_GENOTYPES)
         
-        for g in range(NUM_GENOTYPES):
-            marginal += exp(self._cpt_array[g])
-        
-        return marginal
+        return log_marginal
     
     cdef _init_cpt_array(self, SnvMixOneData data, SnvMixParameters params):
         cdef int a, b, g
@@ -693,9 +700,10 @@ cdef class SnvMixOneCpt(SnvMixCpt):
         
         self._cpt_array = < double *> malloc(NUM_GENOTYPES * sizeof(double))
         
+        a = data.counts[0]
+        b = data.counts[1]
+        
         for g in range(NUM_GENOTYPES):
-            a = data.counts[0]
-            b = data.counts[1]
             mu = params._mu[g]
             log_pi = log(params._pi[g])
             
@@ -731,8 +739,8 @@ cdef class SnvMixTwoCpt(SnvMixCpt):
     cdef double * get_expected_counts_b(self):
         return self._get_expected_counts(0)
     
-    cdef double marginalise(self):
-        return self._marginal
+    cdef double get_log_sum(self):
+        return log(self._marginal)
 
     cdef double * _get_expected_counts(self, int a):
         '''

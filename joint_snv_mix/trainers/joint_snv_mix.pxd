@@ -13,7 +13,6 @@ from joint_snv_mix.counters.joint_binary_counter cimport JointBinaryCounterRow
 from joint_snv_mix.counters.joint_binary_quality_counter cimport JointBinaryQualityCounterRow
 
 from joint_snv_mix.utils.log_pdf cimport dirichlet_log_likelihood, log_space_normalise_row, log_sum_exp
-from joint_snv_mix.utils.special_functions cimport lncombination
 
 from joint_snv_mix.trainers.snv_mix cimport SnvMixOneData, SnvMixTwoData, makeSnvMixOneData, makeSnvMixTwoData
 
@@ -51,6 +50,8 @@ cdef class JointSnvMixPriors(object):
     cdef double _mu_N[NUM_GENOTYPES][2]
     cdef double _mu_T[NUM_GENOTYPES][2]
     cdef double _pi[NUM_JOINT_GENOTYPES]
+    
+    cdef _get_mu_as_tuple(self, double c_mu[3][2])
 
 #---------------------------------------------------------------------------------------------------------------------- 
 cdef class JointSnvMixParameters(object):
@@ -69,7 +70,7 @@ cdef class JointSnvMixParameters(object):
 
 #---------------------------------------------------------------------------------------------------------------------- 
 cdef class JointSnvMixCpt(object):
-    cdef double marginalise(self)
+    cdef double get_log_sum(self)
     cdef double * get_resp(self)
     cdef double * get_expected_counts_a_N(self)
     cdef double * get_expected_counts_a_T(self)
@@ -169,6 +170,7 @@ cdef class JointSnvMixModelTrainer(object):
     cdef JointSnvMixEss _do_e_step(self, list data)
     cdef void _do_m_step(self, JointSnvMixEss ess)
     cdef _check_convergence(self, list data)
+    cdef _print_status(self)
 
 cdef JointSnvMixOneData makeJointSnvMixOneData(JointBinaryCounterRow row)
 cdef JointSnvMixTwoData makeJointSnvMixTwoData(JointBinaryQualityCounterRow row)

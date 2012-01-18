@@ -11,7 +11,6 @@ import pysam
 
 from joint_snv_mix.counters.joint_binary_counter import JointBinaryBaseCounter
 
-
 class Test(unittest.TestCase):
     def get_counter(self, min_base_qual=10, min_map_qual=10):
         normal_file_name = "data/paired/normal.bam"

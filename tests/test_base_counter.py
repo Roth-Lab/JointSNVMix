@@ -112,6 +112,17 @@ class Test(unittest.TestCase):
         reader = self.get_counter('data/map_quality.bam', min_map_qual=map_qual)        
         row = reader.iter_ref('1').next()        
         self.assertEqual(row.counts[0], expected_counts)
+    
+    def test_lower_case(self):
+        '''
+        Make sure that lower case in bam files does not affect counts.
+        '''
+        counter = self.get_counter('data/lower_case.bam', 0, 0)        
+        iter = counter.iter_ref('1')
+        
+        row = iter.next()
+        
+        self.assertEqual(row.counts[0], 1)
         
 if __name__ == "__main__":
     #import sys;sys.argv = ['', 'Test.testName']

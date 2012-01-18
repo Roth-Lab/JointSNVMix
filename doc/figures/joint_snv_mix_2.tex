@@ -1,0 +1,119 @@
+\documentclass[a4paper,10pt]{article} 
+
+\usepackage[english]{babel} 
+\usepackage[T1]{fontenc} 
+\usepackage[ansinew]{inputenc} 
+
+\usepackage{lmodern} 
+
+% font definition
+\usepackage{amsmath} 
+
+% math fonts
+\usepackage{amsthm} 
+\usepackage{amsfonts} 
+
+\usepackage{tikz} 
+
+%%%<
+\usepackage{verbatim} 
+\usepackage[active,tightpage]{preview} \PreviewEnvironment{tikzpicture} \setlength\PreviewBorder{5pt}
+
+\usetikzlibrary{decorations.pathmorphing} 
+
+\usetikzlibrary{backgrounds}
+\usetikzlibrary{calc}
+\usetikzlibrary{fit}
+\usetikzlibrary{positioning}
+
+% drawing the background after the foreground
+\begin{document}
+
+\begin{figure}
+	[htbp] \centering
+	
+	% Layer for the latent variables.
+	\pgfdeclarelayer{latent}
+	
+	% Hidden variables are white.
+	\tikzstyle{hidden}=[circle, thick, minimum size=1.2cm, draw=black, fill=white] 
+
+	% Hidden variables are white.
+	\tikzstyle{visible}=[circle, thick, minimum size=1.2cm, draw=black, fill=gray!20]
+	
+	% Hidden variables are white.
+	\tikzstyle{parameter}=[rectangle, thick, minimum size=0.8cm, draw=black, fill=gray!20, rounded corners=3mm]
+	
+	\begin{tikzpicture}[>=stealth]
+		\node[parameter] (delta) 	{$\boldsymbol{\delta}$};
+
+		\node[hidden] (pi) 	[below=of delta]	{$\boldsymbol{\pi}$};
+
+		\node[hidden] (G)	[below=of pi]	{$\boldsymbol{G}^{i}$};
+				 
+		\node[hidden] (a_N)	[below left=of G]	{$a_{N:j_{N}}^{i}$};
+		\node[hidden] (z_N)	[left=of a_N]	{$z_{N:j_{N}}^{i}$};
+		\node[visible] (q_N)	[below=of a_N]	{$q_{N:j_{N}}^{i}$};
+		\node[visible] (r_N)	[left=of q_N]	{$r_{N:j_{N}}^{i}$};
+
+		\node[hidden] (a_T)	[below right=of G]	{$a_{T:j_{T}}^{i}$}; 	
+		\node[hidden] (z_T)	[right=of a_T]	{$z_{T:j_{T}}^{i}$}; 	
+		\node[visible] (q_T)	[below=of a_T]	{$q_{T:j_{T}}^{i}$};
+		\node[visible] (r_T)	[right=of q_T]	{$r_{T:j_{T}}^{i}$};
+		
+		\node[hidden] (mu_N)	[above=of a_N, yshift=18mm]		{$\boldsymbol{\mu}_{N}$};
+		\node[hidden] (mu_T)	[above=of a_T, yshift=18mm]	{$\boldsymbol{\mu}_{T}$};
+		
+		\node[parameter] (hyper_N)	[above=of mu_N]	{$\boldsymbol{\alpha}_{N}$ $\boldsymbol{\beta}_{N}$};
+		\node[parameter] (hyper_T)	[above=of mu_T]	{$\boldsymbol{\alpha}_{T}$ $\boldsymbol{\beta}_{T}$};
+		right
+		% Connect the nodes by arrows.		
+		\draw	[->, thick]	(delta)	to	(pi);
+		
+		\draw	[->, thick]	(pi)	to	(G);
+
+		\draw	[->, thick]	(G)	to	(a_N);
+		\draw	[->, thick]	(G)	to	(a_T);
+		
+		\draw	[->, thick]	(a_N)	to	(q_N);
+		\draw	[->, thick]	(a_T)	to	(q_T);
+		
+		\draw	[->, thick]	(z_N)	to	(q_N);
+		\draw	[->, thick]	(z_T)	to	(q_T);
+		
+		\draw	[->, thick]	(z_N)	to	(r_N);
+		\draw	[->, thick]	(z_T)	to	(r_T);
+		
+		\draw	[->, thick]	(mu_N)	to	(a_N);
+		\draw	[->, thick]	(mu_T)	to	(a_T);
+		
+		\draw	[->, thick]	(hyper_N)	to	(mu_N);
+		\draw	[->, thick]	(hyper_T)	to	(mu_T);
+
+		
+		% Plate for latent states.
+		\begin{pgfonlayer}{background}
+			\node [draw=black, inner xsep=1em, inner ysep=2em, fit=(G) (a_N) (a_T) (z_N) (z_T) (q_N) (q_T) (r_N) (r_T)] (latent) {};
+		\end{pgfonlayer}
+		\node[above] at (latent.south) {$I$};
+
+		% Plate for normal read states.
+		\begin{pgfonlayer}{background}
+			\node [draw=black, inner xsep=0.5em, inner ysep=1.5em, fit=(a_N) (z_N) (q_N) (r_N)] (latent) {};
+		\end{pgfonlayer}
+		\node[above] at (latent.south) {$j_{N} \in \{1, ..., d_{N}^{i}\}$};
+		
+		% Plate for tumour read states.
+		\begin{pgfonlayer}{background}
+			\node [draw=black, inner xsep=0.5em, inner ysep=1.5em, fit=(a_T) (z_T) (q_T) (r_T)] (latent) {};
+		\end{pgfonlayer}
+		\node[above] at (latent.south) {$j_{T} \in \{1, ..., d_{T}^{i}\}$};		
+
+		
+		
+	\end{tikzpicture}
+	
+	\caption{SequentialSVNMix Model} 
+\end{figure}
+
+\end{document} 

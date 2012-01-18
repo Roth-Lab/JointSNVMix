@@ -8,7 +8,7 @@ from joint_snv_mix.counters.ref_iterator cimport JointRefIterator
 
 from joint_snv_mix.counters.base_counter cimport BaseCounter, BaseCounterRow, BaseCounterRefIterator
 
-from joint_snv_mix.counters.shared cimport binary_counts_struct, base_counts_struct, strcmp, counts_struct
+from joint_snv_mix.counters.shared cimport binary_counts_struct, base_counts_struct, strcmp, counts_struct, toupper
    
 cdef class JointBinaryBaseCounter(Counter):
     cdef BaseCounter _normal_counter
