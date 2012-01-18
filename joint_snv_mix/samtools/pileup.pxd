@@ -21,9 +21,6 @@ ctypedef struct iter_data_t:
     int seq_len
     char * seq
 
-#cdef class AlignedRead:
-#    cdef  bam1_t * _delegate
-
 cdef class PileupRegionIterator:
     cdef int _tid
     cdef int _pos
@@ -34,40 +31,23 @@ cdef class PileupRegionIterator:
     
     cdef const_bam_pileup1_t_ptr _plp    
     cdef bam_plp_t _pileup_iter    
-
     cdef iter_data_t _iter_data 
+    
+    cdef PileupColumn _column
 
     cdef cnext(self)
+    
+    cdef advance_position(self)
+    cdef parse_current_position(self)
+    
     cdef _setup_iterator_data(self, int tid, int start, int end)
-    
-#cdef class PileupProxy:
-#    cdef int _num_reads
-#    cdef bam_pileup1_t * _pileup_ptr
-#    
-#    cdef int _tid
-#    cdef int _pos
-    
+        
 cdef class PileupColumn:
     cdef int _tid
     cdef int _pos
+    cdef int _depth
     
     cdef char * _bases
     
     cdef int * _base_quals
     cdef int * _map_quals
-    
-#cdef class PileupRead:
-#    cdef int _indel_size
-#    cdef int _level_in_viewer
-#    
-#    cdef int32_t  _query_pos
-#   
-#    cdef uint32_t _is_del
-#    cdef uint32_t _is_head
-#    cdef uint32_t _is_tail
-#    
-#    cdef AlignedRead _alignment
-#
-#cdef makeAlignedRead(bam1_t * src)
-#cdef makePileupProxy(bam_pileup1_t * plp, int tid, int pos, int n)
-#cdef makePileupRead(bam_pileup1_t * src)

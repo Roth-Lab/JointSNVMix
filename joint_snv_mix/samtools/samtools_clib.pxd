@@ -129,17 +129,3 @@ cdef extern from "sam.h":
     
     samfile_t * samopen(const_char_ptr fn, char * mode, void * aux)
     void samclose(samfile_t * fp)
-
-ctypedef struct __iter_data:
-    int tid
-    int seq_len
-    
-    char * seq
-    
-    bam_iter_t iter
-    
-    faidx_t * fasta_file_ptr
-    
-    samfile_t * bam_file_ptr
-
-
