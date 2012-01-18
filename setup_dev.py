@@ -66,8 +66,7 @@ samtools_exclude = ("bamtk.c",
                     "md5fa.c",
                     "maq2sam.c")
 
-all_samtools_files = ['joint_snv_mix/samtools.pyx']
-all_samtools_files.extend(glob.glob('include/samtools/*.c'))
+all_samtools_files = glob.glob('include/samtools/*.c')
 all_samtools_files.extend(glob.glob(os.path.join('include/samtools/', '*', '*.c')))
 
 samtools_files = []
@@ -77,32 +76,35 @@ for file_name in all_samtools_files:
         continue
     samtools_files.append(file_name)
 
-samtools_includes = ['joint_snv_mix', 'include/samtools']
+samtools_includes = ['joint_snv_mix/samtools', 'include/samtools']
 
-samtools = Extension(
-                     "joint_snv_mix.samtools",
-                     samtools_files,
-                     include_dirs=samtools_includes,
-                     libraries=[ "z", ]
-                     )
+bam = Extension(
+                 "joint_snv_mix.samtools.bam",
+                 ['joint_snv_mix/samtools/bam.pyx', ] + samtools_files,
+                 include_dirs=samtools_includes,
+                 libraries=[ "z", ]
+                 )
 
-utils_includes = [
-                  'joint_snv_mix/utils'
-                  ]
+pileup = Extension(
+                   "joint_snv_mix.samtools.pileup",
+                   ['joint_snv_mix/samtools/pileup.pyx', ] + samtools_files,
+                   include_dirs=samtools_includes,
+                   libraries=[ "z", ]
+                   )
 
-log_pdf = Extension(
-                    "joint_snv_mix.utils.log_pdf",
-                    ["joint_snv_mix/utils/log_pdf.pyx"],
-                    include_dirs=utils_includes
-                    )
+#utils_includes = [
+#                  'joint_snv_mix/utils'
+#                  ]
+#
+#log_pdf = Extension(
+#                    "joint_snv_mix.utils.log_pdf",
+#                    ["joint_snv_mix/utils/log_pdf.pyx"],
+#                    include_dirs=utils_includes
+#                    )
 
 ext_modules = [
-               ref_iterator,
-               counter,
-               counter_row,
-               base_counter,
-               samtools,
-               log_pdf
+               bam,
+               pileup
                ]
 
 setup(
@@ -115,8 +117,9 @@ setup(
       
       packages=[ 
                 'joint_snv_mix',
+                'joint_snv_mix.samtools',
 #                'joint_snv_mix.counters',
-                'joint_snv_mix.utils'
+#                'joint_snv_mix.utils'
                 ],
       
       cmdclass={'build_ext': build_ext},
