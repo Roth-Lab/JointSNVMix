@@ -278,7 +278,15 @@ cdef class JointSnvMixModel(object):
     def fit(self, data, max_iters=1000, tolerance=1e-6, verbose=False):
         '''
         Fit the model using the EM algorithm.
-        '''        
+        '''
+        if verbose:        
+            print "Fitting model to {0} data-points".format(len(data))
+            print
+            print "Priors : "
+            print self.priors
+            print "Initial parameters : "
+            print self.params
+        
         iters = 0
         ll = [float('-inf')]
         converged = False
@@ -293,19 +301,20 @@ cdef class JointSnvMixModel(object):
             ll.append(ll_iter)
             
             ll_diff = ll[-1] - ll[-2]
+            relative_ll_diff = (ll_diff) / abs(ll[-2]) 
             
             iters += 1
             
             if verbose:
-                print "#" * 20
-                print iters, ll[-1]
+                print "#" * 80
+                print iters, ll[-1], ll_diff, relative_ll_diff
                 print self.params
             
-            if ll_diff < 0:
+            if relative_ll_diff < 0:
                 print self.params
-                print ll[-1], ll[-2]
+                print ll[-1], ll[-2], ll_diff, relative_ll_diff
                 raise Exception('Lower bound decreased.')
-            elif ll_diff < tolerance:
+            elif relative_ll_diff < tolerance:
                 print "Converged"
                 converged = True
             elif iters >= max_iters:
@@ -383,9 +392,7 @@ cdef class JointSnvMixModel(object):
             ll += beta_log_likelihood(mu_T, mu_T_prior['alpha'], mu_T_prior['beta'])         
         
         ll += dirichlet_log_likelihood(self.params.pi, self.priors.pi)
-        
-        print ll
-        
+
         return ll
     
     property params:
