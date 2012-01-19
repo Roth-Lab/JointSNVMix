@@ -12,7 +12,7 @@ cdef double binomial_log_likelihood(int a, int b, double mu):
 cdef double beta_log_likelihood(double mu, double a, double b):
     return (a - 1) * log(mu) + (b - 1) * log(1 - mu)
 
-cdef double dirichlet_log_likelihood(list x, list kappa):
+cdef double dirichlet_log_likelihood(tuple x, tuple kappa):
     cdef double k_i, x_i, log_likelihood
     
     log_likelihood = 0

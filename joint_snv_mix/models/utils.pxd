@@ -7,7 +7,7 @@ from libc.math cimport exp, log
 
 cdef double binomial_log_likelihood(int a, int b, double mu)
 cdef double beta_log_likelihood(double mu, double a, double b)
-cdef double dirichlet_log_likelihood(list x, list kappa)
+cdef double dirichlet_log_likelihood(tuple x, tuple kappa)
 
 cdef double snv_mix_two_log_likelihood(double * q, double * r, int d, double mu)
 cdef double snv_mix_two_single_read_log_likelihood(double q, double r, double mu)
