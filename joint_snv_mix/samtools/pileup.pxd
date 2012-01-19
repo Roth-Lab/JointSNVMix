@@ -21,7 +21,7 @@ ctypedef struct iter_data_t:
     int seq_len
     char * seq
 
-cdef class PileupRegionIterator:
+cdef class PileupIterator:
     cdef int _tid
     cdef int _pos
     cdef int _n_plp
@@ -54,8 +54,4 @@ cdef class PileupColumn:
     
     cdef int get_depth(self)
     
-    cdef get_nucleotide_counts(self, int * counts, int min_base_qual=0, int min_map_qual=0)
-    cdef get_nucleotide_probabilities(self, double ** q, double * r)
-    
-    cdef double convert_phred_qual_to_prob(self, int qual)    
-    cdef _fill_base_prob_array(self, char base, int base_qual, double * array)
+    cdef int get_nucleotide_count(self, char * base, int min_base_qual, int min_map_qual)

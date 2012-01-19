@@ -68,9 +68,9 @@ cdef class BamFile:
         tid = self._tids[reference]
 
         if start is not None and stop is not None:
-            return PileupRegionIterator(self, tid=tid, start=start, stop=stop)
+            return PileupIterator(self, tid=tid, start=start, stop=stop)
         else:
-            return PileupRegionIterator(self, tid=tid) 
+            return PileupIterator(self, tid=tid) 
 
     def _get_tid(self, reference):
         '''
