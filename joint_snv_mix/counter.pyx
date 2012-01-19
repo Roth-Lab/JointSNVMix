@@ -5,7 +5,7 @@ Created on 2012-01-18
 
 @author: Andrew Roth
 '''
-cdef class JointBinaryCounter(Counter):
+cdef class JointBinaryCounter(object):
     '''
     Class for iterating over positions from paired genome files counting bases.
     
@@ -50,13 +50,13 @@ cdef class JointBinaryCounter(Counter):
                                           self._min_base_qual,
                                           self._min_map_qual)
         
-cdef class JointBinaryCounterIterator(RefIterator):
+cdef class JointBinaryCounterIterator(object):
     def __init__(self,
                  char * type,
                  char * ref,
                  PileupIterator normal_iter,
                  PileupIterator tumour_iter,
-                 FastaFile ref_genome
+                 FastaFile ref_genome,
                  int min_base_qual,
                  int min_map_qual):        
         self._type = type        
@@ -96,6 +96,13 @@ cdef class JointBinaryCounterIterator(RefIterator):
         '''
         def __get__(self):
             return self._position + 1    
+
+    cdef cnext(self):
+        '''
+        C-level iterator function. Moves current_column to next position.
+        '''
+        self.advance_position()
+        self.parse_current_position()
         
     cdef advance_position(self):        
         cdef int normal_pos
@@ -124,30 +131,31 @@ cdef class JointBinaryCounterIterator(RefIterator):
         cdef PileupColumn tumour_column
         
         self._normal_iter.parse_current_position()        
-        normal_column = self._normal_iter._current_row
+        normal_column = self._normal_iter._column
         
         self._tumour_iter.parse_current_position()
-        tumour_column = self._tumour_iter._current_row
+        tumour_column = self._tumour_iter._column
                 
         self._current_row = self._make_counter_row(normal_column, tumour_column)
     
-    cdef _make_counter_row(self, normal_column, tumour_column):
+    cdef JointBinaryCounterRow _make_counter_row(self, PileupColumn normal_column, PileupColumn tumour_column):
         cdef JointBinaryBaseCounterRow row = JointBinaryBaseCounterRow.__new__(JointBinaryBaseCounterRow)
         
         row._ref = self._ref
         row._pos = self._pos
         
         row._ref_base = self._ref_genome.get_reference_base(self._ref, self._pos)       
-        row._var_base = get_var_base(ref_base, normal_column, tumour_column, self._min_base_qual, self._min_map_qual)
+        row._var_base = get_var_base(row._ref_base, normal_column, tumour_column, self._min_base_qual, self._min_map_qual)
         
-        if self._type == "base":
+        if strcmp(self._type, "base") == 0:
             row._data = self._make_count_data(row._ref_base, row._var_base, normal_column, tumour_column)
-        if self._type == "quality":
-            row._data = self._make_quality_data(row._ref_base, normal_column, tumour_column)            
+        if strcmp(self._type, "quality") == 0:
+            row._data = self._make_quality_data(row._ref_base, row._var_base, normal_column, tumour_column)            
          
         return row
 
-    cdef _make_count_data(self, ref_base, var_base, normal_column, tumour_column):
+    cdef JointBinaryData _make_count_data(self, char * ref_base, char * var_base,
+                          PileupColumn normal_column, PileupColumn tumour_column):
         cdef JointBinaryCountData data = JointBinaryCountData.__new__(JointBinaryCountData)
 
         data._a_N = normal_column.get_nucleotide_count(ref_base, self._min_base_qual, self._min_map_qual)
@@ -158,30 +166,39 @@ cdef class JointBinaryCounterIterator(RefIterator):
         
         return data
     
-    cdef _make_quality_data(self, ref_base, normal_column, tumour_column):
+    cdef JointBinaryData _make_quality_data(self, char * ref_base, char * var_base,
+                                            PileupColumn normal_column, PileupColumn tumour_column):
+        cdef int d_N, d_T
+        
         cdef JointBinaryQualityData data = JointBinaryQualityData.__new__(JointBinaryQualityData)
 
-        data._normal_depth = normal_column._depth
-        data._tumour_depth = tumour_column._depth
-
-        data._q_N = < double *> malloc(sizeof(double) * normal_column._depth)
-        data._r_N = < double *> malloc(sizeof(double) * normal_column._depth)
+        # Get the number of ref and non-ref bases in tumour.
+        data._a_N = normal_column.get_nucleotide_count(ref_base, 0, 0)
+        data._b_N = normal_column.get_nucleotide_count(var_base, 0, 0)
         
-        data._q_T = < double *> malloc(sizeof(double) * tumour_column._depth)
-        data._r_T = < double *> malloc(sizeof(double) * tumour_column._depth) 
-
-        normal_column.get_base_probabilities(ref_base, data._q_N)
-        normal_column.get_mapping_probabilities(data._r_N)
+        data._a_T = tumour_column.get_nucleotide_count(ref_base, 0, 0)
+        data._b_T = tumour_column.get_nucleotide_count(var_base, 0, 0)
         
-        tumour_column.get_base_probabilities(ref_base, data._q_T)
-        tumour_column.get_mapping_probabilities(data._r_T)        
+        data._d_N = data._a_N + data._b_N
+        data._d_T = data._a_T + data._b_T
+        
+        # Initialise arrays to store base and mapping probabilities. 
+        data._q_N = < double *> malloc(sizeof(double) * data._d_N)
+        data._r_N = < double *> malloc(sizeof(double) * data._d_N)
+        
+        data._q_T = < double *> malloc(sizeof(double) * data._d_T)
+        data._r_T = < double *> malloc(sizeof(double) * data._d_T)
+        
+        # Load aligment probabilities.
+        get_aligment_probabilities(ref_base, var_base, data._q_N, data._r_N, normal_column)
+        get_aligment_probabilities(ref_base, var_base, data._q_T, data._r_T, tumour_column)
 
         return data      
     
 #=======================================================================================================================
 # Row objects
 #=======================================================================================================================
-cdef class JointBinaryCounterRow(CounterRow):
+cdef class JointBinaryCounterRow(object):
     def __dealloc__(self):
         free(self._ref_base)
         free(self._var_base)
@@ -225,32 +242,40 @@ cdef class JointBinaryQualityCounterRow(JointBinaryCounterRow):
 # Data object 
 #=======================================================================================================================
 cdef class JointBinaryData(object):
-    pass
-
-cdef class JointBinaryCountData(object):
     property normal_depth:
         def __get__(self):
             return self._a_N + self._b_N
 
     property tumour_depth:
         def __get__(self):
-            return self._a_T + self._b_T        
+            return self._a_T + self._b_T
+    
+    property normal_ref_counts:
+        def __get__(self):
+            return self._a_N
 
-cdef class JointBinaryQualityData(object):
+    property normal_var_counts:
+        def __get__(self):
+            return self._b_N
+        
+    property tumour_ref_counts:
+        def __get__(self):
+            return self._a_T
+
+    property tumour_var_counts:
+        def __get__(self):
+            return self._b_T  
+
+cdef class JointBinaryCountData(JointBinaryData):
+    pass          
+
+cdef class JointBinaryQualityData(JointBinaryData):
     def __dealloc__(self):
         free(self._q_N)
         free(self._r_N)
         free(self._q_T)
         free(self._r_T)
-    
-    property normal_depth:
-        def __get__(self):
-            return self._normal_depth
-    
-    property tumour_depth:
-        def __get__(self):
-            return self._tumour_depth
-
+        
 #===============================================================================
 # Utility functions for finding non-ref bases and counts.
 #===============================================================================
@@ -299,3 +324,51 @@ cdef char * get_var_base(char * ref_base,
     else:
         return 'N'   
 
+cdef get_aligment_probabilities(char * ref_base, char * var_base, double * q, double * r, PileupColumn column):
+    '''
+    Extract mapping and base qualities for reference position from pileup column.
+    
+    Since we are only given probabilities for observed base, we assume the remaining probability is evenly shared among
+    the 3 other bases.
+    
+    This function ignores positions which do not match the reference or variant base.
+    '''
+    cdef char * base
+    cdef int read_index, i, bq, mq
+    cdef double prob
+    
+    i = 0
+    
+    for read_index in range(column._depth):
+        bq = column._base_quals[read_index]
+        mq = column._map_quals[read_index]
+        base = & column._bases[i]
+
+        if strcmp(ref_base, base) == 0:
+            prob = convert_phred_qual_to_prob(bq)
+            q[i] = prob
+            
+            r[i] = convert_phred_qual_to_prob(mq)
+            
+            i += 1
+        
+        elif strcmp(var_base, base) == 0:
+            prob = convert_phred_qual_to_prob(bq)
+            q[i] = (1 - prob) / 3
+            
+            r[i] = convert_phred_qual_to_prob(mq)
+            
+            i += 1
+
+cdef double convert_phred_qual_to_prob(int qual):
+    '''
+    Converts integer mapping or base quality on the phred scale to a probability.
+    '''
+    cdef double base, exponent, prob
+    
+    exponent = -1 * (< double > qual) / 10
+    base = 10
+    
+    prob = 1 - pow(base, exponent)
+
+    return prob                

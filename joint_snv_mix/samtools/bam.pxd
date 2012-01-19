@@ -9,7 +9,7 @@ from libc.string cimport strdup
 from joint_snv_mix.samtools.samtools_clib cimport bam_index_load, bam_index_destroy, bam_parse_region, samopen, \
                                                   samclose, samfile_t, bam_index_t
 
-from joint_snv_mix.samtools.pileup cimport PileupRegionIterator                                                 
+from joint_snv_mix.samtools.pileup cimport PileupIterator                                                 
 
 cdef class BamFile:
     cdef char * _file_name
