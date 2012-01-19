@@ -130,11 +130,13 @@ cdef class PileupColumn:
         cdef int i
         cdef int count
         
-        for i in range(self._depth):
+        count = 0
+        
+        for i in range(self._depth):            
             if self._base_quals[i] < min_base_qual or self._map_quals[i] < min_map_qual:
                 continue            
             
-            if strcmp(base, & self._bases[i]) == 0:
+            if base[0] == self._bases[i]:
                 count += 1
         
         return count
@@ -152,12 +154,12 @@ cdef makePileupColumn(bam_pileup1_t * plp, int tid, int pos, int n):
     column._tid = tid
     
     # Shift to Sam format 1-based coordinates.
-    column._pos = pos
+    column._pos = pos + 1
     
     # Find out how many non deletion reads there are.
-    depth = get_covered_depth(plp, n)    
-    
-    column._depth = depth
+#    depth = get_covered_depth(plp, n)    
+#    
+#    column._depth = depth
      
     column._bases = < char *> malloc(sizeof(char) * depth)
     column._base_quals = < int *> malloc(sizeof(int) * depth)
@@ -184,6 +186,8 @@ cdef makePileupColumn(bam_pileup1_t * plp, int tid, int pos, int n):
         bam_destroy1(alignment)
         
         index += 1
+    
+    column._depth = index
     
     return column
         

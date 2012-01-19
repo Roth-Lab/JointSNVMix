@@ -8,54 +8,14 @@ import os
 import Cython.Compiler.Options 
 Cython.Compiler.Options.annotate = True
 
-counter_includes = ['joint_snv_mix', 'joint_snv_mix/counters', 'include/samtools']
-
-ref_iterator = Extension(
-                         "joint_snv_mix.counters.ref_iterator",
-                         ["joint_snv_mix/counters/ref_iterator.pyx"],
-                         include_dirs=counter_includes
-                         )
-counter_row = Extension(
-                        "joint_snv_mix.counters.counter_row",
-                        ["joint_snv_mix/counters/counter_row.pyx"],
-                        include_dirs=counter_includes
-                        )
+counter_includes = ['joint_snv_mix', 'joint_snv_mix/samtools', 'include/samtools']
 
 counter = Extension(
-                    "joint_snv_mix.counters.counter",
-                    ["joint_snv_mix/counters/counter.pyx"],
+                    "joint_snv_mix.counter",
+                    ["joint_snv_mix/counter.pyx"],
                     include_dirs=counter_includes
                     )
 
-base_counter = Extension(
-                        "joint_snv_mix.counters.base_counter",
-                        ["joint_snv_mix/counters/base_counter.pyx"],
-                        include_dirs=counter_includes
-                        )
-#
-#quality_counter = Extension(
-#                            "joint_snv_mix.counters.quality_counter",
-#                            ["joint_snv_mix/counters/quality_counter.pyx"],
-#                            include_dirs=counter_includes
-#                            )
-#
-#joint_bin_counter = Extension(
-#                            "joint_snv_mix.counters.joint_binary_counter",
-#                            ["joint_snv_mix/counters/joint_binary_counter.pyx"],
-#                            include_dirs=counter_includes
-#                            )
-#
-#joint_quality_counter = Extension(
-#                                  "joint_snv_mix.counters.joint_binary_quality_counter",
-#                                  ["joint_snv_mix/counters/joint_binary_quality_counter.pyx"],
-#                                  include_dirs=counter_includes
-#                                  )
-#
-#positions_counter = Extension(
-#                              "joint_snv_mix.counters.positions_counter",
-#                              ["joint_snv_mix/counters/positions_counter.pyx"],
-#                              include_dirs=counter_includes
-#                              )
 samtools_exclude = ("bamtk.c",
                     "razip.c",
                     "bgzip.c",
@@ -85,6 +45,13 @@ bam = Extension(
                  libraries=[ "z", ]
                  )
 
+fasta = Extension(
+                 "joint_snv_mix.samtools.fasta",
+                 ['joint_snv_mix/samtools/fasta.pyx', ] + samtools_files,
+                 include_dirs=samtools_includes,
+                 libraries=[ "z", ]
+                 )
+
 pileup = Extension(
                    "joint_snv_mix.samtools.pileup",
                    ['joint_snv_mix/samtools/pileup.pyx', ] + samtools_files,
@@ -92,19 +59,11 @@ pileup = Extension(
                    libraries=[ "z", ]
                    )
 
-#utils_includes = [
-#                  'joint_snv_mix/utils'
-#                  ]
-#
-#log_pdf = Extension(
-#                    "joint_snv_mix.utils.log_pdf",
-#                    ["joint_snv_mix/utils/log_pdf.pyx"],
-#                    include_dirs=utils_includes
-#                    )
-
 ext_modules = [
                bam,
-               pileup
+               fasta,
+               pileup,
+               counter
                ]
 
 setup(

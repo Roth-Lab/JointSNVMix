@@ -24,7 +24,10 @@ ctypedef struct base_counts_struct:
     int counts
 
 cdef class JointBinaryCounter(object):
-    cdef char * _type
+    cdef bint _qualities
+    
+    cdef int _min_base_qual
+    cdef int _min_map_qual
     
     cdef BamFile _normal_bam
     cdef BamFile _tumour_bam
@@ -34,7 +37,7 @@ cdef class JointBinaryCounter(object):
     cdef tuple _refs 
         
 cdef class JointBinaryCounterIterator(object):
-    cdef char * _type
+    cdef bint _qualities
     cdef char * _ref
 
     cdef int _min_base_qual
