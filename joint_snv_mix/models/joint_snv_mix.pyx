@@ -271,7 +271,6 @@ cdef class JointSnvMixModel(object):
         free(self._resp)
 
     def predict(self, data_point):
-        print '1'
         self._density.get_responsibilities(data_point, self._resp)
         
         return [exp(x) for x in self._resp[:self._num_joint_genotypes]]
@@ -314,7 +313,9 @@ cdef class JointSnvMixModel(object):
             else:
                 converged = False
     
-    cdef _E_step(self, data):    
+    cdef _E_step(self, data):
+        cdef JointBinaryData data_point
+    
         self._ess.reset()
         self._density.set_params(self._params)
 
@@ -322,11 +323,11 @@ cdef class JointSnvMixModel(object):
             self._density.get_responsibilities(data_point, self._resp)
             self._ess.update(data_point, self._resp)
 
-    cdef _M_step(self):  
-        self.params._mu_N = self._get_updated_mu(self._ess.a_N, self._ess.b_N, self.priors._mu_N)
-        self.params._mu_T = self._get_updated_mu(self._ess.a_T, self._ess.b_T, self.priors._mu_T)
+    cdef _M_step(self):
+        self._params._mu_N = self._get_updated_mu(self._ess.a_N, self._ess.b_N, self._priors._mu_N)
+        self._params._mu_T = self._get_updated_mu(self._ess.a_T, self._ess.b_T, self._priors._mu_T)
         
-        self.params._pi = self._get_updated_pi(self._ess.n, self.priors._pi)
+        self._params._pi = self._get_updated_pi(self._ess.n, self._priors._pi)
 
     cdef _get_updated_mu(self, a, b, prior):
         '''
@@ -342,7 +343,7 @@ cdef class JointSnvMixModel(object):
 
             mu.append(alpha / denom)
         
-        return mu
+        return tuple(mu)
             
     cdef _get_updated_pi(self, n, prior):
         '''
@@ -355,7 +356,7 @@ cdef class JointSnvMixModel(object):
         
         pi = [x / sum(pi) for x in pi]
 
-        return pi
+        return tuple(pi)
     
     cdef double _get_log_likelihood(self, data):
         cdef double log_liklihood
@@ -445,12 +446,15 @@ cdef class _JointSnvMixDensity(object):
         '''
         Computes the responsibilities of the given data-point. Results are stored in resp.
         '''
-        print '2'
+        cdef int i
+        
         self._get_complete_log_likelihood(data_point, resp)
        
-        print '3'
         # Normalise the class log likelihoods in place to get class posteriors
         log_space_normalise(resp, self._num_joint_genotypes)
+        
+        for i in range(self._num_joint_genotypes):
+            resp[i] = exp(resp[i])
         
     cdef double get_log_likelihood(self, JointBinaryData data_point, double * ll):
         '''
@@ -632,13 +636,13 @@ cdef class _JointSnvMixOneEss(_JointSnvMixEss):
             for g_T in range(self._num_tumour_genotypes):
                 g_J = (self._num_tumour_genotypes * g_N) + g_T
             
-                self.a_N[g_N] += data_point._a_N * resp[g_J]
-                self.b_N[g_N] += data_point._b_N * resp[g_J]
+                self._a_N[g_N] += data_point._a_N * resp[g_J]
+                self._b_N[g_N] += data_point._b_N * resp[g_J]
                 
-                self.a_T[g_T] += data_point._a_T * resp[g_J]
-                self.b_T[g_T] += data_point._b_T * resp[g_J]
+                self._a_T[g_T] += data_point._a_T * resp[g_J]
+                self._b_T[g_T] += data_point._b_T * resp[g_J]
             
-                self.n += resp[g_J]      
+                self._n[g_J] += resp[g_J]      
 
 #---------------------------------------------------------------------------------------------------------------------- 
 cdef class _JointSnvMixTwoEss(_JointSnvMixEss):
@@ -660,14 +664,14 @@ cdef class _JointSnvMixTwoEss(_JointSnvMixEss):
                     a_N = snv_mix_two_expected_a(data_point._q_N[i], data_point._r_N[i], mu_N)
                     b_N = snv_mix_two_expected_b(data_point._q_N[i], data_point._r_N[i], mu_N)
                     
-                    self.a_N[g_N] += a_N * self._resp[g_J]
-                    self.b_N[g_N] += b_N * self._resp[g_J]
+                    self._a_N[g_N] += a_N * self._resp[g_J]
+                    self._b_N[g_N] += b_N * self._resp[g_J]
                     
                 for i in range(data_point._d_T):
                     a_T = snv_mix_two_expected_a(data_point._q_T[i], data_point._r_T[i], mu_T)
                     b_T = snv_mix_two_expected_b(data_point._q_T[i], data_point._r_T[i], mu_T)
                     
-                    self.a_T[g_T] += a_T * self._resp[g_J]
-                    self.b_T[g_T] += b_T * self._resp[g_J]                    
+                    self._a_T[g_T] += a_T * self._resp[g_J]
+                    self._b_T[g_T] += b_T * self._resp[g_J]                    
 
-                self.n += self._resp[g_J] 
+                self._n[g_J] += self._resp[g_J] 
