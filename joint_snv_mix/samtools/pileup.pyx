@@ -93,8 +93,6 @@ cdef class PileupIterator:
         self._pileup_iter = bam_plp_init(& advance_all, & self._iter_data)
     
         bam_plp_set_mask(self._pileup_iter, self._mask)
-        
-        print self._iter_data.tid
 
 cdef class PileupColumn:
     def __dealloc__(self):
@@ -104,6 +102,18 @@ cdef class PileupColumn:
     
     def __str__(self):
         return "{0}, {1}, {2}".format(self._tid, self._pos, self._depth)
+    
+    property position:
+        def __get__(self):
+            return self._pos + 1
+    
+    property base_quals:
+        def __get__(self):
+            return [x for x in self._base_quals[:self._depth]]
+
+    property map_quals:
+        def __get__(self):
+            return [x for x in self._map_quals[:self._depth]]
     
     cdef int get_depth(self):
         return self._depth
@@ -121,10 +131,10 @@ cdef class PileupColumn:
         cdef int count
         
         for i in range(self._depth):
-            if self._base_quals[i] < min_base_quals or self._map_quals[i] < min_map_quals:
+            if self._base_quals[i] < min_base_qual or self._map_quals[i] < min_map_qual:
                 continue            
             
-            if strcmp(base, self._bases[i]) == 0:
+            if strcmp(base, & self._bases[i]) == 0:
                 count += 1
         
         return count
@@ -142,7 +152,7 @@ cdef makePileupColumn(bam_pileup1_t * plp, int tid, int pos, int n):
     column._tid = tid
     
     # Shift to Sam format 1-based coordinates.
-    column._pos = pos + 1
+    column._pos = pos
     
     # Find out how many non deletion reads there are.
     depth = get_covered_depth(plp, n)    

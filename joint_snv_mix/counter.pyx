@@ -204,8 +204,17 @@ cdef class JointBinaryCounterRow(object):
         free(self._var_base)
 
     def __str__(self):
-        out_row = [self.ref, str(self.position), self.ref_base, self.non_ref_base]
-        out_row.extend([str(x) for x in self.counts])
+        out_row = [
+                   self.ref,
+                   str(self.position),
+                   self.ref_base,
+                   self.var_base,
+                   str(self.normal_ref_counts),
+                   str(self.normal_var_counts),
+                   str(self.tumour_ref_counts),
+                   str(self.tumour_var_counts)
+                   ]
+        
         
         return "\t".join(out_row)    
     
@@ -228,10 +237,26 @@ cdef class JointBinaryCounterRow(object):
         def __get__(self):
             return self._var_base
     
+    property normal_ref_counts:
+        def __get__(self):
+            return self._data.normal_ref_counts
+
+    property normal_var_counts:
+        def __get__(self):
+            return self._data.normal_var_counts        
+
+    property tumour_ref_counts:
+        def __get__(self):
+            return self._data.normal_ref_counts
+
+    property tumour_var_counts:
+        def __get__(self):
+            return self._data.normal_var_counts
+    
     property data:
         def __get__(self):
             return self._data 
-
+        
 cdef class JointBinaryBaseCounterRow(JointBinaryCounterRow):
     pass
 

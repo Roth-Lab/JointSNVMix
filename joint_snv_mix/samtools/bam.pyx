@@ -56,9 +56,7 @@ cdef class BamFile:
         
         for ref in self._refs:
             tid = self._get_tid(ref)
-            
-            print ref, tid
-            
+
             self._tids[ref] = tid
             
     def get_pileup_iterator(self, reference, start=None, stop=None):
