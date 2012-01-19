@@ -3,24 +3,254 @@ Created on 2012-01-16
 
 @author: Andrew Roth
 '''
-class Parameters(object):
-    def __init__(self, pi=None, mu_N=None, mu_T=None, num_genotypes=9):
-        if pi is None:
-            self.pi = tuple([1 / num_genotypes] * num_genotypes) 
-        else:
-            self.pi = pi
+#=======================================================================================================================
+# Priors
+#=======================================================================================================================
+cdef class JointSnvMixPriors(object):
+    def __init__(self, **kwargs):
+        default_mu = (
+                      (100, 2),
+                      (50, 50),
+                      (2, 100)
+                      )
         
-        default_mu = [0.999, 0.5, 0.001]
+        default_pi = (2,) * 9
         
-        if mu_N is None:
-            self.mu_N = default_mu
-        else:
-            self.mu_N = mu_N
+        mu_N = kwargs.get('mu_N', default_mu)
+        mu_T = kwargs.get('mu_T', default_mu)
+        
+        pi = kwargs.get('pi', default_pi)
+        
+        for g in range(NUM_GENOTYPES):
+            self._mu_N[g][0] = mu_N[g][0]
+            self._mu_N[g][1] = mu_N[g][1]
             
-        if mu_T is None:
-            self.mu_T = default_mu
-        else:
-            self.mu_T = mu_T
+            self._mu_T[g][0] = mu_T[g][0]
+            self._mu_T[g][1] = mu_T[g][1]
+        
+        for g in range(NUM_JOINT_GENOTYPES):    
+            self._pi[g] = pi[g]
+
+    def __str__(self):
+        s = "mu_N_alpha : "        
+        s += "\t".join([str(x[0]) for x in self.mu_N])
+        s += "\n"
+
+        s += "mu_N_beta : "        
+        s += "\t".join([str(x[1]) for x in self.mu_N])
+        s += "\n"
+        
+        s += "mu_T_alpha : "        
+        s += "\t".join([str(x[0]) for x in self.mu_T])
+        s += "\n"
+
+        s += "mu_T_beta : "        
+        s += "\t".join([str(x[1]) for x in self.mu_T])
+        s += "\n"                   
+        
+        s += "pi : "
+        s += "\t".join([str(x) for x in self.pi])
+        s += "\n"
+        
+        return s
+
+    def read_from_file(self, file_name):
+        genotypes = ['AA', 'AB', 'BB']
+        joint_genotypes = []
+        
+        for g_N in genotypes:
+            for g_T in genotypes:
+                joint_genotypes.append("_".join((g_N, g_T)))
+        
+        config = ConfigParser.SafeConfigParser()
+        config.read(file_name)
+        
+        for g in range(NUM_GENOTYPES):
+            self._mu_N[g][0] = float(config.get('mu_N_alpha', genotypes[g]))
+            self._mu_T[g][0] = float(config.get('mu_T_alpha', genotypes[g]))
+            
+            self._mu_N[g][1] = float(config.get('mu_N_beta', genotypes[g]))
+            self._mu_T[g][1] = float(config.get('mu_T_beta', genotypes[g]))
+        
+        for g in range(NUM_JOINT_GENOTYPES):
+            self._pi[g] = float(config.get('pi', joint_genotypes[g]))
+    
+    property mu_N:
+        def __get__(self):
+            return self._get_mu_as_tuple(self._mu_N)
+
+    property mu_T:
+        def __get__(self):
+            return self._get_mu_as_tuple(self._mu_T)
+    
+    property pi:
+        def __get__(self):
+            return tuple([x for x in self._pi[:NUM_JOINT_GENOTYPES]])
+    
+    cdef _get_mu_as_tuple(self, double c_mu[3][2]):
+            mu = []
+            
+            for g in range(NUM_GENOTYPES):
+                mu.append((c_mu[g][0], c_mu[g][1]))
+            
+            return tuple(mu)
+
+#=======================================================================================================================
+# Parameters
+#=======================================================================================================================
+cdef class JointSnvMixParameters(object):
+    def __init__(self, **kwargs):        
+        self._priors = kwargs.get('priors', JointSnvMixPriors())
+        
+        default_mu = (0.99, 0.5, 0.01)
+        default_pi = (1e6, 1e3, 1e3, 1e3, 1e4, 1e3, 1e1, 1e1, 1e4)
+        
+        mu_N = kwargs.get('mu_N', default_mu)
+        mu_T = kwargs.get('mu_T', default_mu)
+        
+        pi = kwargs.get('pi', default_pi)
+        
+        for g in range(NUM_GENOTYPES):
+            self._mu_N[g] = mu_N[g]            
+            self._mu_T[g] = mu_T[g]
+        
+        for g in range(NUM_JOINT_GENOTYPES):
+            self._pi[g] = pi[g]
+        
+        self._normalise_pi()            
+        
+    def __str__(self):
+        s = "mu_N : "
+        s += "\t".join([str(x) for x in self.mu_N])
+        s += "\n"
+        
+        s += "mu_T : "
+        s += "\t".join([str(x) for x in self.mu_T])
+        s += "\n"
+
+        s += "pi : "
+        s += "\t".join([str(x) for x in self._pi])
+        s += "\n"
+        
+        return s
+    
+    def write_to_file(self, file_name):
+        genotypes = ['AA', 'AB', 'BB']
+        joint_genotypes = []
+        
+        for g_N in genotypes:
+            for g_T in genotypes:
+                joint_genotypes.append("_".join((g_N, g_T)))
+        
+        config = ConfigParser.SafeConfigParser()
+        
+        config.add_section('pi')
+        config.add_section('mu_N')
+        config.add_section('mu_T')
+        
+        for g_N, mu_N in zip(genotypes, self.mu_N):
+            config.set('mu_N', g_N, "{0:.10f}".format(mu_N))
+        
+        for g_T, mu_T in zip(genotypes, self.mu_T):
+            config.set('mu_T', g_T, "{0:.10f}".format(mu_T))
+            
+        for g_J, pi in zip(joint_genotypes, self.pi):
+            config.set('pi', g_J, "{0:.10f}".format(pi))
+        
+        fh = open(file_name, 'w')
+        config.write(fh)
+        fh.close()
+        
+    def read_from_file(self, file_name):
+        genotypes = ['AA', 'AB', 'BB']
+        joint_genotypes = []
+        
+        for g_N in genotypes:
+            for g_T in genotypes:
+                joint_genotypes.append("_".join((g_N, g_T)))
+        
+        config = ConfigParser.SafeConfigParser()
+        config.read(file_name)
+        
+        for g in range(NUM_GENOTYPES):
+            self._mu_N[g] = float(config.get('mu_N', genotypes[g]))
+            self._mu_T[g] = float(config.get('mu_T', genotypes[g]))
+        
+        for g in range(NUM_JOINT_GENOTYPES):
+            self._pi[g] = float(config.get('pi', joint_genotypes[g]))
+        
+        self._normalise_pi()
+        
+    property mu_N:
+        def __get__(self):
+            return tuple([x for x in self._mu_N[:NUM_GENOTYPES]])
+    
+    property mu_T:
+        def __get__(self):
+            return tuple([x for x in self._mu_T[:NUM_GENOTYPES]])
+    
+    property pi:
+        def __get__(self):
+            return tuple([x for x in self._pi[:NUM_JOINT_GENOTYPES]])
+    
+    cdef _normalise_pi(self):
+        cdef int g
+        cdef double norm_const
+        
+        norm_const = 0
+        
+        for g in range(NUM_JOINT_GENOTYPES):
+            norm_const += self._pi[g]
+        
+        for g in range(NUM_JOINT_GENOTYPES):
+            self._pi[g] = self._pi[g] / norm_const
+
+    cdef update(self, double * n, double * a_N, double * a_T, double * b_N, double * b_T):
+        self._update_mu(self._mu_N, self._priors._mu_N, a_N, b_N)
+        self._update_mu(self._mu_T, self._priors._mu_T, a_T, b_T)
+        self._update_pi(n)
+
+    cdef _update_mu(self, double * mu, double mu_prior[NUM_GENOTYPES][2], double * a, double * b):
+        cdef int g
+        cdef double alpha, beta, denom
+    
+        for g in range(NUM_GENOTYPES):
+            alpha = a[g] + mu_prior[g][0] - 1
+            beta = b[g] + mu_prior[g][1] - 1
+            denom = alpha + beta
+
+            mu[g] = alpha / denom
+            
+    cdef _update_pi(self, double * n):
+        cdef int g
+        cdef double denom
+        cdef double pi[NUM_JOINT_GENOTYPES]
+        
+        denom = 0
+        
+        for g in range(NUM_JOINT_GENOTYPES):
+            pi[g] = n[g] + self._priors._pi[g] - 1
+
+        self._normalise_pi()
+    
+    cdef double _get_prior_log_likelihood(self):
+        cdef double ll
+        cdef double x[2]
+        
+        ll = 0
+        
+        for g in range(NUM_GENOTYPES):
+            x[0] = self._mu_N[g]
+            x[1] = 1 - self._mu_N[g]            
+            ll += dirichlet_log_likelihood(x, self._priors._mu_N[g], NUM_BASES)
+            
+            x[0] = self._mu_T[g]
+            x[1] = 1 - self._mu_T[g]
+            ll += dirichlet_log_likelihood(x, self._priors._mu_T[g], NUM_BASES)
+        
+        ll += dirichlet_log_likelihood(self._pi, self._priors._pi, NUM_JOINT_GENOTYPES)
+        
+        return ll
 
 #=======================================================================================================================
 # Model
