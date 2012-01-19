@@ -149,13 +149,7 @@ cdef makePileupColumn(bam_pileup1_t * plp, int tid, int pos, int n):
                     
     column._tid = tid
     
-    # Shift to Sam format 1-based coordinates.
-    column._pos = pos + 1
-    
-    # Find out how many non deletion reads there are.
-#    depth = get_covered_depth(plp, n)    
-#    
-#    column._depth = depth
+    column._pos = pos
      
     column._bases = < char *> malloc(sizeof(char) * depth)
     column._base_quals = < int *> malloc(sizeof(int) * depth)
