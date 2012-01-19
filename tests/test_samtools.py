@@ -11,12 +11,12 @@ from joint_snv_mix.samtools.fasta import FastaFile
 
 class Test(unittest.TestCase):
     def test_references(self):
-        bam = BamFile('data/multiple_chromosome.bam')
+        bam = BamFile('data/pileup.bam')
         
-        self.assertSetEqual(set(('1', '2')), set(bam.references))
+        self.assertSetEqual(set(('1', '2', 'chrX')), set(bam.references))
     
     def test_invalid_reference(self):
-        bam = BamFile('data/multiple_chromosome.bam')
+        bam = BamFile('data/pileup.bam')
         
         self.assertRaises(Exception, bam.get_pileup_iterator, 'X')
         

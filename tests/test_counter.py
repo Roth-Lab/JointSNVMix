@@ -92,7 +92,6 @@ class Test(unittest.TestCase):
         
         for row in counter.get_ref_iterator('1'):
             if row.position == 3:
-                print row
                 self.check_counts(row, (3, 0, 2, 0))
     
     def test_tumour_insertion(self):
