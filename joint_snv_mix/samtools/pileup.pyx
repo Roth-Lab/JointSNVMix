@@ -38,13 +38,9 @@ cdef class PileupIterator:
         return self
 
     def __next__(self): 
-        while True:
-            self.cnext()
+        self.cnext()
 
-            if self._column is None:
-                raise StopIteration
-            else:
-                return self._column
+        return self._column
     
     cdef cnext(self):
         '''
@@ -61,6 +57,9 @@ cdef class PileupIterator:
                                  & self._tid,
                                  & self._pos,
                                  & self._n_plp)
+        
+        if self._plp == NULL:
+            raise StopIteration
     
     cdef parse_current_position(self):
         '''
@@ -68,14 +67,11 @@ cdef class PileupIterator:
         '''
         if self._n_plp < 0:
             raise Exception("IteratorColumn : error during iteration.")        
-        
-        if self._plp == NULL:
-            self._column = None
-        else:
-            self._column = makePileupColumn(< bam_pileup1_t *> self._plp,
-                                            self._tid,
-                                            self._pos,
-                                            self._n_plp)
+
+        self._column = makePileupColumn(< bam_pileup1_t *> self._plp,
+                                        self._tid,
+                                        self._pos,
+                                        self._n_plp)
         
     cdef _setup_iterator_data(self, int tid, int start, int stop):
         '''
