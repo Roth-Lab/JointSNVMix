@@ -5,7 +5,7 @@ Created on 2012-01-17
 '''
 from libc.stdint cimport int32_t, uint8_t, uint32_t, uint64_t
 from libc.stdlib cimport free, malloc
-from libc.string cimport strdup
+from libc.string cimport strcmp, strdup
 
 from joint_snv_mix.samtools.samtools_clib cimport bam_destroy1, bam_iter_read, bam_plp_reset, bam_plp_init, \
                                                  bam_plp_destroy, bam_plp_auto, bam_plp_set_mask, BAM_DEF_MASK, \

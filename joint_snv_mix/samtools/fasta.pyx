@@ -27,16 +27,19 @@ cdef class FastaFile:
         if self._file_name != NULL: 
             free(self._file_name)
     
+    def get_base(self, reference, position):
+        return self.get_reference_base(reference, position)
+    
     cdef faidx_t * get_file_pointer(self):
         return self._fasta_file
 
-    cdef char * get_reference_base(self, char * reference, int position):        
+    cdef char * get_reference_base(self, char * reference, int position):       
         cdef char * ref_base
         cdef int len
         
         len = 1
         
-        ref_base = self._fetch(reference, position, position + 1, & len)
+        ref_base = self._fetch(reference, position - 1, position, & len)
         
         ref_base[0] = < char > toupper(< int > ref_base[0])
 
