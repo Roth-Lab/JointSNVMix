@@ -27,24 +27,24 @@ def classify(args):
     
     classify_data_set(parser, classifier, args)
 
-def classify_data_set(parser, classifier, args):
+def classify_data_set(counter, classifier, args):
     if args.out_file == '-':
         writer = StdoutWriter()
     else:
         writer = FileWriter(args.out_file)
     
     if args.chrom is not None:
-        positions_iter = parser.get_chrom_iterator(args.chrom)
+        positions_iter = counter.get_chrom_iterator(args.chrom)
     else:
-        positions_iter = parser.get_genome_iterator()
+        positions_iter = counter.get_genome_iterator()
     
-    for position in positions_iter:
-        if not position.has_variant:
+    for row in positions_iter:
+        if not row.tumour_var_counts == 0:
             continue 
         
-        probs = classifier.predict_probabilities(position.data)
+        probs = classifier.predict_probabilities(row.data)
         
-        writer.write_position(position, probs)
+        writer.write_position(row, probs)
 
 class FileWriter(object):
     info = [

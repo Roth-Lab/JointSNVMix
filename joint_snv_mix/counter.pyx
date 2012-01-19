@@ -150,7 +150,7 @@ cdef class JointBinaryCounterIterator(object):
         row._pos = self._pos
         
         row._ref_base = self._ref_genome.get_reference_base(self._ref, self._pos)       
-        row._var_base = get_var_base(row._ref_base, normal_column, tumour_column, 
+        row._var_base = get_var_base(row._ref_base, normal_column, tumour_column,
                                      self._min_base_qual, self._min_map_qual)
 
         if self._qualities:
@@ -301,7 +301,11 @@ cdef class JointBinaryData(object):
             return self._b_T
 
 cdef class JointBinaryCountData(JointBinaryData):
-    pass          
+    def __init__(self, a_N, b_N, a_T, b_T):
+        self._a_N = a_N
+        self._b_N = b_N
+        self._a_T = a_T
+        self._b_T = b_T          
 
 cdef class JointBinaryQualityData(JointBinaryData):
     def __dealloc__(self):

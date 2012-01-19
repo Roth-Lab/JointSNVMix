@@ -8,6 +8,9 @@ import os
 import Cython.Compiler.Options 
 Cython.Compiler.Options.annotate = True
 
+#=======================================================================================================================
+# Counter
+#=======================================================================================================================
 counter_includes = ['joint_snv_mix', 'joint_snv_mix/samtools', 'include/samtools']
 
 counter = Extension(
@@ -16,6 +19,9 @@ counter = Extension(
                     include_dirs=counter_includes
                     )
 
+#=======================================================================================================================
+# Samtools
+#=======================================================================================================================
 samtools_exclude = ("bamtk.c",
                     "razip.c",
                     "bgzip.c",
@@ -59,11 +65,31 @@ pileup = Extension(
                    libraries=[ "z", ]
                    )
 
+#=======================================================================================================================
+# Models
+#=======================================================================================================================
+models_include = ['joint_snv_mix', 'joint_snv_mix/models', 'include/samtools']
+
+models = Extension(
+                    "joint_snv_mix.models.joint_snv_mix",
+                    ["joint_snv_mix/models/joint_snv_mix.pyx"],
+                    include_dirs=models_include
+                    )
+
+utils = Extension(
+                  "joint_snv_mix.models.utils",
+                  ["joint_snv_mix/models/utils.pyx"],
+                  include_dirs=models_include
+                  )
+
+
 ext_modules = [
                bam,
                fasta,
                pileup,
-               counter
+               counter,
+               models,
+               utils
                ]
 
 setup(
@@ -77,7 +103,7 @@ setup(
       packages=[ 
                 'joint_snv_mix',
                 'joint_snv_mix.samtools',
-#                'joint_snv_mix.counters',
+                'joint_snv_mix.models'
 #                'joint_snv_mix.utils'
                 ],
       
