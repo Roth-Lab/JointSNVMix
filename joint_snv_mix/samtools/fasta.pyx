@@ -39,7 +39,7 @@ cdef class FastaFile:
         
         len = 1
         
-        ref_base = self._fetch(reference, position - 1, position, & len)
+        ref_base = self._fetch(reference, position, position + 1, & len)
         
         ref_base[0] = < char > toupper(< int > ref_base[0])
 

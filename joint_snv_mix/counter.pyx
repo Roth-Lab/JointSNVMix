@@ -16,20 +16,24 @@ cdef class JointBinaryCounter(object):
         ref_genome - A FastaFile for the reference genome.
     '''
     def __init__(self,
-                 char * type,
                  BamFile normal_bam,
                  BamFile tumour_bam,
                  FastaFile ref_genome,
                  int min_base_qual=0,
-                 int min_map_qual=0):
-        self._type = type
+                 int min_map_qual=0,
+                 bint qualities=0):
+        
+        self._qualities = qualities
+        
+        self._min_base_qual = min_base_qual
+        self._min_map_qual = min_map_qual
         
         self._normal_bam = normal_bam
         self._tumour_bam = tumour_bam
         
         self._ref_genome = ref_genome
         
-        self._refs = tuple(set(self._normal_bam.refs) & set(self._tumour_bam.refs)) 
+        self._refs = tuple(set(self._normal_bam.references) & set(self._tumour_bam.references)) 
 
     property refs:
         '''
@@ -42,29 +46,30 @@ cdef class JointBinaryCounter(object):
         if ref not in self.refs:
             raise Exception("Invalid reference passed.")
         
-        return JointBinaryCounterIterator(self._type,
-                                          ref,
+        return JointBinaryCounterIterator(ref,
                                           self._normal_bam.get_pileup_iterator(ref),
                                           self._tumour_bam.get_pileup_iterator(ref),
                                           self._ref_genome,
                                           self._min_base_qual,
-                                          self._min_map_qual)
+                                          self._min_map_qual,
+                                          self._qualities)
         
 cdef class JointBinaryCounterIterator(object):
     def __init__(self,
-                 char * type,
                  char * ref,
                  PileupIterator normal_iter,
                  PileupIterator tumour_iter,
                  FastaFile ref_genome,
                  int min_base_qual,
-                 int min_map_qual):        
-        self._type = type        
+                 int min_map_qual,
+                 bint qualities):
+      
+        self._qualities = qualities        
         self._ref = ref
         
-        self._min_base_qual = 0
-        self._min_map_qual = 0
-        
+        self._min_base_qual = min_base_qual
+        self._min_map_qual = min_map_qual
+
         self._normal_iter = normal_iter
         self._tumour_iter = tumour_iter
         
@@ -88,14 +93,14 @@ cdef class JointBinaryCounterIterator(object):
         Read only access to reference which the iterator runs over.
         '''
         def __get__(self):
-            return self._ref
+            return self._ref1
     
     property position:
         '''
         Read only access to 1-based current position of iterator.
         '''
         def __get__(self):
-            return self._position + 1    
+            return self._pos + 1    
 
     cdef cnext(self):
         '''
@@ -146,11 +151,11 @@ cdef class JointBinaryCounterIterator(object):
         
         row._ref_base = self._ref_genome.get_reference_base(self._ref, self._pos)       
         row._var_base = get_var_base(row._ref_base, normal_column, tumour_column, self._min_base_qual, self._min_map_qual)
-        
-        if strcmp(self._type, "base") == 0:
-            row._data = self._make_count_data(row._ref_base, row._var_base, normal_column, tumour_column)
-        if strcmp(self._type, "quality") == 0:
-            row._data = self._make_quality_data(row._ref_base, row._var_base, normal_column, tumour_column)            
+
+        if self._qualities:
+            row._data = self._make_quality_data(row._ref_base, row._var_base, normal_column, tumour_column)
+        else:
+            row._data = self._make_count_data(row._ref_base, row._var_base, normal_column, tumour_column)            
          
         return row
 
@@ -163,7 +168,7 @@ cdef class JointBinaryCounterIterator(object):
 
         data._a_T = tumour_column.get_nucleotide_count(ref_base, self._min_base_qual, self._min_map_qual)
         data._b_T = tumour_column.get_nucleotide_count(var_base, self._min_base_qual, self._min_map_qual)
-        
+
         return data
     
     cdef JointBinaryData _make_quality_data(self, char * ref_base, char * var_base,
@@ -201,7 +206,6 @@ cdef class JointBinaryCounterIterator(object):
 cdef class JointBinaryCounterRow(object):
     def __dealloc__(self):
         free(self._ref_base)
-        free(self._var_base)
 
     def __str__(self):
         out_row = [
@@ -247,11 +251,15 @@ cdef class JointBinaryCounterRow(object):
 
     property tumour_ref_counts:
         def __get__(self):
-            return self._data.normal_ref_counts
+            return self._data.tumour_ref_counts
 
     property tumour_var_counts:
         def __get__(self):
-            return self._data.normal_var_counts
+            return self._data.tumour_var_counts
+        
+    property counts:
+        def __get__(self):
+            return (self.normal_ref_counts, self.normal_var_counts, self.tumour_ref_counts, self.tumour_var_counts)
     
     property data:
         def __get__(self):
@@ -289,7 +297,7 @@ cdef class JointBinaryData(object):
 
     property tumour_var_counts:
         def __get__(self):
-            return self._b_T  
+            return self._b_T
 
 cdef class JointBinaryCountData(JointBinaryData):
     pass          
