@@ -7,6 +7,13 @@ from __future__ import division
 
 import ConfigParser
 
+from joint_snv_mix.counter cimport JointBinaryCountData
+
+from joint_snv_mix.models.utils cimport binomial_log_likelihood, beta_log_likelihood, dirichlet_log_likelihood, \
+                                        snv_mix_two_log_likelihood, snv_mix_two_single_read_log_likelihood, \
+                                        snv_mix_two_expected_a, snv_mix_two_expected_b,
+                                        log_space_normalise_row, log_sum_exp 
+
 #=======================================================================================================================
 # Priors and Parameters
 #=======================================================================================================================
@@ -308,6 +315,17 @@ class JointSnvMixModel(object):
 
         return pi
     
+    cdef double _get_log_likelihood(self, data):
+        cdef double log_liklihood
+        cdef JointBinaryCountData data_point
+        
+        log_likelihood = self._get_prior_log_likelihood()
+        
+        for data_point in data:
+            log_likelihood += self._density.get_log_likelihood(data_point)
+        
+        return log_likelihood
+    
     cdef _get_prior_log_likelihood(self):
         '''
         Compute the prior portion of the log likelihood.
@@ -342,9 +360,9 @@ class _JointSnvMixDensity(object):
     #===================================================================================================================
     # Interface
     #===================================================================================================================
-    cdef get_responsibilities(self, JointBinaryCountData data_point, double * resp):
+    cdef _get_complete_log_likelihood(self, JointBinaryCountData data_point, double * ll):
         '''
-        Computes the responsibilities of the given data-point. Results are stored in resp.
+        Get the log_likelihood the data point belongs to each class in the model. This will be stored in ll.
         '''
         pass
     
@@ -372,6 +390,23 @@ class _JointSnvMixDensity(object):
         self._mu_T = < double *> malloc(sizeof(double) * self._num_tumour_genotypes)
         
         self._log_mix_weights = < double *> malloc(sizeof(double) * self._num_joint_genotypes)    
+
+    cdef get_responsibilities(self, JointBinaryCountData data_point, double * resp):
+        '''
+        Computes the responsibilities of the given data-point. Results are stored in resp.
+        '''
+        self._get_complete_log_likelihood(data_point, resp)
+       
+        # Normalise the class log likelihoods in place to get class posteriors
+        log_space_normalise(resp, self._num_joint_genotypes)
+        
+    cdef double get_log_likelihood(self, JointBinaryCountData data_point, double * ll):
+        '''
+        Computes the log_likelihood for a single point.
+        '''
+        self._get_complete_log_likelihood(data_point, ll)
+        
+        return log_sum_exp(ll)
     
     cdef set_params(self, JointSnvMixParams params):
         '''
@@ -388,8 +423,8 @@ class _JointSnvMixDensity(object):
             self._log_mix_weights[i] = log(pi)
 
 #---------------------------------------------------------------------------------------------------------------------- 
-cdef class _JointSnvMixOneDensity(JointSnvMixDensity):
-    cdef get_responsibilities(self, JointBinaryCountData data_point, double * resp):
+cdef class _JointSnvMixOneDensity(JointSnvMixDensity):    
+    cdef _get_complete_log_likelihood(self, JointBinaryCountData data_point, double * ll):        
         cdef int g_N, g_T, g_J
         cdef double mu_N, mu_T, log_mix_weight, normal_log_likelihood, tumour_log_likelihood
     
@@ -407,14 +442,11 @@ cdef class _JointSnvMixOneDensity(JointSnvMixDensity):
                 tumour_log_likelihood = binomial_log_likelihood(data_point._a_T, data_point._b_T, mu_T)
                 
                 # Combine the mix-weight, normal likelihood and tumour likelihood to obtain class likelihood
-                resp[g_J] = log_mix_weight + normal_log_likelihood + tumour_log_likelihood
-        
-        # Normalise the class log likelihoods in place to get class posteriors
-        normalise_log_space(resp, self._num_joint_genotypes)
-
+                ll[g_J] = log_mix_weight + normal_log_likelihood + tumour_log_likelihood
+                
 #---------------------------------------------------------------------------------------------------------------------- 
 cdef class _JointSnvMixTwoDensity(JointSnvMixDensity):
-    cdef get_responsibilities(self, JointBinaryCountData data_point, double * resp):
+    cdef _get_complete_log_likelihood(self, JointBinaryCountData data_point, double * ll):
         cdef int g_N, g_T, g_J
         cdef double mu_N, mu_T, log_mix_weight, normal_log_likelihood, tumour_log_likelihood
     
@@ -430,19 +462,16 @@ cdef class _JointSnvMixTwoDensity(JointSnvMixDensity):
                                         
                 normal_log_likelihood = snv_mix_two_log_likelihood(data_point._q_N,
                                                                    data_point._r_N,
-                                                                   data_point._num_normal_reads,
+                                                                   data_point._d_N,
                                                                    mu_N)
                 
                 tumour_log_likelihood = snv_mix_two_log_likelihood(data_point._q_T,
                                                                    data_point._r_T,
-                                                                   data_point._num_tumour_reads,
+                                                                   data_point._d_T,
                                                                    mu_T)
                 
                 # Combine the mix-weight, normal likelihood and tumour likelihood to obtain class likelihood
-                self._resp[g_J] = log_mix_weight + normal_log_likelihood + tumour_log_likelihood
-        
-        # Normalise the class log likelihoods in place to get class posteriors
-        normalise_log_space(self._resp, self._num_joint_genotypes)
+                ll[g_J] = log_mix_weight + normal_log_likelihood + tumour_log_likelihood
 
 #=======================================================================================================================
 # Ess
@@ -569,14 +598,14 @@ class JointSnvMixTwoEss(JointSnvMixEss):
                 mu_N = self._mu_N[g_N]
                 mu_T = self._mu_T[g_T]
             
-                for i in range(data_point._num_normal_reads):
+                for i in range(data_point._d_N):
                     a_N = snv_mix_two_expected_a(data_point._q_N[i], data_point._r_N[i], mu_N)
                     b_N = snv_mix_two_expected_b(data_point._q_N[i], data_point._r_N[i], mu_N)
                     
                     self.a_N[g_N] += a_N * self._resp[g_J]
                     self.b_N[g_N] += b_N * self._resp[g_J]
                     
-                for i in range(data_point._num_tumour_reads):
+                for i in range(data_point._d_T):
                     a_T = snv_mix_two_expected_a(data_point._q_T[i], data_point._r_T[i], mu_T)
                     b_T = snv_mix_two_expected_b(data_point._q_T[i], data_point._r_T[i], mu_T)
                     
