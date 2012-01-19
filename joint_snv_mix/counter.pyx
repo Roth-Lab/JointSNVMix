@@ -29,7 +29,7 @@ cdef class JointBinaryCounter(Counter):
         
         self._ref_genome = ref_genome
         
-        self._refs = tuple(set(self._normal_counter.refs) & set(self._tumour_counter.refs)) 
+        self._refs = tuple(set(self._normal_bam.refs) & set(self._tumour_bam.refs)) 
 
     property refs:
         '''
@@ -70,7 +70,7 @@ cdef class JointBinaryCounterIterator(RefIterator):
         
         self._ref_genome = ref_genome
         
-        self._position = -1
+        self._pos = -1
         
     def __iter__(self):
         return self
@@ -105,13 +105,12 @@ cdef class JointBinaryCounterIterator(RefIterator):
         self._tumour_iter.advance_position()
                 
         while True:
-            normal_pos = self._normal_iter._position
-            tumour_pos = self._tumour_iter._position
+            normal_pos = self._normal_iter._pos
+            tumour_pos = self._tumour_iter._pos
             
             if normal_pos == tumour_pos:
-                self._position = normal_pos
-                                       
-                break             
+                self._pos = normal_pos                                       
+                break
             elif normal_pos < tumour_pos:
                 self._normal_iter.advance_position()
             elif normal_pos > tumour_pos:
