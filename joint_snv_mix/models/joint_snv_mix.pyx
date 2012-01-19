@@ -285,9 +285,10 @@ cdef class JointSnvMixModel(object):
         
         while not converged:            
             self._E_step(data)
-            self._M_step()
             
             ll_iter = self._get_log_likelihood(data)
+            
+            self._M_step()
             
             ll.append(ll_iter)
             
@@ -382,7 +383,9 @@ cdef class JointSnvMixModel(object):
             ll += beta_log_likelihood(mu_T, mu_T_prior['alpha'], mu_T_prior['beta'])         
         
         ll += dirichlet_log_likelihood(self.params.pi, self.priors.pi)
-
+        
+        print ll
+        
         return ll
     
     property params:
