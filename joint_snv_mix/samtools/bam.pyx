@@ -61,7 +61,7 @@ cdef class BamFile:
             
             self._tids[ref] = tid
             
-    def get_counts_iterator(self, reference, start=None, stop=None):
+    def get_pileup_iterator(self, reference, start=None, stop=None):
         if reference not in self._refs:
             raise Exception("Invalid reference given `{0}`".format(reference))
         

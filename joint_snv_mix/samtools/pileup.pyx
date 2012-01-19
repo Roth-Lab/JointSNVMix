@@ -7,7 +7,7 @@ Created on 2012-01-17
 cdef int max_pos = 2 << 29
 cdef char * bam_nt16_rev_table = "=ACMGRSVTWYHKDBN"
 
-cdef class PileupRegionIterator:
+cdef class PileupIterator:
     def __cinit__(self, BamFile bam_file, int tid=0, int start=0, int stop=max_pos):        
         self._bam_file = bam_file
                             
@@ -108,53 +108,61 @@ cdef class PileupColumn:
     cdef int get_depth(self):
         return self._depth
     
-    cdef get_nucleotide_counts(self, int * counts, int min_base_qual=0, int min_map_qual=0):
+    cdef int get_nucleotide_count(self, char * base, int min_base_qual, int min_map_qual):
         '''
         Retrieve the number of nucleotides found at this position. Counts will be initialised to 0 in the method.
         
         Arguments:
-        counts - array of length 4. Will be filled in so counts for A,C,G,T are added in that order.
+        base - a char * containing the query base.
         min_base_qual - nucleotides will only be counted if their base quality exceeds this value.
-        min_map_qual - nucleotides will only be counted if their mappiny quality exceeds this value.
+        min_map_qual - nucleotides will only be counted if their mapping quality exceeds this value.
         '''
         cdef int i
-        
-        counts[A_index] = 0
-        counts[C_index] = 0
-        counts[G_index] = 0
-        counts[T_index] = 0
+        cdef int count
         
         for i in range(self._depth):
             if self._base_quals[i] < min_base_quals or self._map_quals[i] < min_map_quals:
                 continue            
             
-            if strcmp(column._bases[i], "A") == 0:
-                counts[A_index] += 1         
-            elif strcmp(column._bases[i], "C") == 0:
-                counts[C_index] += 1
-            elif strcmp(column._bases[i], "G") == 0:
-                counts[G_index] += 1
-            elif strcmp(column._bases[i], "T") == 0:
-                counts[T_index] += 1
+            if strcmp(base, self._bases[i]) == 0:
+                count += 1
+        
+        return count
     
-    cdef get_nucleotide_probabilities(self, double ** q, double * r):
+    cdef get_base_probabilities(self, char * base, double * q):
         '''
-        Retrieve the probabilities a base was correctly called and correctly mapped.
+        Retrieve the probabilities a read j contained the specified base.
         
         Since we are only have base qualities for the observed base, the probabilities for the remaining bases will be
         assigned by dividing 1 - Prob(observed_base) evenly among the other three bases.
         
         Arguments:
-        q - depth x 4 array. With probabilities of observing a each of the four pases on the at this position on the 
-            jth read.
+        base - The base to query
+        q - Array to store probabilities. Should have size self._depth. 
+        '''
+        cdef int i
+        cdef double prob
+        
+        for i in range(self._depth):
+            prob = self.convert_phred_qual_to_prob(self._base_qual[i])
             
-        r - depth x 1 array. Will be filled with probabilities the jth base was aligned correctly.
+            if strcmp(base, self._bases[i]) == 0:
+                q[i] = prob
+            else:
+                q[i] = (1 - prob) / 3
+                
+    cdef get_mapping_probabilities(self, double * r):
+        '''
+        Retrieve the base at read j is correctly aligned.
+        
+        Arguments:
+        base - The base to query
+        r - Array to store probabilities. Should have size self._depth. 
         '''
         cdef int i
         
-        for i in range(self._depth):            
-            self._fill_base_prob_array(self._bases[i], self._base_qual[i], q[i])            
-            r[i] = self.convert_phred_qual_to_prob(self._map_quals[i])
+        for i in range(self._depth):
+            r[i] = self.convert_phred_qual_to_prob(self._map_qual[i])            
 
     cdef double convert_phred_qual_to_prob(self, int qual):
         '''
