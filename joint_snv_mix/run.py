@@ -4,7 +4,11 @@ Created on 2011-08-11
 @author: Andrew Roth
 '''
 import csv
-    
+
+from joint_snv_mix.counter import JointBinaryCounter
+from joint_snv_mix.classifiers import JointSnvMixPriors, JointSnvMixParameters, \
+                                      JointSnvMixOneClassifier, JointSnvMixTwoClassifier 
+
 #=======================================================================================================================
 # Functions for running classification.
 #=======================================================================================================================
@@ -153,18 +157,20 @@ def create_training_data_set(parser, args):
 #=======================================================================================================================
 class ParserFactory(object):
     def get_joint_snv_mix_one_parser(self, args):
-        parser = JointSnvMixOnePositionsParser(args.normal_file,
-                                               args.tumour_file,
-                                               args.ref_genome_file,
-                                               args.min_base_qual,
-                                               args.min_map_qual)
+        parser = JointBinaryCounter(args.normal_file,
+                                    args.tumour_file,
+                                    args.ref_genome_file,
+                                    args.min_base_qual,
+                                    args.min_map_qual)
         
         return parser
     
     def get_joint_snv_mix_two_parser(self, args):
-        parser = JointSnvMixTwoPositionsParser(args.normal_file,
-                                               args.tumour_file,
-                                               args.ref_genome_file)
+        parser = JointBinaryCounter(args.normal_file,
+                                    args.tumour_file,
+                                    args.ref_genome_file,
+                                    qualities=1
+                                    )
         
         return parser
 
