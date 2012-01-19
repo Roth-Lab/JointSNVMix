@@ -150,7 +150,8 @@ cdef class JointBinaryCounterIterator(object):
         row._pos = self._pos
         
         row._ref_base = self._ref_genome.get_reference_base(self._ref, self._pos)       
-        row._var_base = get_var_base(row._ref_base, normal_column, tumour_column, self._min_base_qual, self._min_map_qual)
+        row._var_base = get_var_base(row._ref_base, normal_column, tumour_column, 
+                                     self._min_base_qual, self._min_map_qual)
 
         if self._qualities:
             row._data = self._make_quality_data(row._ref_base, row._var_base, normal_column, tumour_column)
@@ -308,6 +309,22 @@ cdef class JointBinaryQualityData(JointBinaryData):
         free(self._r_N)
         free(self._q_T)
         free(self._r_T)
+    
+    property normal_base_qualities:
+        def __get__(self):
+            return [x for x in self._q_N[:self._d_N]]
+    
+    property tumour_base_qualities:
+        def __get__(self):
+            return [x for x in self._q_T[:self._d_T]]
+        
+    property normal_mapping_qualities:
+        def __get__(self):
+            return [x for x in self._r_N[:self._d_N]]
+        
+    property tumour_mapping_qualities:
+        def __get__(self):
+            return [x for x in self._r_T[:self._d_T]]        
         
 #===============================================================================
 # Utility functions for finding non-ref bases and counts.
@@ -375,9 +392,8 @@ cdef get_aligment_probabilities(char * ref_base, char * var_base, double * q, do
     for read_index in range(column._depth):
         bq = column._base_quals[read_index]
         mq = column._map_quals[read_index]
-        base = & column._bases[i]
 
-        if strcmp(ref_base, base) == 0:
+        if ref_base[0] == column._bases[i]:
             prob = convert_phred_qual_to_prob(bq)
             q[i] = prob
             
@@ -385,7 +401,7 @@ cdef get_aligment_probabilities(char * ref_base, char * var_base, double * q, do
             
             i += 1
         
-        elif strcmp(var_base, base) == 0:
+        elif var_base[0] == column._bases[i]:
             prob = convert_phred_qual_to_prob(bq)
             q[i] = (1 - prob) / 3
             

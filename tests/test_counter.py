@@ -5,6 +5,8 @@ Created on 2011-06-30
 
 @author: Andrew Roth
 '''
+from __future__ import division
+
 import unittest
 
 from joint_snv_mix.counter import JointBinaryCounter
@@ -12,24 +14,7 @@ from joint_snv_mix.counter import JointBinaryCounter
 from joint_snv_mix.samtools.bam import BamFile
 from joint_snv_mix.samtools.fasta import FastaFile
 
-class Test(unittest.TestCase):
-    def setUp(self):
-        normal_file_name = "data/paired/normal.bam"
-        
-        tumour_file_name = "data/paired/tumour.bam"
-        
-        reference_file_name = "data/paired/reference.fasta"
-        
-        self._ref_genome = FastaFile(reference_file_name)
-        
-        self._normal_bam = BamFile(normal_file_name)
-        self._tumour_bam = BamFile(tumour_file_name)
-        
-    def get_counter(self, min_base_qual=10, min_map_qual=10):
-        counter = JointBinaryCounter(self._normal_bam, self._tumour_bam, self._ref_genome, min_base_qual, min_map_qual)
-
-        return counter
-    
+class CounterTester(object):   
     def check_position(self, row, ref, position, ref_base, var_base):
         self.assertEqual(row.ref, ref)
         self.assertEqual(row.position, position)
@@ -64,28 +49,6 @@ class Test(unittest.TestCase):
         
         row = iter.next()
         self.check_position(row, '1', 2, 'A', 'C')
-
-    def test_map_qualities(self):
-        counter = self.get_counter(0, 0)        
-        iter = counter.get_ref_iterator('1')
-        row = iter.next()
-        
-        self.check_counts(row, (3, 0, 3, 0))
-        
-        counter = self.get_counter(0, 10)        
-        iter = counter.get_ref_iterator('1')
-        row = iter.next()        
-        self.check_counts(row, (3, 0, 3, 0))
-        
-        counter = self.get_counter(0, 20)        
-        iter = counter.get_ref_iterator('1')
-        row = iter.next()
-        self.check_counts(row, (2, 0, 2, 0))
-        
-        counter = self.get_counter(0, 30)        
-        iter = counter.get_ref_iterator('1')
-        row = iter.next()
-        self.check_counts(row, (1, 0, 1, 0))
     
     def test_tumour_del(self):
         counter = self.get_counter(0, 0)
@@ -152,7 +115,89 @@ class Test(unittest.TestCase):
                 self.assertEqual(row.ref_base, 'C')
                 self.assertEqual(row.var_base, 'G')
                 
-                self.check_counts(row, (3, 0, 2, 1))    
+                self.check_counts(row, (3, 0, 2, 1))
+
+class TestBaseCounter(CounterTester, unittest.TestCase):
+    def setUp(self):
+        normal_file_name = "data/paired/normal.bam"
+        
+        tumour_file_name = "data/paired/tumour.bam"
+        
+        reference_file_name = "data/paired/reference.fasta"
+        
+        self._ref_genome = FastaFile(reference_file_name)
+        
+        self._normal_bam = BamFile(normal_file_name)
+        self._tumour_bam = BamFile(tumour_file_name)
+            
+    def get_counter(self, min_base_qual=10, min_map_qual=10):
+        counter = JointBinaryCounter(self._normal_bam, self._tumour_bam, self._ref_genome, min_base_qual, min_map_qual)
+
+        return counter
+    
+    def test_map_qualities(self):
+        counter = self.get_counter(0, 0)        
+        iter = counter.get_ref_iterator('1')
+        row = iter.next()
+        
+        self.check_counts(row, (3, 0, 3, 0))
+        
+        counter = self.get_counter(0, 10)        
+        iter = counter.get_ref_iterator('1')
+        row = iter.next()        
+        self.check_counts(row, (3, 0, 3, 0))
+        
+        counter = self.get_counter(0, 20)        
+        iter = counter.get_ref_iterator('1')
+        row = iter.next()
+        self.check_counts(row, (2, 0, 2, 0))
+        
+        counter = self.get_counter(0, 30)        
+        iter = counter.get_ref_iterator('1')
+        row = iter.next()
+        self.check_counts(row, (1, 0, 1, 0))    
+
+class TestQualitiesCounter(CounterTester, unittest.TestCase):
+    def setUp(self):
+        normal_file_name = "data/paired/normal.bam"
+        
+        tumour_file_name = "data/paired/tumour.bam"
+        
+        reference_file_name = "data/paired/reference.fasta"
+        
+        self._ref_genome = FastaFile(reference_file_name)
+        
+        self._normal_bam = BamFile(normal_file_name)
+        self._tumour_bam = BamFile(tumour_file_name)
+            
+    def get_counter(self, min_base_qual=10, min_map_qual=10):
+        counter = JointBinaryCounter(self._normal_bam, self._tumour_bam, self._ref_genome, min_base_qual, min_map_qual,
+                                     qualities=1)
+
+        return counter
+    
+    def test_quality_probabilities(self):
+        counter = self.get_counter(0, 0)        
+        iter = counter.get_ref_iterator('1')
+        row = iter.next()
+        
+        expected_map_probs = [self.convert_phred_to_probabilities(x) for x in [10, 20, 30]]        
+        self.assertSequenceEqual(row.data.normal_mapping_qualities, expected_map_probs)
+        
+        expected_map_probs = [self.convert_phred_to_probabilities(x) for x in [10, 25, 30]]        
+        self.assertSequenceEqual(row.data.tumour_mapping_qualities, expected_map_probs)
+        
+        row = iter.next()
+               
+        expected_base_probs = [self.convert_phred_to_probabilities(x) for x in [27, 27, 27]]        
+        self.assertSequenceEqual(row.data.normal_base_qualities, expected_base_probs)
+        
+        expected_base_probs = [self.convert_phred_to_probabilities(x) for x in [27, 27, 27]]
+        expected_base_probs[2] = (1 - expected_base_probs[2]) / 3        
+        self.assertSequenceEqual(row.data.tumour_base_qualities, expected_base_probs)
+                                                            
+    def convert_phred_to_probabilities(self, phred_qual):
+        return 1 - 10 ** (-phred_qual / 10)
 
 if __name__ == "__main__":
     #import sys;sys.argv = ['', 'Test.testName']
