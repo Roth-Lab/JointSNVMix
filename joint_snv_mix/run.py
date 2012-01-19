@@ -153,16 +153,18 @@ def create_training_data_set(parser, args):
 #=======================================================================================================================
 class ParserFactory(object):
     def get_joint_snv_mix_one_parser(self, args):
-        parser = JointSnvMixOneDataParser(args.normal_file,
-                                          args.tumour_file,
-                                          args.min_base_qual,
-                                          args.min_map_qual)
+        parser = JointSnvMixOnePositionsParser(args.normal_file,
+                                               args.tumour_file,
+                                               args.ref_genome_file,
+                                               args.min_base_qual,
+                                               args.min_map_qual)
         
         return parser
     
     def get_joint_snv_mix_two_parser(self, args):
-        parser = JointSnvMixTwoDataParser(args.normal_file,
-                                          args.tumour_file)
+        parser = JointSnvMixTwoPositionsParser(args.normal_file,
+                                               args.tumour_file,
+                                               args.ref_genome_file)
         
         return parser
 
