@@ -55,7 +55,7 @@ cdef snv_mix_two_expected_b(double q, double r, double mu):
 #=======================================================================================================================
 # Code for doing log space normalisation
 #=======================================================================================================================
-cdef void log_space_normalise_row(double * log_X, int size):
+cdef void log_space_normalise(double * log_X, int size):
     '''
     Normalise log_X so that 
     
