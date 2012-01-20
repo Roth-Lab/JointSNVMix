@@ -28,7 +28,7 @@ def classify_data_set(counter, classifier, args):
         writer = FileWriter(args.out_file)
     
     if args.chromosome is not None:
-        positions_iter = counter.get_ref_iterator(args.chrom)
+        positions_iter = counter.get_ref_iterator(args.chromosome)
     else:
         positions_iter = get_genome_iterator(counter)
     
@@ -127,7 +127,7 @@ def create_training_data_set(counter, args):
     data_set = []
     
     if args.chromosome is not None:
-        positions_iter = counter.get_ref_iterator(args.chrom)
+        positions_iter = counter.get_ref_iterator(args.chromosome)
     else:
         positions_iter = get_genome_iterator(counter)
     
