@@ -86,7 +86,7 @@ cdef class JointSnvMixPriors(object):
         mu_T = []
         pi = []
         
-        for g in range(genotypes):
+        for g in genotypes:
             mu_N_g = {}
             mu_N_g['alpha'] = float(config.get('mu_N_alpha', g))
             mu_N_g['beta'] = float(config.get('mu_N_beta', g)) 
@@ -99,10 +99,10 @@ cdef class JointSnvMixPriors(object):
             
             mu_T.append(mu_T_g)
         
-        for g in range(joint_genotypes):
+        for g in joint_genotypes:
             pi_g = float(config.get('pi', g))
             
-            self.pi.append(pi_g)
+            pi.append(pi_g)
         
         self._mu_N = tuple(mu_N)
         self._mu_T = tuple(mu_T)
@@ -208,15 +208,15 @@ cdef class JointSnvMixParameters(object):
         mu_T = []
         pi = []
         
-        for g in range(genotypes):
+        for g in genotypes:
             mu_N_g = config.getfloat('mu_N', g)            
             mu_N.append(mu_N_g)
             
             mu_T_g = config.getfloat('mu_T', g)
             mu_T.append(mu_T_g)
         
-        for g in range(joint_genotypes):
-            pi_g = config.getgetfloat('pi', g)
+        for g in joint_genotypes:
+            pi_g = config.getfloat('pi', g)
             pi.append(pi_g)
         
         self._mu_N = tuple(mu_N)
