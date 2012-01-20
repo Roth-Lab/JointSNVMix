@@ -88,6 +88,9 @@ classify_parent.add_argument('--print_all_sites', action='store_true', default=F
                              help='''By default only sites with a variant read in the tumour are printed. If this flag
                              is set all sites will be printed.''')
 
+classify_parent.add_argument('--parameters_file',
+                             help='Path to a file with custom parameters values for the model.')
+
 #=======================================================================================================================
 # Parent parser for any classifier which uses simple count data
 #=======================================================================================================================
@@ -107,7 +110,7 @@ train_parser = subparsers.add_parser('train', add_help=False,
                                     help='''Learn the parameters for a model from the SnvMix family. The output of this
                                     command can be passed as an option to some models under the classify command.''')
 
-train_parser.set_defaults(func=train)
+train_parser.set_defaults(func=train, mode='train')
 
 train_subparsers = train_parser.add_subparsers()
 
@@ -130,7 +133,7 @@ classify_parser = subparsers.add_parser('classify',
                                         help='''Classify the data from two BAM files from normal/tumour pair using one
                                         of the several strategies.''')
 
-classify_parser.set_defaults(func=classify)
+classify_parser.set_defaults(func=classify, mode='classify')
 
 classify_subparsers = classify_parser.add_subparsers()
 

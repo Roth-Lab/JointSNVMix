@@ -15,10 +15,7 @@ from joint_snv_mix.samtools import BamFile, FastaFile
 def classify(args):
     counter_factory = CounterFactory()
     model_factory = ModelFactory()
-    
-    args.priors_file = None
-    args.initial_parameters_file = None
-    
+
     counter = counter_factory.get_counter(args)
     model = model_factory.get_model(args) 
     
@@ -192,19 +189,24 @@ class ModelFactory(object):
     def _get_joint_snv_mix_priors(self, args):
         priors = JointSnvMixPriors()
         
-        if args.priors_file is not None:
-            priors.load_from_file(args.priors_file)
+        if args.mode == 'train' and args.priors_file is not None:
+            priors.read_from_file(args.priors_file)
             
-            print "Using custom initial priors from {0}".format(args.init_params_file)
+            print "Using custom initial priors from {0}".format(args.priors_file)
         
         return priors
     
     def _get_joint_snv_mix_params(self, args):
         params = JointSnvMixParameters()        
         
-        if args.initial_parameters_file is not None:            
-            params.load_from_file(args.init_params_file)
+        if args.mode == 'train' and args.initial_parameters_file is not None:            
+            params.read_from_file(args.initial_parameters_file)
             
-            print "Using custom initial parameters from {0}".format(args.init_params_file)
+            print "Using custom initial parameters from {0}".format(args.initial_parameters_file)
+        
+        if args.mode == 'classify' and args.parameters_file is not None:
+            params.read_from_file(args.parameters_file)
+            
+            print "Using custom parameters from {0}".format(args.parameters_file)
         
         return params

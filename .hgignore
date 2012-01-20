@@ -38,3 +38,9 @@ syntax: regexp
 ^debug\.txt$
 syntax: regexp
 ^\.hgignore$
+syntax: regexp
+^test\.jsm1\.cfg$
+syntax: regexp
+^test\.jsm2\.cfg$
+syntax: regexp
+^test\.jsm2\.tsv$
