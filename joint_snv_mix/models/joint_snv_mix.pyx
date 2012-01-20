@@ -273,7 +273,7 @@ cdef class JointSnvMixModel(object):
     def predict(self, data_point):
         self._density.get_responsibilities(data_point, self._resp)
         
-        return [exp(x) for x in self._resp[:self._num_joint_genotypes]]
+        return [x for x in self._resp[:self._num_joint_genotypes]]
     
     def fit(self, data, max_iters=1000, tolerance=1e-6, verbose=False):
         '''
@@ -325,8 +325,9 @@ cdef class JointSnvMixModel(object):
     
     cdef _E_step(self, data):
         cdef JointBinaryData data_point
-    
+        
         self._ess.reset()
+        self._ess.set_params(self._params)
         self._density.set_params(self._params)
 
         for data_point in data:
@@ -560,6 +561,9 @@ cdef class _JointSnvMixEss(object):
     cdef double * _a_T
     cdef double * _b_T
     cdef double * _n
+    
+    cdef double * _mu_N
+    cdef double * _mu_T
         
     #===================================================================================================================
     # Interface
@@ -591,6 +595,9 @@ cdef class _JointSnvMixEss(object):
         free(self._b_T)
         free(self._n)
 
+        free(self._mu_N)
+        free(self._mu_T)
+    
     cdef _init_arrays(self):
         '''
         Allocate arrays for sufficient statistics and initialise to 0.        
@@ -602,6 +609,9 @@ cdef class _JointSnvMixEss(object):
         self._b_T = < double *> malloc(sizeof(double) * self._num_tumour_genotypes)
        
         self._n = < double *> malloc(sizeof(double) * self._num_joint_genotypes)
+        
+        self._mu_N = < double *> malloc(sizeof(double) * self._num_normal_genotypes)
+        self._mu_T = < double *> malloc(sizeof(double) * self._num_tumour_genotypes)
         
     cdef reset(self):
         cdef int i
@@ -616,6 +626,16 @@ cdef class _JointSnvMixEss(object):
 
         for i in range(self._num_joint_genotypes):
             self._n[i] = 0
+
+    cdef set_params(self, JointSnvMixParameters params):
+        '''
+        Copy Python level parameters into C arrays for fast access.
+        '''
+        for i, mu_N in enumerate(params._mu_N):
+            self._mu_N[i] = mu_N
+
+        for i, mu_T in enumerate(params._mu_T):
+            self._mu_T[i] = mu_T         
     
     property a_N:
         def __get__(self):
@@ -674,14 +694,14 @@ cdef class _JointSnvMixTwoEss(_JointSnvMixEss):
                     a_N = snv_mix_two_expected_a(data_point._q_N[i], data_point._r_N[i], mu_N)
                     b_N = snv_mix_two_expected_b(data_point._q_N[i], data_point._r_N[i], mu_N)
                     
-                    self._a_N[g_N] += a_N * self._resp[g_J]
-                    self._b_N[g_N] += b_N * self._resp[g_J]
+                    self._a_N[g_N] += a_N * resp[g_J]
+                    self._b_N[g_N] += b_N * resp[g_J]
                     
                 for i in range(data_point._d_T):
                     a_T = snv_mix_two_expected_a(data_point._q_T[i], data_point._r_T[i], mu_T)
                     b_T = snv_mix_two_expected_b(data_point._q_T[i], data_point._r_T[i], mu_T)
                     
-                    self._a_T[g_T] += a_T * self._resp[g_J]
-                    self._b_T[g_T] += b_T * self._resp[g_J]                    
+                    self._a_T[g_T] += a_T * resp[g_J]
+                    self._b_T[g_T] += b_T * resp[g_J]                    
 
-                self._n[g_J] += self._resp[g_J] 
+                self._n[g_J] += resp[g_J] 

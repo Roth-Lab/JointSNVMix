@@ -241,6 +241,14 @@ cdef class JointBinaryCounterRow(object):
     property var_base:
         def __get__(self):
             return self._var_base
+        
+    property normal_depth:
+        def __get__(self):
+            return self._data.normal_depth
+
+    property tumour_depth:
+        def __get__(self):
+            return self._data.tumour_depth
     
     property normal_ref_counts:
         def __get__(self):
@@ -308,24 +316,6 @@ cdef class JointBinaryCountData(JointBinaryData):
         self._b_T = b_T          
 
 cdef class JointBinaryQualityData(JointBinaryData):
-    def __cinit__(self, q_N, r_N, q_T, r_T):
-        self._d_N = len(q_N)
-        self._d_T = len(q_T)
-        
-        self._q_N = < double *> malloc(sizeof(double) * self._d_N)
-        self._r_N = < double *> malloc(sizeof(double) * self._d_N)
-        
-        self._q_T = < double *> malloc(sizeof(double) * self._d_T)
-        self._r_T = < double *> malloc(sizeof(double) * self._d_T)
-        
-        for i, (q, r) in enumerate(zip(q_N, r_N)):
-            self._q_N[i] = q
-            self._r_N[i] = r
-
-        for i, (q, r) in enumerate(zip(q_T, r_T)):
-            self._q_T[i] = q
-            self._r_T[i] = r    
-    
     def __dealloc__(self):
         free(self._q_N)
         free(self._r_N)
@@ -346,7 +336,26 @@ cdef class JointBinaryQualityData(JointBinaryData):
         
     property tumour_mapping_qualities:
         def __get__(self):
-            return [x for x in self._r_T[:self._d_T]]        
+            return [x for x in self._r_T[:self._d_T]]
+
+cdef class JointBinaryQualityDataTest(JointBinaryQualityData):             
+    def __cinit__(self, q_N, r_N, q_T, r_T):
+        self._d_N = len(q_N)
+        self._d_T = len(q_T)
+        
+        self._q_N = < double *> malloc(sizeof(double) * self._d_N)
+        self._r_N = < double *> malloc(sizeof(double) * self._d_N)
+        
+        self._q_T = < double *> malloc(sizeof(double) * self._d_T)
+        self._r_T = < double *> malloc(sizeof(double) * self._d_T)
+        
+        for i, (q, r) in enumerate(zip(q_N, r_N)):
+            self._q_N[i] = q
+            self._r_N[i] = r
+
+        for i, (q, r) in enumerate(zip(q_T, r_T)):
+            self._q_T[i] = q
+            self._r_T[i] = r
         
 #===============================================================================
 # Utility functions for finding non-ref bases and counts.

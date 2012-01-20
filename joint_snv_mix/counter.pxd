@@ -101,3 +101,6 @@ cdef class JointBinaryQualityData(JointBinaryData):
     
     cdef double * _q_T
     cdef double * _r_T
+    
+cdef class JointBinaryQualityDataTest(JointBinaryQualityData):
+    pass
