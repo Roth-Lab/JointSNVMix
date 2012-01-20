@@ -104,7 +104,6 @@ setup(
                 'joint_snv_mix',
                 'joint_snv_mix.samtools',
                 'joint_snv_mix.models'
-#                'joint_snv_mix.utils'
                 ],
       
       cmdclass={'build_ext': build_ext},
