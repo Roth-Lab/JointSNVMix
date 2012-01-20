@@ -5,6 +5,7 @@ Created on 2012-01-19
 '''
 import unittest
 
+import numpy as np
 from tests.simualtors.joint_binomial import JointSnvMixSimulator
 
 from joint_snv_mix.counter import JointBinaryCountData, JointBinaryQualityData
@@ -19,26 +20,35 @@ class Test(unittest.TestCase):
               )
         
         priors = JointSnvMixPriors(mu_N=mu, mu_T=mu)
-        print priors
         params = JointSnvMixParameters()        
-        print params
         
-        model = JointSnvMixModel(priors, params, model='jsm1')
+        model = JointSnvMixModel(priors, params, model='jsm2')
+        
+#        sim = JointSnvMixSimulator(mu_T=[0.9, 0.3, 0.01])
+#        counts, labels = sim.draw_sample(100000)
+#        
+#        data = [JointBinaryCountData(*x) for x in counts]
+#        model.fit(data, verbose=True)
+#        
+#        correct = 0
+#        
+#        for x, t in zip(data, labels):
+#            p = model.predict(x)
+#            
+#            l = p.index(max(p))
+#            t = np.argmax(t)
+#            
+#            if t == l:
+#                correct += 1
+#        
+#        print correct
+#        
         
         print model.params
-        
-        sim = JointSnvMixSimulator()
-        counts, labels = sim.draw_sample(10000000)
-        
-        data = [JointBinaryCountData(*x) for x in counts]
+        q = [0] * 100
+        r = [1] * 100
+        data = [JointBinaryQualityData(q, r, q, r) for _ in range(100000)]
         model.fit(data, verbose=True)
-        
-        
-#        print model.params
-#        q = [0] * 100000
-#        r = [0] * 100000     
-#        data = JointBinaryQualityData(q, r, q, r)
-#        print model.predict(data)
 
 
 if __name__ == "__main__":

@@ -6,26 +6,23 @@ Created on 2011-08-11
 import csv
 
 from joint_snv_mix.counter import JointBinaryCounter
-from joint_snv_mix.classifiers import JointSnvMixPriors, JointSnvMixParameters, \
-                                      JointSnvMixOneClassifier, JointSnvMixTwoClassifier 
+from joint_snv_mix.models.joint_snv_mix import JointSnvMixModel, JointSnvMixPriors, JointSnvMixParameters
+from joint_snv_mix.samtools import BamFile, FastaFile
 
 #=======================================================================================================================
 # Functions for running classification.
 #=======================================================================================================================
 def classify(args):
-    parser_factory = ParserFactory()
-    classifier_factory = ClassifierFactory()
+    counter_factory = CounterFactory()
+    model_factory = ModelFactory()
     
-    if args.model == "joint_snv_mix_one":
-        parser = parser_factory.get_joint_snv_mix_one_parser(args)
-        classifier = classifier_factory.get_joint_snv_mix_two_classifier(args)
-    elif args.model == "joint_snv_mix_two":
-        parser = parser_factory.get_joint_snv_mix_one_parser(args)
-        classifier = classifier_factory.get_joint_snv_mix_two_classifier(args)
-    else:
-        raise Exception("{0} is not a valid model.".format(args.model))
+    args.priors_file = None
+    args.initial_parameters_file = None
     
-    classify_data_set(parser, classifier, args)
+    counter = counter_factory.get_counter(args)
+    model = model_factory.get_model(args) 
+    
+    classify_data_set(counter, model, args)
 
 def classify_data_set(counter, classifier, args):
     if args.out_file == '-':
@@ -33,16 +30,16 @@ def classify_data_set(counter, classifier, args):
     else:
         writer = FileWriter(args.out_file)
     
-    if args.chrom is not None:
-        positions_iter = counter.get_chrom_iterator(args.chrom)
+    if args.chromosome is not None:
+        positions_iter = counter.get_ref_iterator(args.chrom)
     else:
-        positions_iter = counter.get_genome_iterator()
+        positions_iter = get_genome_iterator(counter)
     
     for row in positions_iter:
-        if not row.tumour_var_counts == 0:
+        if not args.print_all_sites and row.tumour_var_counts == 0:
             continue 
         
-        probs = classifier.predict_probabilities(row.data)
+        probs = classifier.predict(row.data)
         
         writer.write_position(row, probs)
 
@@ -77,115 +74,120 @@ class FileWriter(object):
         
         self._writer.writeheader()
         
-    def write_position(self, position, probs):
-        row = {}
-        row['chrom'] = position.ref
-        row['position'] = position.coord
-        row['ref_base'] = position.ref_base
-        row['var_base'] = position.var_base
+    def write_position(self, row, probs):
+        out_row = {}
+        out_row['chrom'] = row.ref
+        out_row['position'] = row.position
+        out_row['ref_base'] = row.ref_base
+        out_row['var_base'] = row.var_base
         
-        counts = position.counts
+        counts = row.counts
         
-        row['normal_counts_a'] = counts[0]
-        row['normal_counts_b'] = counts[1]
-        row['tumour_counts_a'] = counts[2]
-        row['tumour_counts_b'] = counts[3]
+        out_row['normal_counts_a'] = counts[0]
+        out_row['normal_counts_b'] = counts[1]
+        out_row['tumour_counts_a'] = counts[2]
+        out_row['tumour_counts_b'] = counts[3]
         
         probs = dict(zip(FileWriter.probs, probs))
         
-        row = dict(row.items() + probs.items())
+        out_row = dict(out_row.items() + probs.items())
         
-        self._writer.write(row)
+        self._writer.writerow(out_row)
 
 class StdoutWriter(object):
-    def write_position(self, position, probs):
+    def write_position(self, row, probs):
         out_row = [
-                   position.ref,
-                   position.coord,
-                   position.ref_base,
-                   position.var_base                   
+                   row.ref,
+                   row.position,
+                   row.ref_base,
+                   row.var_base                   
                    ]
         
-        out_row.extend(position.counts)
+        out_row.extend(row.counts)
         out_row.extend(probs)
         
-        print "\t".join(out_row) 
+        print "\t".join([str(x) for x in out_row]) 
          
 #=======================================================================================================================
 # Functions for training a model.
 #=======================================================================================================================
 def train(args):
-    parser_factory = ParserFactory()
-    classifier_factory = ClassifierFactory()
+    counter_factory = CounterFactory()
+    model_factory = ModelFactory()
     
-    if args.model == "joint_snv_mix_one":
-        parser = parser_factory.get_joint_snv_mix_one_parser(args)
-        classifier = classifier_factory.get_joint_snv_mix_two_classifier(args)
-    elif args.model == "joint_snv_mix_two":
-        parser = parser_factory.get_joint_snv_mix_one_parser(args)
-        classifier = classifier_factory.get_joint_snv_mix_two_classifier(args)
-    else:
-        raise Exception("{0} is not a valid model.".format(args.model))
+    counter = counter_factory.get_counter(args)
+    model = model_factory.get_model(args)
     
-    data_set = create_training_data_set(parser, args)
+    data_set = create_training_data_set(counter, args)
     
-    classifier.fit(data_set)
+    model.fit(data_set, verbose=True)
     
-    classifier.params.save_to_file(args.params_file)        
+    model.params.write_to_file(args.estimated_parameters_file)        
 
-def create_training_data_set(parser, args):
+def create_training_data_set(counter, args):
     i = 0
     
     data_set = []
     
-    if args.chrom is not None:
-        positions_iter = parser.get_chrom_iterator(args.chrom)
+    if args.chromosome is not None:
+        positions_iter = counter.get_ref_iterator(args.chrom)
     else:
-        positions_iter = parser.get_genome_iterator()
+        positions_iter = get_genome_iterator(counter)
     
-    for position in positions_iter:
-        if args.min_depth <= position.depth <= args.max_depth:
+    for row in positions_iter:
+        if args.min_normal_depth <= row.normal_depth <= args.max_normal_depth and \
+           args.min_tumour_depth <= row.tumour_depth <= args.max_tumour_depth:
             i += 1
             
             if i % args.skip_size == 0:
-                data_set.append(position.data)
+                data_set.append(row.data)
     
     return data_set
 
 #=======================================================================================================================
 # Helper factory classes for setting up parsers and classifiers.
 #=======================================================================================================================
-class ParserFactory(object):
-    def get_joint_snv_mix_one_parser(self, args):
-        parser = JointBinaryCounter(args.normal_file,
-                                    args.tumour_file,
-                                    args.ref_genome_file,
-                                    args.min_base_qual,
-                                    args.min_map_qual)
-        
-        return parser
+def get_genome_iterator(counter):
+    refs = sorted(counter.refs)
     
-    def get_joint_snv_mix_two_parser(self, args):
-        parser = JointBinaryCounter(args.normal_file,
-                                    args.tumour_file,
-                                    args.ref_genome_file,
-                                    qualities=1
-                                    )
+    for ref in refs:
+        ref_iter = counter.get_ref_iterator(ref)
         
-        return parser
+        for row in ref_iter:
+            yield row
 
-class ClassifierFactory(object):
-    def get_joint_snv_mix_one_classifier(self, args):
+class CounterFactory(object):
+    def get_counter(self, args):
+        if args.model == 'jsm1':
+            qualities = 0
+            min_base_qual = args.min_base_qual
+            min_map_qual = args.min_map_qual
+            
+        elif args.model == 'jsm2':
+            qualities = 1
+            min_base_qual = 0
+            min_map_qual = 0
+        
+        normal_bam = BamFile(args.normal_file)
+        tumour_bam = BamFile(args.tumour_file)
+        ref_genome = FastaFile(args.reference_genome_file)
+        
+        
+        counter = JointBinaryCounter(normal_bam,
+                                     tumour_bam,
+                                     ref_genome,
+                                     min_base_qual,
+                                     min_map_qual,
+                                     qualities)
+        
+        return counter
+
+class ModelFactory(object):
+    def get_model(self, args):
         priors = self._get_joint_snv_mix_priors(args)
         params = self._get_joint_snv_mix_params(args)
 
-        return JointSnvMixOneClassifier(priors=priors, params=params)
-    
-    def get_joint_snv_mix_two_classifier(self, args):
-        priors = self._get_joint_snv_mix_priors(args)
-        params = self._get_joint_snv_mix_params(args)
-
-        return JointSnvMixTwoClassifier(priors=priors, params=params)
+        return JointSnvMixModel(priors, params, model=args.model)
     
     def _get_joint_snv_mix_priors(self, args):
         priors = JointSnvMixPriors()
@@ -194,23 +196,15 @@ class ClassifierFactory(object):
             priors.load_from_file(args.priors_file)
             
             print "Using custom initial priors from {0}".format(args.init_params_file)
-        else:
-            print "Using default priors"
-        
-        print priors
         
         return priors
     
     def _get_joint_snv_mix_params(self, args):
         params = JointSnvMixParameters()        
         
-        if args.init_params_file is not None:            
+        if args.initial_parameters_file is not None:            
             params.load_from_file(args.init_params_file)
             
             print "Using custom initial parameters from {0}".format(args.init_params_file)
-        else:
-            print "Using default initial parameters."
-        
-        print params
         
         return params
