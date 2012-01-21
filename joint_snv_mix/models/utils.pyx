@@ -29,18 +29,18 @@ cdef double snv_mix_two_log_likelihood(double * q, double * r, int d, double mu)
     log_likelihood = 0
     
     for i in range(d):
-        log_likelihood += snv_mix_two_single_read_log_likelihood(q[i], r[i], mu)
+        log_likelihood += log(snv_mix_two_single_read_likelihood(q[i], r[i], mu))
     
     return log_likelihood
 
-cpdef double snv_mix_two_single_read_log_likelihood(double q, double r, double mu):
+cpdef double snv_mix_two_single_read_likelihood(double q, double r, double mu):
     return 0.5 * (1 - r) + r * ((1 - q) * (1 - mu) + q * mu)
 
 cpdef snv_mix_two_expected_a(double q, double r, double mu):
     cdef double numerator, denominator
     
     numerator = mu * (0.5 + r * (q - 0.5))
-    denominator = snv_mix_two_single_read_log_likelihood(q, r, mu)
+    denominator = snv_mix_two_single_read_likelihood(q, r, mu)
     
     return numerator / denominator
 
@@ -48,34 +48,13 @@ cpdef snv_mix_two_expected_b(double q, double r, double mu):
     cdef double numerator, denominator
     
     numerator = (1 - mu) * (0.5 + r * (0.5 - q))
-    denominator = snv_mix_two_single_read_log_likelihood(q, r, mu)
+    denominator = snv_mix_two_single_read_likelihood(q, r, mu)
     
     return numerator / denominator
 
 #=======================================================================================================================
 # Code for doing log space normalisation
-#=======================================================================================================================
-cpdef log_space_normalise_list(list log_X):
-    '''
-    Perform a log space normalisation of values in a python list. Done in place.
-    '''
-    cdef int i, l
-    cdef double * c_log_X
-    
-    l = len(log_X)
-    
-    c_log_X = < double *> malloc(sizeof(double) * l)
-    
-    for i in range(l):
-        c_log_X[i] = log_X[i]
-    
-    log_space_normalise(c_log_X, l)
-    
-    for i in range(l):
-        log_X[i] = c_log_X[i]
-    
-    free(c_log_X)
-    
+#=======================================================================================================================   
 cdef void log_space_normalise(double * log_X, int size):
     '''
     Normalise log_X so that 
