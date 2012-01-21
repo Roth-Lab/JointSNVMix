@@ -6,7 +6,6 @@ Created on 2011-08-04
 #=======================================================================================================================
 # Log likelihoods
 #=======================================================================================================================
-from numpy.oldnumeric.compat import mu
 cpdef double binomial_log_likelihood(int a, int b, double mu):
     return a * log(mu) + b * log(1 - mu)
 
@@ -56,6 +55,27 @@ cpdef snv_mix_two_expected_b(double q, double r, double mu):
 #=======================================================================================================================
 # Code for doing log space normalisation
 #=======================================================================================================================
+cpdef log_space_normalise_list(list log_X):
+    '''
+    Perform a log space normalisation of values in a python list. Done in place.
+    '''
+    cdef int i, l
+    cdef double * c_log_X
+    
+    l = len(log_X)
+    
+    c_log_X = < double *> malloc(sizeof(double) * l)
+    
+    for i in range(l):
+        c_log_X[i] = log_X[i]
+    
+    log_space_normalise(c_log_X, l)
+    
+    for i in range(l):
+        log_X[i] = c_log_X[i]
+    
+    free(c_log_X)
+    
 cdef void log_space_normalise(double * log_X, int size):
     '''
     Normalise log_X so that 
