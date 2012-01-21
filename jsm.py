@@ -80,13 +80,13 @@ train_parent.add_argument('--convergence_threshold', default=1e-6, type=float,
 #=======================================================================================================================
 classify_parent = argparse.ArgumentParser(add_help=False, parents=[train_classify_parent])
 
-classify_parent.add_argument('out_file',
-                             help='''Path to output file to be created. Output file will be tab separated file with
-                             position information and class labels.''')
+classify_parent.add_argument('--out_file',
+                             help='''If set results will be output here, otherwise they will go to STDOUT.Output file
+                             will be tab separated file with position information and class labels.''')
 
-classify_parent.add_argument('--print_all_sites', action='store_true', default=False, 
-                             help='''By default only sites with a variant read in the tumour are printed. If this flag
-                             is set all sites will be printed.''')
+classify_parent.add_argument('--print_all_positions', action='store_true', default=False, 
+                             help='''By default only positions with a variant read in the tumour are printed. If this
+                             flag is set all sites will be printed.''')
 
 classify_parent.add_argument('--parameters_file',
                              help='Path to a file with custom parameters values for the model.')
