@@ -140,7 +140,7 @@ cdef class PileupColumn:
 #=======================================================================================================================
 # Factory methods
 #=======================================================================================================================
-cdef makePileupColumn(bam_pileup1_t * plp, int tid, int pos, int n):
+cdef makePileupColumn(bam_pileup1_t * plp, int tid, int pos, int n_plp):
     cdef int i, depth, index, qpos
     cdef bam1_t * alignment
     cdef bam_pileup1_t * pileup
@@ -150,14 +150,16 @@ cdef makePileupColumn(bam_pileup1_t * plp, int tid, int pos, int n):
     column._tid = tid
     
     column._pos = pos
+    
+    column._depth = get_covered_depth(plp, n_plp)
      
-    column._bases = < char *> malloc(sizeof(char) * depth)
-    column._base_quals = < int *> malloc(sizeof(int) * depth)
-    column._map_quals = < int *> malloc(sizeof(int) * depth)  
+    column._bases = < char *> malloc(sizeof(char) * column._depth)
+    column._base_quals = < int *> malloc(sizeof(int) * column._depth)
+    column._map_quals = < int *> malloc(sizeof(int) * column._depth)  
         
     index = 0
 
-    for i in range(n):
+    for i in range(n_plp):
         pileup = & plp[i]
         
         if pileup.is_del:
@@ -176,8 +178,6 @@ cdef makePileupColumn(bam_pileup1_t * plp, int tid, int pos, int n):
         bam_destroy1(alignment)
         
         index += 1
-    
-    column._depth = index
     
     return column
         
