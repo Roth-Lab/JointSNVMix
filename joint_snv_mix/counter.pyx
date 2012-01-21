@@ -414,17 +414,22 @@ cdef get_aligment_probabilities(char * ref_base, char * var_base, double * q, do
     
     This function ignores positions which do not match the reference or variant base.
     '''
-    cdef char * base
+    cdef char base_char, ref_base_char, var_base_char
     cdef int read_index, i, bq, mq
     cdef double prob
     
     i = 0
     
+    ref_base_char = ref_base[0]
+    var_base_char = var_base[0]
+    
     for read_index in range(column._depth):
         bq = column._base_quals[read_index]
         mq = column._map_quals[read_index]
+        
+        base_char = column._bases[read_index]
 
-        if ref_base[0] == column._bases[i]:
+        if ref_base_char == base_char:
             prob = convert_phred_qual_to_prob(bq)
             q[i] = prob
             
@@ -432,7 +437,7 @@ cdef get_aligment_probabilities(char * ref_base, char * var_base, double * q, do
             
             i += 1
         
-        elif var_base[0] == column._bases[i]:
+        elif var_base_char == base_char:
             prob = convert_phred_qual_to_prob(bq)
             q[i] = (1 - prob) / 3
             
