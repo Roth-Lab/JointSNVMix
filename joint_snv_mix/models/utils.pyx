@@ -6,13 +6,14 @@ Created on 2011-08-04
 #=======================================================================================================================
 # Log likelihoods
 #=======================================================================================================================
-cdef double binomial_log_likelihood(int a, int b, double mu):
+from numpy.oldnumeric.compat import mu
+cpdef double binomial_log_likelihood(int a, int b, double mu):
     return a * log(mu) + b * log(1 - mu)
 
-cdef double beta_log_likelihood(double mu, double a, double b):
+cpdef double beta_log_likelihood(double mu, double a, double b):
     return (a - 1) * log(mu) + (b - 1) * log(1 - mu)
 
-cdef double dirichlet_log_likelihood(tuple x, tuple kappa):
+cpdef double dirichlet_log_likelihood(tuple x, tuple kappa):
     cdef double k_i, x_i, log_likelihood
     
     log_likelihood = 0
@@ -33,21 +34,21 @@ cdef double snv_mix_two_log_likelihood(double * q, double * r, int d, double mu)
     
     return log_likelihood
 
-cdef double snv_mix_two_single_read_log_likelihood(double q, double r, double mu):
+cpdef double snv_mix_two_single_read_log_likelihood(double q, double r, double mu):
     return 0.5 * (1 - r) + r * ((1 - q) * (1 - mu) + q * mu)
 
-cdef snv_mix_two_expected_a(double q, double r, double mu):
+cpdef snv_mix_two_expected_a(double q, double r, double mu):
     cdef double numerator, denominator
     
-    numerator = 0.5 * (1 - r) + r * q * mu
+    numerator = mu * (0.5 + r * (q - 0.5))
     denominator = snv_mix_two_single_read_log_likelihood(q, r, mu)
     
     return numerator / denominator
 
-cdef snv_mix_two_expected_b(double q, double r, double mu):
+cpdef snv_mix_two_expected_b(double q, double r, double mu):
     cdef double numerator, denominator
     
-    numerator = 0.5 * (1 - r) * (1 - q) + r * (1 - q) * (1 - mu)
+    numerator = (1 - mu) * (0.5 + r * (0.5 - q))
     denominator = snv_mix_two_single_read_log_likelihood(q, r, mu)
     
     return numerator / denominator
