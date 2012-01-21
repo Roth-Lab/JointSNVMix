@@ -4,6 +4,7 @@ Created on 2011-08-11
 @author: Andrew Roth
 '''
 import csv
+import sys
 
 from joint_snv_mix.counter import JointBinaryCounter
 from joint_snv_mix.models.joint_snv_mix import JointSnvMixModel, JointSnvMixPriors, JointSnvMixParameters
@@ -22,10 +23,7 @@ def classify(args):
     classify_data_set(counter, model, args)
 
 def classify_data_set(counter, classifier, args):
-    if args.out_file == '-':
-        writer = StdoutWriter()
-    else:
-        writer = FileWriter(args.out_file)
+    writer = ResultsWriter(file_name=args.out_file)
     
     if args.chromosome is not None:
         positions_iter = counter.get_ref_iterator(args.chromosome)
@@ -33,14 +31,14 @@ def classify_data_set(counter, classifier, args):
         positions_iter = get_genome_iterator(counter)
     
     for row in positions_iter:
-        if not args.print_all_sites and row.tumour_var_counts == 0:
+        if not args.print_all_positions and row.tumour_var_counts == 0:
             continue 
         
         probs = classifier.predict(row.data)
         
         writer.write_position(row, probs)
 
-class FileWriter(object):
+class ResultsWriter(object):
     info = [
             'chrom',
             'position',
@@ -66,8 +64,13 @@ class FileWriter(object):
     
     fields = info + probs
     
-    def __init__(self, file_name):
-        self._writer = csv.DictWriter(open(file_name, 'w'), FileWriter.fields, delimiter='\t')
+    def __init__(self, file_name=None):
+        if file_name is None:
+            fh = sys.stdout
+        else:
+            fh = open(file_name, 'w')
+        
+        self._writer = csv.DictWriter(fh, ResultsWriter.fields, delimiter='\t')
         
         self._writer.writeheader()
         
@@ -85,25 +88,11 @@ class FileWriter(object):
         out_row['tumour_counts_a'] = counts[2]
         out_row['tumour_counts_b'] = counts[3]
         
-        probs = dict(zip(FileWriter.probs, probs))
+        probs = dict(zip(ResultsWriter.probs, probs))
         
         out_row = dict(out_row.items() + probs.items())
         
         self._writer.writerow(out_row)
-
-class StdoutWriter(object):
-    def write_position(self, row, probs):
-        out_row = [
-                   row.ref,
-                   row.position,
-                   row.ref_base,
-                   row.var_base                   
-                   ]
-        
-        out_row.extend(row.counts)
-        out_row.extend(probs)
-        
-        print "\t".join([str(x) for x in out_row]) 
          
 #=======================================================================================================================
 # Functions for training a model.
