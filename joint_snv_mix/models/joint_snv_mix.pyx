@@ -578,7 +578,7 @@ cdef class _JointSnvMixEss(object):
     #===================================================================================================================
     # Implementation
     #===================================================================================================================
-    def __init__(self, int num_normal_genotypes, int num_tumour_genotypes):        
+    def __cinit__(self, int num_normal_genotypes, int num_tumour_genotypes):        
         self._num_normal_genotypes = num_normal_genotypes
         
         self._num_tumour_genotypes = num_tumour_genotypes
