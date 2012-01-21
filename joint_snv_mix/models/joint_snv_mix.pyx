@@ -14,9 +14,8 @@ from libc.stdlib cimport malloc, free
 
 from joint_snv_mix.counter cimport JointBinaryData, JointBinaryCountData, JointBinaryQualityData
 from joint_snv_mix.models.utils cimport binomial_log_likelihood, beta_log_likelihood, dirichlet_log_likelihood, \
-                                        snv_mix_two_log_likelihood, snv_mix_two_single_read_log_likelihood, \
-                                        snv_mix_two_expected_a, snv_mix_two_expected_b, \
-                                        log_space_normalise_list, log_space_normalise, log_sum_exp 
+                                        snv_mix_two_log_likelihood, snv_mix_two_expected_a, snv_mix_two_expected_b, \
+                                        log_space_normalise, log_sum_exp 
 
 #=======================================================================================================================
 # Priors and Parameters
@@ -349,10 +348,12 @@ cdef class JointSnvMixModel(object):
         mu = []
         
         for a_g, b_g, prior_g in zip(a, b, prior):
-            log_numerator = log(a_g + prior_g['alpha'] - 1)
-            log_denominator = log(a_g + b_g + prior_g['alpha'] + prior_g['beta'] - 2)
+            alpha = a_g + prior_g['alpha'] - 1
+            beta = b_g + prior_g['beta'] - 1
+            
+            denom = alpha + beta
 
-            mu.append(exp(log_numerator - log_denominator))
+            mu.append(alpha / denom)
         
         return tuple(mu)
             
@@ -360,14 +361,14 @@ cdef class JointSnvMixModel(object):
         '''
         Compute the MAP update of the mix-weights in a mixture model with a Dirichlet prior.
         '''        
-        log_pi = []
+        pi = []
         
         for n_g, prior_g in zip(n, prior):
-            log_pi.append(log(n_g + prior_g - 1))
+            pi.append(n_g + prior_g - 1)
         
-        log_space_normalise_list(log_pi)
+        pi = [x / sum(pi) for x in pi]
 
-        return tuple([exp(x) for x in log_pi])
+        return tuple(pi)
     
     cdef double _get_log_likelihood(self, data):
         cdef double log_liklihood
