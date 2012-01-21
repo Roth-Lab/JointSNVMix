@@ -440,7 +440,7 @@ cdef get_aligment_probabilities(char * ref_base, char * var_base, double * q, do
             
             i += 1
 
-cdef double convert_phred_qual_to_prob(int qual):
+cpdef double convert_phred_qual_to_prob(int qual):
     '''
     Converts integer mapping or base quality on the phred scale to a probability.
     '''
