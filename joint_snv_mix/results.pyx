@@ -75,7 +75,7 @@ cdef class CResultsWriter(object):
         self._file_ptr = NULL
 
     cdef write_position(self, JointBinaryCounterRow row, double * probs):
-        cdef JointBinaryCounterData data
+        cdef JointBinaryData data
         
         data = row._data
         

@@ -3,7 +3,9 @@ Created on 2012-01-22
 
 @author: Andrew Roth
 '''
-from libc.stdio cimport fopen, fclose, fputs, fprintf, stdout, FILE 
+from libc.stdio cimport fopen, fclose, fputs, fprintf, stdout, FILE
+
+from joint_snv_mix.counter cimport JointBinaryCounterRow, JointBinaryData
 
 cdef class CResultsWriter(object):
     cdef FILE * _file_ptr
