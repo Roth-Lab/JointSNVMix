@@ -11,6 +11,8 @@ from joint_snv_mix.models.joint_snv_mix import JointSnvMixModel, JointSnvMixPrio
 from joint_snv_mix.samtools import BamFile, FastaFile
 
 from joint_snv_mix.counter cimport JointBinaryCounterRow, JointBinaryData
+from joint_snv_mix.models.joint_snv_mix cimport JointSnvMixModel
+from joint_snv_mix.results cimport CResultsWriter
 
 #=======================================================================================================================
 # Functions for running classification.
@@ -31,6 +33,8 @@ def classify_data_set(counter, JointSnvMixModel model, args):
     cdef JointBinaryCounterRow row
     cdef JointBinaryData data
     
+    cdef CResultsWriter writer
+    
     print_all = args.print_all_positions
     
     writer = CResultsWriter(file_name=args.out_file)
@@ -41,7 +45,7 @@ def classify_data_set(counter, JointSnvMixModel model, args):
         refs = [args.chromosome, ]
         
     for ref in refs:
-        positions_iter = counter.get_iterator(ref=ref)
+        positions_iter = counter.get_ref_iterator(ref)
         
         for row in positions_iter:
             data = row._data
@@ -96,7 +100,7 @@ def create_training_data_set(counter, args):
         refs = [args.chromosome, ]
     
     for ref in sorted(refs):
-        positions_iter = counter.get_iterator(ref=ref)
+        positions_iter = counter.get_ref_iterator(ref)
         
         for row in positions_iter:
             data = row._data
@@ -154,7 +158,7 @@ class ModelFactory(object):
         if args.mode == 'train' and args.priors_file is not None:
             priors.read_from_file(args.priors_file)
             
-            print "Using custom initial priors from {0}".format(args.priors_file)
+            sys.stderr.write("Using custom initial priors from {0}".format(args.priors_file))
         
         return priors
     
@@ -164,11 +168,11 @@ class ModelFactory(object):
         if args.mode == 'train' and args.initial_parameters_file is not None:            
             params.read_from_file(args.initial_parameters_file)
             
-            print "Using custom initial parameters from {0}".format(args.initial_parameters_file)
+            sys.stderr.write("Using custom initial parameters from {0}".format(args.initial_parameters_file))
         
         if args.mode == 'classify' and args.parameters_file is not None:
             params.read_from_file(args.parameters_file)
             
-            print "Using custom parameters from {0}".format(args.parameters_file)
+            sys.stderr.write("Using custom parameters from {0}".format(args.parameters_file))
         
         return params
