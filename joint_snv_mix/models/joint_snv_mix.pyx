@@ -6,25 +6,10 @@ Created on 2012-01-16
 from __future__ import division
 
 import ConfigParser
-
-from math import exp, log 
-
-from libc.math cimport exp, log
-from libc.stdlib cimport malloc, free
-
-from joint_snv_mix.counter cimport JointBinaryData, JointBinaryCountData, JointBinaryQualityData
-from joint_snv_mix.models.utils cimport binomial_log_likelihood, beta_log_likelihood, dirichlet_log_likelihood, \
-                                        snv_mix_two_log_likelihood, snv_mix_two_expected_a, snv_mix_two_expected_b, \
-                                        log_space_normalise, log_sum_exp 
-
 #=======================================================================================================================
 # Priors and Parameters
 #=======================================================================================================================
 cdef class JointSnvMixPriors(object):
-    cdef tuple _mu_N
-    cdef tuple _mu_T
-    cdef tuple _pi
-    
     def __init__(self, mu_N=None, mu_T=None, pi=None):
         default_mu = (
                       {'alpha' : 100, 'beta' : 2},
@@ -125,10 +110,6 @@ cdef class JointSnvMixPriors(object):
 
 #---------------------------------------------------------------------------------------------------------------------- 
 cdef class JointSnvMixParameters(object):
-    cdef tuple _mu_N
-    cdef tuple _mu_T
-    cdef tuple _pi
-
     def __init__(self, mu_N=None, mu_T=None, pi=None):
         default_mu = (0.99, 0.5, 0.01)
         
@@ -242,15 +223,6 @@ cdef class JointSnvMixParameters(object):
 # Model
 #=======================================================================================================================
 cdef class JointSnvMixModel(object):
-    cdef JointSnvMixPriors _priors
-    cdef JointSnvMixParameters _params
-    
-    cdef _JointSnvMixDensity _density
-    cdef _JointSnvMixEss _ess
-    
-    cdef int _num_joint_genotypes
-    cdef double * _resp
-    
     def __cinit__(self, JointSnvMixPriors priors, JointSnvMixParameters params, model="jsm1"):
         self._priors = priors
         self._params = params
@@ -416,13 +388,6 @@ cdef class _JointSnvMixDensity(object):
     Base class for density objects. Sub-classing objects need to implement one method, get_responsibilities. This method
     computes the responsibilities for a data-point.
     '''
-    cdef int _num_normal_genotypes
-    cdef int _num_tumour_genotypes
-    cdef int _num_joint_genotypes
-    
-    cdef double * _mu_N
-    cdef double * _mu_T
-    cdef double * _log_mix_weights
     #===================================================================================================================
     # Interface
     #===================================================================================================================
@@ -556,19 +521,6 @@ cdef class _JointSnvMixEss(object):
     Base class for storing and updating expected sufficient statistics (ESS) for JointSnvMix models using Bernoulli or
     Binomial distributions.
     '''
-    cdef int _num_normal_genotypes
-    cdef int _num_tumour_genotypes
-    cdef int _num_joint_genotypes
-    
-    cdef double * _a_N
-    cdef double * _b_N
-    cdef double * _a_T
-    cdef double * _b_T
-    cdef double * _n
-    
-    cdef double * _mu_N
-    cdef double * _mu_T
-        
     #===================================================================================================================
     # Interface
     #===================================================================================================================
