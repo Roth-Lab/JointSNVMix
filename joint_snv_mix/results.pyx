@@ -23,14 +23,11 @@ results_header = ['chrom',
                   'p_BB_BB']
 
 cdef class CResultsWriter(object):
-    cdef FILE * _file_ptr
-    cdef char * _format_string
-
     def __init__(self, file_name=None):
         if file_name is None:
             self._file_ptr = stdout
         else:
-            self._file_ptr = fopen(file_name, "w")
+            self._file_ptr = fopen(< char *> file_name, "w")
         
             if self._file_ptr == NULL:
                 raise Exception("Couldn't open results file at {0}".format(file_name))
@@ -41,12 +38,14 @@ cdef class CResultsWriter(object):
         header += "\n"
         
         fputs(< char *> header, self._file_ptr)
-        
-        return file_p
     
     def __dealloc__(self):
         if self._file_ptr != NULL:
             self.close()
+        
+        if self._format_string != NULL:
+            free(self._format_string)
+            self._format_string = NULL
     
     cdef _init_format_string(self):
         format_string = ['%s', # chrom
@@ -68,7 +67,9 @@ cdef class CResultsWriter(object):
                          '%.4f', # p_BB_BB
                          ]
         
-        self._format_string = "\t".join(format_string) + "\n"
+        format_string = "\t".join(format_string) + "\n"
+        
+        self._format_string = strdup(< char *> format_string)
         
     cdef close(self):
         fclose(self._file_ptr)
@@ -80,7 +81,7 @@ cdef class CResultsWriter(object):
         data = row._data
         
         fprintf(self._file_ptr, self._format_string, row._ref,
-                                                     row._position + 1,
+                                                     row._pos + 1,
                                                      row._ref_base,
                                                      row._var_base,
                                                      data._a_N,
