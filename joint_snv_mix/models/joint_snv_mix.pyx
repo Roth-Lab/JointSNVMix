@@ -489,69 +489,12 @@ cdef class _JointSnvMixDensity(object):
         # Store the log of the mix-weights to speed up computation.
         for i, pi in enumerate(params._pi):
             self._log_mix_weights[i] = log(pi)
-
-#---------------------------------------------------------------------------------------------------------------------- 
-cdef class _JointSnvMixOneDensity(_JointSnvMixDensity):    
-    cdef _get_complete_log_likelihood(self, JointBinaryData uncast_data_point, double * ll):        
-        cdef int g_N, g_T, g_J, a, b
-        cdef double mu_N, mu_T, log_mix_weight, normal_log_likelihood, tumour_log_likelihood
-        
-        cdef JointBinaryCountData data_point = < JointBinaryCountData > uncast_data_point
-    
-        for g_N in range(self._num_normal_genotypes):            
-            for g_T in range(self._num_tumour_genotypes):
-                # Index of joint genotype
-                g_J = (self._num_tumour_genotypes * g_N) + g_T
-                
-                mu_N = self._mu_N[g_N]
-                mu_T = self._mu_T[g_T]
-                
-                log_mix_weight = self._log_mix_weights[g_J]
-                
-                normal_log_likelihood = binomial_log_likelihood(data_point._a_N, data_point._b_N, mu_N)
-                tumour_log_likelihood = binomial_log_likelihood(data_point._a_T, data_point._b_T, mu_T)
-                
-                # Combine the mix-weight, normal likelihood and tumour likelihood to obtain class likelihood
-                ll[g_J] = log_mix_weight + normal_log_likelihood + tumour_log_likelihood
-                
-#---------------------------------------------------------------------------------------------------------------------- 
-cdef class _JointSnvMixTwoDensity(_JointSnvMixDensity):
-    cdef _get_complete_log_likelihood(self, JointBinaryData uncast_data_point, double * ll):
-        cdef int g_N, g_T, g_J
-        cdef double mu_N, mu_T, log_mix_weight, normal_log_likelihood, tumour_log_likelihood
-    
-        cdef JointBinaryQualityData data_point = < JointBinaryQualityData > uncast_data_point
-    
-        for g_N in range(self._num_normal_genotypes):            
-            for g_T in range(self._num_tumour_genotypes):
-                # Index of joint genotype
-                g_J = (self._num_tumour_genotypes * g_N) + g_T
-                
-                mu_N = self._mu_N[g_N]
-                mu_T = self._mu_T[g_T]
-                
-                log_mix_weight = self._log_mix_weights[g_J]
-                                        
-                normal_log_likelihood = snv_mix_two_log_likelihood(data_point._q_N,
-                                                                   data_point._r_N,
-                                                                   data_point._d_N,
-                                                                   mu_N)
-                
-                tumour_log_likelihood = snv_mix_two_log_likelihood(data_point._q_T,
-                                                                   data_point._r_T,
-                                                                   data_point._d_T,
-                                                                   mu_T)
-                
-                # Combine the mix-weight, normal likelihood and tumour likelihood to obtain class likelihood
-                ll[g_J] = log_mix_weight + normal_log_likelihood + tumour_log_likelihood
-
 #=======================================================================================================================
-# Ess
+# ESS
 #=======================================================================================================================
 cdef class _JointSnvMixEss(object):
     '''
-    Base class for storing and updating expected sufficient statistics (ESS) for JointSnvMix models using Bernoulli or
-    Binomial distributions.
+    Base class for storing and updating expected sufficient statistics (ESS) for JointSnvMix models.
     '''
     cdef int _num_normal_genotypes
     cdef int _num_tumour_genotypes
@@ -656,53 +599,5 @@ cdef class _JointSnvMixEss(object):
     
     property n:
         def __get__(self):
-            return [x for x in self._n[:self._num_joint_genotypes]]
-                    
-#---------------------------------------------------------------------------------------------------------------------- 
-cdef class _JointSnvMixOneEss(_JointSnvMixEss):
-    cdef update(self, JointBinaryData data_point, double * resp):
-        cdef int g_N, g_T, g_J
-    
-        for g_N in range(self._num_normal_genotypes):            
-            for g_T in range(self._num_tumour_genotypes):
-                g_J = (self._num_tumour_genotypes * g_N) + g_T
-            
-                self._a_N[g_N] += data_point._a_N * resp[g_J]
-                self._b_N[g_N] += data_point._b_N * resp[g_J]
-                
-                self._a_T[g_T] += data_point._a_T * resp[g_J]
-                self._b_T[g_T] += data_point._b_T * resp[g_J]
-            
-                self._n[g_J] += resp[g_J]      
+            return [x for x in self._n[:self._num_joint_genotypes]]----------------------------------------------------------------------------------------------------------------- 
 
-#---------------------------------------------------------------------------------------------------------------------- 
-cdef class _JointSnvMixTwoEss(_JointSnvMixEss):
-    cdef update(self, JointBinaryData uncast_data_point, double * resp):
-        cdef int g_N, g_T, g_J
-        cdef double mu_N, mu_T, a_N, a_T, b_N, b_T
-        
-        cdef JointBinaryQualityData data_point = < JointBinaryQualityData > uncast_data_point
-    
-        for g_N in range(self._num_normal_genotypes):            
-            for g_T in range(self._num_tumour_genotypes):
-                # Index of joint genotype
-                g_J = (self._num_tumour_genotypes * g_N) + g_T
-                
-                mu_N = self._mu_N[g_N]
-                mu_T = self._mu_T[g_T]
-            
-                for i in range(data_point._d_N):
-                    a_N = snv_mix_two_expected_a(data_point._q_N[i], data_point._r_N[i], mu_N)
-                    b_N = snv_mix_two_expected_b(data_point._q_N[i], data_point._r_N[i], mu_N)
-                    
-                    self._a_N[g_N] += a_N * resp[g_J]
-                    self._b_N[g_N] += b_N * resp[g_J]
-                    
-                for i in range(data_point._d_T):
-                    a_T = snv_mix_two_expected_a(data_point._q_T[i], data_point._r_T[i], mu_T)
-                    b_T = snv_mix_two_expected_b(data_point._q_T[i], data_point._r_T[i], mu_T)
-                    
-                    self._a_T[g_T] += a_T * resp[g_J]
-                    self._b_T[g_T] += b_T * resp[g_J]                    
-
-                self._n[g_J] += resp[g_J] 
