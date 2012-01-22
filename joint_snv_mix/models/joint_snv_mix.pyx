@@ -272,9 +272,12 @@ cdef class JointSnvMixModel(object):
         free(self._resp)
 
     def predict(self, data_point):
-        self._density.get_responsibilities(data_point, self._resp)
+        self._predict(data_point)
         
         return [x for x in self._resp[:self._num_joint_genotypes]]
+    
+    cdef _predict(self, JointBinaryData data_point):
+        self._density.get_responsibilities(data_point, self._resp)
     
     def fit(self, data, max_iters=1000, tolerance=1e-6, verbose=False):
         '''
