@@ -72,12 +72,6 @@ cdef class JointBinaryCounterRow(object):
     cdef char * _var_base
     
     cdef JointBinaryData _data
-    
-cdef class JointBinaryBaseCounterRow(JointBinaryCounterRow):
-    pass
-
-cdef class JointBinaryQualityCounterRow(JointBinaryCounterRow):
-    pass
 
 #=======================================================================================================================
 # Data object 

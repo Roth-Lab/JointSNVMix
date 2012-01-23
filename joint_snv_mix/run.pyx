@@ -3,7 +3,6 @@ Created on 2011-08-11
 
 @author: Andrew Roth
 '''
-import csv
 import sys
 
 from joint_snv_mix.counter import JointBinaryCounter
