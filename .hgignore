@@ -44,3 +44,5 @@ syntax: regexp
 ^test\.jsm2\.cfg$
 syntax: regexp
 ^test\.jsm2\.tsv$
+syntax: regexp
+^tests/data/nan_error$
