@@ -19,6 +19,18 @@ counter = Extension(
                     include_dirs=counter_includes
                     )
 
+results = Extension(
+                    "joint_snv_mix.results",
+                    ["joint_snv_mix/results.pyx"],
+                    include_dirs=counter_includes
+                    )
+
+run = Extension(
+                "joint_snv_mix.run",
+                ["joint_snv_mix/run.pyx"],
+                include_dirs=counter_includes
+                )
+
 #=======================================================================================================================
 # Samtools
 #=======================================================================================================================
@@ -89,7 +101,9 @@ ext_modules = [
                pileup,
                counter,
                models,
-               utils
+               utils,
+               run,
+               results
                ]
 
 setup(

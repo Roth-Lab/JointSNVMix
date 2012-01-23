@@ -25,11 +25,6 @@ train_classify_parent.add_argument('normal_file',
 train_classify_parent.add_argument('tumour_file',
                                    help='''Path to BAM file for tumour sample.''')
 
-train_classify_parent.add_argument('--positions_file', default=None,
-                                   help='''Path to a file containing a list of positions to create use for analysis.
-                                   Should be space separated chrom pos. Additionally for each chromosome the positions
-                                   should be sorted. The same format as samtools.''')
-
 train_classify_parent.add_argument('--chromosome', default=None,
                                    help='''Chromosome to analyse. If not set all chromosomes will be analysed.''')
 
