@@ -148,7 +148,7 @@ cdef class JointBinaryCounterIterator(object):
         self._current_row = self._make_counter_row(normal_column, tumour_column)
     
     cdef JointBinaryCounterRow _make_counter_row(self, PileupColumn normal_column, PileupColumn tumour_column):
-        cdef JointBinaryBaseCounterRow row = JointBinaryBaseCounterRow.__new__(JointBinaryBaseCounterRow)
+        cdef JointBinaryCounterRow row = JointBinaryCounterRow.__new__(JointBinaryCounterRow)
         
         row._ref = self._ref
         row._pos = self._pos
@@ -169,7 +169,7 @@ cdef class JointBinaryCounterIterator(object):
         return row
 
     cdef JointBinaryData _make_count_data(self, char * ref_base, char * var_base,
-                          PileupColumn normal_column, PileupColumn tumour_column):
+                                          PileupColumn normal_column, PileupColumn tumour_column):
         cdef JointBinaryCountData data = JointBinaryCountData.__new__(JointBinaryCountData)
 
         data._a_N = normal_column.get_nucleotide_count(ref_base, self._min_base_qual, self._min_map_qual)
@@ -290,12 +290,6 @@ cdef class JointBinaryCounterRow(object):
         def __get__(self):
             return self._data 
         
-cdef class JointBinaryBaseCounterRow(JointBinaryCounterRow):
-    pass
-
-cdef class JointBinaryQualityCounterRow(JointBinaryCounterRow):
-    pass
-
 #=======================================================================================================================
 # Data object 
 #=======================================================================================================================
@@ -433,11 +427,17 @@ cdef get_aligment_probabilities(char * ref_base, char * var_base, double * q, do
     cdef char base_char, ref_base_char, var_base_char
     cdef int read_index, i, bq, mq
     cdef double prob
+    cdef bint var_base_is_not_N
     
     i = 0
     
     ref_base_char = ref_base[0]
     var_base_char = var_base[0]
+    
+    if strcmp(var_base, 'N') == 0:
+        var_base_is_not_N = 0
+    else:
+        var_base_is_not_N = 1
     
     for read_index in range(column._depth):
         bq = column._base_quals[read_index]
@@ -453,7 +453,7 @@ cdef get_aligment_probabilities(char * ref_base, char * var_base, double * q, do
             
             i += 1
         
-        elif var_base_char == base_char:
+        elif var_base_char == base_char and var_base_is_not_N:
             prob = convert_phred_qual_to_prob(bq)
             q[i] = (1 - prob) / 3
             
