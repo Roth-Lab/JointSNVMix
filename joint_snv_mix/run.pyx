@@ -44,7 +44,7 @@ def classify_data_set(counter, JointSnvMixModel model, args):
     else:
         refs = [args.chromosome, ]
         
-    for ref in refs:
+    for ref in sorted(refs):
         positions_iter = counter.get_ref_iterator(ref)
         
         for row in positions_iter:
