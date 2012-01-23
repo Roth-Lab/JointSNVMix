@@ -67,8 +67,12 @@ cdef class JointBinaryCounterIterator(object):
         self._qualities = qualities        
         self._ref = ref
         
-        self._min_base_qual = min_base_qual
-        self._min_map_qual = min_map_qual
+        if qualities:
+            self._min_base_qual = 0
+            self._min_map_qual = 0
+        else:
+            self._min_base_qual = min_base_qual
+            self._min_map_qual = min_map_qual
 
         self._normal_iter = normal_iter
         self._tumour_iter = tumour_iter
@@ -93,7 +97,7 @@ cdef class JointBinaryCounterIterator(object):
         Read only access to reference which the iterator runs over.
         '''
         def __get__(self):
-            return self._ref1
+            return self._ref
     
     property position:
         '''
@@ -165,10 +169,14 @@ cdef class JointBinaryCounterIterator(object):
         cdef JointBinaryCountData data = JointBinaryCountData.__new__(JointBinaryCountData)
 
         data._a_N = normal_column.get_nucleotide_count(ref_base, self._min_base_qual, self._min_map_qual)
-        data._b_N = normal_column.get_nucleotide_count(var_base, self._min_base_qual, self._min_map_qual)
-
         data._a_T = tumour_column.get_nucleotide_count(ref_base, self._min_base_qual, self._min_map_qual)
-        data._b_T = tumour_column.get_nucleotide_count(var_base, self._min_base_qual, self._min_map_qual)
+        
+        if strcmp(var_base, 'N') == 0:
+            data._b_N = 0
+            data._b_T = 0
+        else: 
+            data._b_N = normal_column.get_nucleotide_count(var_base, self._min_base_qual, self._min_map_qual)
+            data._b_T = tumour_column.get_nucleotide_count(var_base, self._min_base_qual, self._min_map_qual)
 
         return data
     
@@ -178,13 +186,17 @@ cdef class JointBinaryCounterIterator(object):
         
         cdef JointBinaryQualityData data = JointBinaryQualityData.__new__(JointBinaryQualityData)
 
-        # Get the number of ref and non-ref bases in tumour.
-        data._a_N = normal_column.get_nucleotide_count(ref_base, 0, 0)
-        data._b_N = normal_column.get_nucleotide_count(var_base, 0, 0)
+        # Get the number of ref and non-ref bases in tumour.        
+        data._a_N = normal_column.get_nucleotide_count(ref_base, self._min_base_qual, self._min_map_qual)
+        data._a_T = tumour_column.get_nucleotide_count(ref_base, self._min_base_qual, self._min_map_qual)
         
-        data._a_T = tumour_column.get_nucleotide_count(ref_base, 0, 0)
-        data._b_T = tumour_column.get_nucleotide_count(var_base, 0, 0)
-        
+        if strcmp(var_base, 'N') == 0:                
+            data._b_N = 0
+            data._b_T = 0
+        else:
+            data._b_N = normal_column.get_nucleotide_count(var_base, self._min_base_qual, self._min_map_qual)                
+            data._b_T = tumour_column.get_nucleotide_count(var_base, self._min_base_qual, self._min_map_qual)
+            
         data._d_N = data._a_N + data._b_N
         data._d_T = data._a_T + data._b_T
         
