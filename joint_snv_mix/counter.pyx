@@ -154,8 +154,12 @@ cdef class JointBinaryCounterIterator(object):
         row._pos = self._pos
         
         row._ref_base = self._ref_genome.get_reference_base(self._ref, self._pos)       
-        row._var_base = get_var_base(row._ref_base, normal_column, tumour_column,
-                                     self._min_base_qual, self._min_map_qual)
+        
+        row._var_base = get_var_base(row._ref_base,
+                                     normal_column,
+                                     tumour_column,
+                                     self._min_base_qual,
+                                     self._min_map_qual)
 
         if self._qualities:
             row._data = self._make_quality_data(row._ref_base, row._var_base, normal_column, tumour_column)
