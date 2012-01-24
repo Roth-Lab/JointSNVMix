@@ -36,7 +36,7 @@ cdef double snv_mix_two_log_likelihood(double * q, double * r, int d, double mu)
 cpdef double snv_mix_two_single_read_likelihood(double q, double r, double mu):
     return 0.5 * (1 - r) + r * ((1 - q) * (1 - mu) + q * mu)
 
-cpdef snv_mix_two_expected_a(double q, double r, double mu):
+cpdef double snv_mix_two_expected_a(double q, double r, double mu):
     cdef double numerator, denominator
     
     numerator = mu * (0.5 + r * (q - 0.5))
@@ -44,7 +44,7 @@ cpdef snv_mix_two_expected_a(double q, double r, double mu):
     
     return numerator / denominator
 
-cpdef snv_mix_two_expected_b(double q, double r, double mu):
+cpdef double snv_mix_two_expected_b(double q, double r, double mu):
     cdef double numerator, denominator
     
     numerator = (1 - mu) * (0.5 + r * (0.5 - q))
