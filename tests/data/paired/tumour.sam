@@ -1,0 +1,9 @@
+@HD	VN:1.0
+@SQ	SN:1	LN:1575
+@SQ	SN:2	LN:1575
+@CO	Tumour sample alignment for testing paired sequence readers.
+@CO	Mapping qualities are 10, 20, 30
+read_1	99	1	1	10	4M1I6M	*	0	0	TAACTCTTCAC	<<<<<<<<<<<	NM:i:1
+read_2	99	1	1	25	2M1D7M	*	0	0	TACCTACAc	<<<<<<<<<	NM:i:1
+read_3	99	1	1	30	10M	*	0	0	TCACCTTCAg	<<<<<<<<<<	NM:i:1
+read_4	99	2	1	30	10M	*	0	0	TCACCTTCAg	<<<<<<<<<<	NM:i:1
