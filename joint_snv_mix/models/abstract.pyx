@@ -65,7 +65,7 @@ cdef class Parameters(object):
         def __get__(self):
             return self._pi    
 
-cdef class Model(object):
+cdef class MixtureModel(object):
     #===================================================================================================================
     # Needs to be implemented.
     #===================================================================================================================
@@ -211,7 +211,7 @@ cdef class Density(object):
     Base class for density objects. Sub-classing objects need to implement one method, get_responsibilities. This method
     computes the responsibilities for a data-point.
     '''   
-    cdef set_params(self, JointSnvMixParameters params):
+    cdef set_params(self, Parameters params):
         '''
         Copy Python level parameters into C arrays for fast access.
         '''
@@ -268,7 +268,7 @@ cdef class Ess(object):
         '''
         pass
 
-    cdef set_params(self, JointSnvMixParameters params):
+    cdef set_params(self, Parameters params):
         '''
         Copy parameters into object.
         '''

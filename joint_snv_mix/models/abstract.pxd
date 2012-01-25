@@ -3,7 +3,15 @@ Created on 2012-01-16
 
 @author: Andrew Roth
 '''
+from __future__ import division
+
+from libc.math cimport exp, log
+from libc.stdlib cimport malloc, free
+
 from joint_snv_mix.counter cimport JointBinaryData, JointBinaryCountData
+
+from joint_snv_mix.models.utils cimport log_space_normalise, log_sum_exp 
+
 
 cdef class Priors(object):
     cdef tuple _pi

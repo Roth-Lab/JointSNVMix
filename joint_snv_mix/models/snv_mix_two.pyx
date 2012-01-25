@@ -7,7 +7,7 @@ from __future__ import division
 
 import ConfigParser
 
-cdef class JointSnvMixModel(object):
+cdef class SnvMixTwoModel(MixtureModel):
     def __cinit__(self, BinomialPriors priors, BinomialParameters params):
         self._density = SnvMixTwoDensity(params)
         
@@ -51,8 +51,8 @@ cdef class JointSnvMixModel(object):
 
         return ll
 
-cdef class SnvMixTwoDensity(density):
-    def __cinit__(self, JointSnvMixParameters params):        
+cdef class SnvMixTwoDensity(Density):
+    def __cinit__(self, BinomialParameters params):        
         self._num_normal_genotypes = len(params.mu_N)
         
         self._num_tumour_genotypes = len(params.mu_T)
@@ -74,15 +74,14 @@ cdef class SnvMixTwoDensity(density):
         
         self._log_mix_weights = < double *> malloc(sizeof(double) * self._num_joint_genotypes)    
 
-    cdef set_params(self, JointSnvMixParameters params):
-        for i, mu_N in enumerate(params._mu_N):
+    cdef set_params(self, Parameters params):
+        for i, mu_N in enumerate(params.mu_N):
             self._mu_N[i] = mu_N
 
-        for i, mu_T in enumerate(params._mu_T):
+        for i, mu_T in enumerate(params.mu_T):
             self._mu_T[i] = mu_T
-        
-        # Store the log of the mix-weights to speed up computation.
-        for i, pi in enumerate(params._pi):
+
+        for i, pi in enumerate(params.pi):
             self._log_mix_weights[i] = log(pi)
 
     cdef _get_complete_log_likelihood(self, JointBinaryData uncast_data_point, double * ll):
@@ -162,7 +161,7 @@ cdef class SnvMixTwoEss(Ess):
         for i in range(self._num_joint_genotypes):
             self._n[i] = 0
 
-    cdef set_params(self, JointSnvMixParameters params):
+    cdef set_params(self, Parameters params):
         '''
         Copy Python level parameters into C arrays for fast access.
         '''

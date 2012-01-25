@@ -82,36 +82,28 @@ pileup = Extension(
 #=======================================================================================================================
 models_include = ['joint_snv_mix', 'joint_snv_mix/models', 'include/samtools']
 
-models = Extension(
-                    "joint_snv_mix.models.joint_snv_mix",
-                    ["joint_snv_mix/models/joint_snv_mix.pyx"],
-                    include_dirs=models_include
-                    )
+models = []
 
-beta_binomial = Extension(
-                          "joint_snv_mix.models.beta_binomial",
-                          ["joint_snv_mix/models/beta_binomial.pyx"],
-                          include_dirs=models_include
-                          )
-
-utils = Extension(
-                  "joint_snv_mix.models.utils",
-                  ["joint_snv_mix/models/utils.pyx"],
-                  include_dirs=models_include
-                  )
-
+for file_name in glob.glob('joint_snv_mix/models/*.pyx'):
+    base_name = os.path.basename(file_name)
+    root, ext = os.path.splitext(base_name)
+    
+    module = "joint_snv_mix.models.{0}".format(root)
+    
+    ext = Extension(module, [file_name, ], include_dirs=models_include)
+    
+    models.append(ext)
 
 ext_modules = [
                bam,
                fasta,
                pileup,
                counter,
-               models,
-               beta_binomial,
-               utils,
-               run,
+#               run,
                results
                ]
+
+ext_modules.extend(models)
 
 setup(
       name='JointSNVMix',

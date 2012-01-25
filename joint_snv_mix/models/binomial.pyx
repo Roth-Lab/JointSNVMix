@@ -7,6 +7,8 @@ from __future__ import division
 
 import ConfigParser
 
+import joint_snv_mix.constants as constants
+
 #=======================================================================================================================
 # Priors and Parameters
 #=======================================================================================================================
@@ -87,11 +89,11 @@ cdef class BinomialParameters(Parameters):
         config.add_section('mu_T')
         
         for i, g in enumerate(constants.genotypes):
-            config.set('mu_N', g, mu_N)
-            config.set('mu_T', g, mu_T)
+            config.set('mu_N', g, self.mu_N)
+            config.set('mu_T', g, self.mu_T)
             
         for i, g in enumerate(constants.joint_genotypes):
-            config.set('pi', g, pi)
+            config.set('pi', g, self.pi)
         
         fh = open(file_name, 'w')
         config.write(fh)
@@ -111,10 +113,10 @@ cdef class BinomialParameters(Parameters):
         self._pi = (0,) * len(constants.joint_genotypes)
         
         for i, g in enumerate(constants.joint_genotypes):
-            self._pi = config.getfloat('pi', g)
+            self._pi[i] = config.getfloat('pi', g)
         
         # Normalise pi
-        self._pi = tuple([x / sum(pi) for x in pi])
+        self._pi = tuple([x / sum(self._pi) for x in self._pi])
 
     property mu_N:
         def __get__(self):
@@ -127,7 +129,7 @@ cdef class BinomialParameters(Parameters):
 #=======================================================================================================================
 # Model
 #=======================================================================================================================
-cdef class JointSnvMixModel(object):
+cdef class BinomialModel(MixtureModel):
     def __cinit__(self, BinomialPriors priors, BinomialParameters params):
         self._density = BinomialDensity(params)
         self._ess = BinomialEss(len(params.mu_N), len(params.mu_T))            
@@ -171,7 +173,7 @@ cdef class JointSnvMixModel(object):
         return ll
 
 cdef class BinomialDensity(object):
-    def __cinit__(self, JointSnvMixParameters params):        
+    def __cinit__(self, Parameters params):        
         self._num_normal_genotypes = len(params.mu_N)
         
         self._num_tumour_genotypes = len(params.mu_T)

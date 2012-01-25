@@ -29,9 +29,17 @@ cdef class BetaBinomialModel(MixtureModel):
     pass
     
 cdef class BetaBinomialDensity(Density):
+    cdef double * _alpha_N
+    cdef double * _alpha_T
+        
+    cdef double * _beta_N
+    cdef double * _beta_T
+        
+    cdef double * _log_mix_weights
+
     cdef _init_arrays(self)
 
-cdef class BetaBinomialEss(object):
+cdef class BetaBinomialEss(Ess):
     cdef int _num_normal_genotypes
     cdef int _num_tumour_genotypes
     cdef int _num_joint_genotypes    
