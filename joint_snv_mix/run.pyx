@@ -165,7 +165,7 @@ class ModelFactory(object):
         if args.mode == 'train' and args.priors_file is not None:
             priors.read_from_file(args.priors_file)
             
-            sys.stderr.write("Using custom initial priors from {0}".format(args.priors_file))
+            sys.stderr.write("Using custom initial priors from {0}\n".format(args.priors_file))
         
         return priors
     
@@ -178,11 +178,11 @@ class ModelFactory(object):
         if args.mode == 'train' and args.initial_parameters_file is not None:            
             params.read_from_file(args.initial_parameters_file)
             
-            sys.stderr.write("Using custom initial parameters from {0}".format(args.initial_parameters_file))
+            sys.stderr.write("Using custom initial parameters from {0}\n".format(args.initial_parameters_file))
         
         if args.mode == 'classify' and args.parameters_file is not None:
             params.read_from_file(args.parameters_file)
             
-            sys.stderr.write("Using custom parameters from {0}".format(args.parameters_file))
+            sys.stderr.write("Using custom parameters from {0}\n".format(args.parameters_file))
         
         return params
