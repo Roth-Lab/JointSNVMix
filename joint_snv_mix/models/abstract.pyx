@@ -188,7 +188,7 @@ cdef class MixtureModel(object):
         '''
         Get log likelihood of data-set.
         '''
-        cdef double log_liklihood
+        cdef double log_likelihood
         cdef JointBinaryData data_point
         
         log_likelihood = self._get_prior_log_likelihood()
