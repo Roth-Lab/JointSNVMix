@@ -17,14 +17,7 @@ cdef class BetaBinomialPriors(Priors):
         config = ConfigParser.SafeConfigParser()
         config.read(file_name)
         
-        pi = []
-        
-        for g in constants.joint_genotypes:
-            pi_g = config.getfloat('pi', g)
-            
-            pi.append(pi_g)
-        
-        self._pi = tuple(pi)
+        self._pi = tuple([config.getfloat('pi', g) for g in constants.joint_genotypes])
 
 #---------------------------------------------------------------------------------------------------------------------- 
 cdef class BetaBinomialParameters(Parameters):
@@ -40,29 +33,26 @@ cdef class BetaBinomialParameters(Parameters):
         self._beta_T = tuple(kwargs.get('beta_T', default_beta))        
         
     def __str__(self):
-        return self.convert_parameter_to_string('pi', self.pi)
+        s = ''
+        s += self.convert_parameter_to_string('alpha_N', self.alpha_N)
+        s += self.convert_parameter_to_string('alpha_T', self.alpha_T)
+        s += self.convert_parameter_to_string('beta_N', self.beta_N)
+        s += self.convert_parameter_to_string('beta_T', self.beta_T)        
+        s += self.convert_parameter_to_string('pi', self.pi)
+        
+        return s
         
     def read_from_file(self, file_name):
         config = ConfigParser.SafeConfigParser()
         config.read(file_name)
         
-        self._alpha_N = (0,) * len(constants.genotypes)
-        self._alpha_T = (0,) * len(constants.genotypes)
+        self._alpha_N = tuple([config.getfloat('alpha_N', g) for g in constants.genotypes])
+        self._alpha_T = tuple([config.getfloat('alpha_T', g) for g in constants.genotypes])
         
-        self._beta_N = (0,) * len(constants.genotypes)
-        self._beta_T = (0,) * len(constants.genotypes)
+        self._beta_N = tuple([config.getfloat('beta_N', g) for g in constants.genotypes])
+        self._beta_T = tuple([config.getfloat('beta_T', g) for g in constants.genotypes])
 
-        for i, g in enumerate(constants.genotypes):
-            self._alpha_N[i] = config.getfloat('alpha_N', g)
-            self._alpha_T[i] = config.getfloat('alpha_T', g)
-            
-            self._beta_N[i] = config.getfloat('beta_N', g)
-            self._beta_T[i] = config.getfloat('beta_T', g)
-        
-        pi = (0,) * len(constants.joint_genotypes)
-        
-        for i, g in enumerate(constants.joint_genotypes):
-            pi[i] = config.getfloat('pi', g)
+        pi = [config.getfloat('pi', g) for g in constants.joint_genotypes]
 
         # Normalise pi
         self._pi = tuple([x / sum(pi) for x in pi])
