@@ -10,7 +10,6 @@ cdef class JointBinaryCounter(object):
     Class for iterating over positions from paired genome files counting bases.
     
     Parameters :
-        type - What type of counter. Options : base, quality
         normal_counter - A Counter object for the normal genome.
         tumour_counter - A Counter object for the tumour genome.
         ref_genome - A FastaFile for the reference genome.
