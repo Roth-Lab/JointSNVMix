@@ -6,95 +6,52 @@ Created on 2012-01-16
 from __future__ import division
 
 import ConfigParser
+
 #=======================================================================================================================
 # Priors and Parameters
 #=======================================================================================================================
-cdef class JointSnvMixPriors(object):
-    def __init__(self, mu_N=None, mu_T=None, pi=None):
+cdef class BinomialPriors(Priors):
+    def __init__(self, **kwargs):
+        Priors.__init__(self, **kwargs)
+        
         default_mu = (
                       {'alpha' : 100, 'beta' : 2},
                       {'alpha' : 50, 'beta' : 50},
                       {'alpha' : 2, 'beta' : 100}
                       )
         
-        default_pi = (2,) * 9
+        self._mu_N = tuple(kwargs.get('mu_N', default_mu))
+        self._mu_T = tuple(kwargs.get('mu_T', default_mu))
         
-        if mu_N is None:
-            self._mu_N = default_mu
-        else:
-            self._mu_N = tuple(mu_N)
-        
-        if mu_T is None:
-            self._mu_T = default_mu
-        else:
-            self._mu_T = tuple(mu_T)
-        
-        if pi is None:
-            self._pi = default_pi
-        else:
-            self._pi = tuple(pi)
-
     def __str__(self):
-        s = "mu_N_alpha : "        
-        s += "\t".join([str(x['alpha']) for x in self.mu_N])
-        s += "\n"
-
-        s += "mu_N_beta : "        
-        s += "\t".join([str(x['beta']) for x in self.mu_N])
-        s += "\n"
+        s = ''
+                
+        s += self.convert_parameter_to_string('mu_N_alpha', [x['alpha'] for x in self.mu_N])
+        s += self.convert_parameter_to_string('mu_N_beta', [x['beta'] for x in self.mu_N])
         
-        s += "mu_T_alpha : "        
-        s += "\t".join([str(x['alpha']) for x in self.mu_T])
-        s += "\n"
-
-        s += "mu_T_beta : "        
-        s += "\t".join([str(x['beta']) for x in self.mu_T])
-        s += "\n"                   
+        s += self.convert_parameter_to_string('mu_T_alpha', [x['alpha'] for x in self.mu_T])
+        s += self.convert_parameter_to_string('mu_T_beta', [x['beta'] for x in self.mu_T])
         
-        s += "pi : "
-        s += "\t".join([str(x) for x in self.pi])
-        s += "\n"
+        s += self.convert_parameter_to_string('pi', self.pi)
         
         return s
 
-    def read_from_file(self, file_name):
-        genotypes = ['AA', 'AB', 'BB']
-        joint_genotypes = []
-        
-        for g_N in genotypes:
-            for g_T in genotypes:
-                joint_genotypes.append("_".join((g_N, g_T)))
-        
+    def read_from_file(self, file_name):       
         config = ConfigParser.SafeConfigParser()
         config.read(file_name)
         
-        mu_N = []
-        mu_T = []
-        pi = []
+        self._mu_N = ({},) * len(constants.genotypes)
+        self._mu_T = ({},) * len(constants.genotypes)
         
-        for g in genotypes:
-            mu_N_g = {}
-            mu_N_g['alpha'] = float(config.get('mu_N_alpha', g))
-            mu_N_g['beta'] = float(config.get('mu_N_beta', g)) 
+        for i, g in enumerate(constants.genotypes):
+            self._mu_N[i]['alpha'] = config.getfloat('mu_N_alpha', g)
+            self._mu_N[i]['beta'] = config.getfloat('mu_N_beta', g)
             
-            mu_N.append(mu_N_g)
-            
-            mu_T_g = {}
-            mu_T_g['alpha'] = float(config.get('mu_T_alpha', g))
-            mu_T_g['beta'] = float(config.get('mu_T_beta', g)) 
-            
-            mu_T.append(mu_T_g)
+            self._mu_T[i]['alpha'] = config.getfloat('mu_T_alpha', g)
+            self._mu_T[i]['beta'] = config.getfloat('mu_T_beta', g)
         
-        for g in joint_genotypes:
-            pi_g = float(config.get('pi', g))
-            
-            pi.append(pi_g)
-        
-        self._mu_N = tuple(mu_N)
-        self._mu_T = tuple(mu_T)
-        
-        # Normalise pi
-        self._pi = tuple(pi)
+        for i, g in enumerate(constants.joint_genotypes):
+            self._pi[i] = config.get_float('pi', g)
         
     property mu_N:
         def __get__(self):
@@ -103,106 +60,58 @@ cdef class JointSnvMixPriors(object):
     property mu_T:
         def __get__(self):
             return self._mu_T
-        
-    property pi:
-        def __get__(self):
-            return self._pi
 
 #---------------------------------------------------------------------------------------------------------------------- 
-cdef class JointSnvMixParameters(object):
-    def __init__(self, mu_N=None, mu_T=None, pi=None):
+cdef class BinomialParameters(Parameters):
+    def __init__(self, **kwargs):
+        Parameters.__init__(self, **kwargs)
+        
         default_mu = (0.99, 0.5, 0.01)
         
-        default_pi = (1e6, 1e3, 1e3, 1e3, 1e4, 1e3, 1e1, 1e1, 1e4)
-        
-        if mu_N is None:
-            self._mu_N = default_mu
-        else:
-            self._mu_N = tuple(mu_N)
-            
-        if mu_T is None:
-            self._mu_T = default_mu
-        else:
-            self._mu_T = tuple(mu_T)
-        
-        if pi is None:
-            self._pi = default_pi
-        else:
-            self._pi = tuple(pi)
-        
-        # Normalise pi
-        self._pi = tuple([x / sum(self._pi) for x in self._pi])         
+        self._mu_N = tuple(kwargs.get('mu_N', default_mu))
+        self._mu_T = tuple(kwargs.get('mu_T', default_mu))
         
     def __str__(self):
-        s = "mu_N : "
-        s += "\t".join([str(x) for x in self.mu_N])
-        s += "\n"
-        
-        s += "mu_T : "
-        s += "\t".join([str(x) for x in self.mu_T])
-        s += "\n"
-
-        s += "pi : "
-        s += "\t".join([str(x) for x in self.pi])
-        s += "\n"
+        s = ''        
+        s += self.convert_parameter_to_string('mu_N', self.mu_N)
+        s += self.convert_parameter_to_string('mu_T', self.mu_T)
+        s += self.convert_parameter_to_string('pi', self.pi)
         
         return s
     
     def write_to_file(self, file_name):
-        genotypes = ['AA', 'AB', 'BB']
-        joint_genotypes = []
-        
-        for g_N in genotypes:
-            for g_T in genotypes:
-                joint_genotypes.append("_".join((g_N, g_T)))
-        
         config = ConfigParser.SafeConfigParser()
         
         config.add_section('pi')
         config.add_section('mu_N')
         config.add_section('mu_T')
         
-        for g_N, mu_N in zip(genotypes, self.mu_N):
-            config.set('mu_N', g_N, "{0:.10f}".format(mu_N))
-        
-        for g_T, mu_T in zip(genotypes, self.mu_T):
-            config.set('mu_T', g_T, "{0:.10f}".format(mu_T))
+        for i, g in enumerate(constants.genotypes):
+            config.set('mu_N', g, mu_N)
+            config.set('mu_T', g, mu_T)
             
-        for g_J, pi in zip(joint_genotypes, self.pi):
-            config.set('pi', g_J, "{0:.10f}".format(pi))
+        for i, g in enumerate(constants.joint_genotypes):
+            config.set('pi', g, pi)
         
         fh = open(file_name, 'w')
         config.write(fh)
         fh.close()
         
     def read_from_file(self, file_name):
-        genotypes = ['AA', 'AB', 'BB']
-        joint_genotypes = []
-        
-        for g_N in genotypes:
-            for g_T in genotypes:
-                joint_genotypes.append("_".join((g_N, g_T)))
-        
         config = ConfigParser.SafeConfigParser()
         config.read(file_name)
         
-        mu_N = []
-        mu_T = []
-        pi = []
+        self._mu_N = (0,) * len(constants.genotypes)
+        self._mu_T = (0,) * len(constants.genotypes)
+          
+        for i, g in enumerate(constants.genotypes):
+            self._mu_N[i] = config.getfloat('mu_N', g)
+            self._mu_T[i] = config.getfloat('mu_T', g)
         
-        for g in genotypes:
-            mu_N_g = config.getfloat('mu_N', g)            
-            mu_N.append(mu_N_g)
-            
-            mu_T_g = config.getfloat('mu_T', g)
-            mu_T.append(mu_T_g)
+        self._pi = (0,) * len(constants.joint_genotypes)
         
-        for g in joint_genotypes:
-            pi_g = config.getfloat('pi', g)
-            pi.append(pi_g)
-        
-        self._mu_N = tuple(mu_N)
-        self._mu_T = tuple(mu_T)
+        for i, g in enumerate(constants.joint_genotypes):
+            self._pi = config.getfloat('pi', g)
         
         # Normalise pi
         self._pi = tuple([x / sum(pi) for x in pi])
@@ -215,100 +124,13 @@ cdef class JointSnvMixParameters(object):
         def __get__(self):
             return self._mu_T
         
-    property pi:
-        def __get__(self):
-            return self._pi
-        
 #=======================================================================================================================
 # Model
 #=======================================================================================================================
 cdef class JointSnvMixModel(object):
-    def __cinit__(self, JointSnvMixPriors priors, JointSnvMixParameters params, model="jsm1"):
-        self._priors = priors
-        self._params = params
-        
-        if model == "jsm1":
-            self._density = _JointSnvMixOneDensity(params)
-            self._ess = _JointSnvMixOneEss(len(params._mu_N), len(params._mu_T))            
-        elif model == "jsm2":
-            self._density = _JointSnvMixTwoDensity(params)
-            self._ess = _JointSnvMixTwoEss(len(params._mu_N), len(params._mu_T))
-        else:
-            raise Exception("{0} not a recongnised model. Options are jsm1, jsm2.".format(model))
-        
-        self._num_joint_genotypes = len(params._mu_N) * len(params._mu_T)
-        
-        self._resp = < double *> malloc(sizeof(double) * self._num_joint_genotypes)
-    
-    def __dealloc__(self):
-        free(self._resp)
-
-    def predict(self, data_point):
-        self._predict(data_point)
-        
-        return [x for x in self._resp[:self._num_joint_genotypes]]
-    
-    cdef _predict(self, JointBinaryData data_point):
-        self._density.get_responsibilities(data_point, self._resp)
-    
-    def fit(self, data, max_iters=1000, tolerance=1e-6, verbose=False):
-        '''
-        Fit the model using the EM algorithm.
-        '''
-        if verbose:        
-            print "Fitting model to {0} data-points".format(len(data))
-            print
-            print "Priors : "
-            print self.priors
-            print "Initial parameters : "
-            print self.params
-        
-        iters = 0
-        ll = [float('-inf')]
-        converged = False
-        
-        while not converged:            
-            self._E_step(data)
-            
-            ll_iter = self._get_log_likelihood(data)
-            
-            self._M_step()
-            
-            ll.append(ll_iter)
-            
-            ll_diff = ll[-1] - ll[-2]
-            relative_ll_diff = (ll_diff) / abs(ll[-2]) 
-            
-            iters += 1
-            
-            if verbose:
-                print "#" * 80
-                print iters, ll[-1], ll_diff, relative_ll_diff
-                print self.params
-            
-            if relative_ll_diff < 0:
-                print self.params
-                print ll[-1], ll[-2], ll_diff, relative_ll_diff
-                raise Exception('Lower bound decreased.')
-            elif relative_ll_diff < tolerance:
-                print "Converged"
-                converged = True
-            elif iters >= max_iters:
-                print "Maximum number of iterations exceeded exiting."
-                converged = True
-            else:
-                converged = False
-    
-    cdef _E_step(self, data):
-        cdef JointBinaryData data_point
-        
-        self._ess.reset()
-        self._ess.set_params(self._params)
-        self._density.set_params(self._params)
-
-        for data_point in data:
-            self._density.get_responsibilities(data_point, self._resp)
-            self._ess.update(data_point, self._resp)
+    def __cinit__(self, BinomialPriors priors, BinomialParameters params):
+        self._density = BinomialDensity(params)
+        self._ess = BinomialEss(len(params.mu_N), len(params.mu_T))            
 
     cdef _M_step(self):
         self._params._mu_N = self._get_updated_mu(self._ess.a_N, self._ess.b_N, self._priors._mu_N)
@@ -331,30 +153,6 @@ cdef class JointSnvMixModel(object):
             mu.append(alpha / denom)
         
         return tuple(mu)
-            
-    cdef _get_updated_pi(self, n, prior):
-        '''
-        Compute the MAP update of the mix-weights in a mixture model with a Dirichlet prior.
-        '''        
-        pi = []
-        
-        for n_g, prior_g in zip(n, prior):
-            pi.append(n_g + prior_g - 1)
-        
-        pi = [x / sum(pi) for x in pi]
-
-        return tuple(pi)
-    
-    cdef double _get_log_likelihood(self, data):
-        cdef double log_liklihood
-        cdef JointBinaryData data_point
-        
-        log_likelihood = self._get_prior_log_likelihood()
-        
-        for data_point in data:
-            log_likelihood += self._density.get_log_likelihood(data_point, self._resp)
-        
-        return log_likelihood
     
     cdef _get_prior_log_likelihood(self):
         '''
@@ -371,39 +169,12 @@ cdef class JointSnvMixModel(object):
         ll += dirichlet_log_likelihood(self.params.pi, self.priors.pi)
 
         return ll
-    
-    property params:
-        def __get__(self):
-            return self._params
-        
-    property priors:
-        def __get__(self):
-            return self._priors
 
-#=======================================================================================================================
-# Density
-#=======================================================================================================================
-cdef class _JointSnvMixDensity(object):
-    '''
-    Base class for density objects. Sub-classing objects need to implement one method, get_responsibilities. This method
-    computes the responsibilities for a data-point.
-    '''
-    #===================================================================================================================
-    # Interface
-    #===================================================================================================================
-    cdef _get_complete_log_likelihood(self, JointBinaryData data_point, double * ll):
-        '''
-        Get the log_likelihood the data point belongs to each class in the model. This will be stored in ll.
-        '''
-        pass
-    
-    #===================================================================================================================
-    # Implementation
-    #===================================================================================================================
+cdef class BinomialDensity(object):
     def __cinit__(self, JointSnvMixParameters params):        
-        self._num_normal_genotypes = len(params._mu_N)
+        self._num_normal_genotypes = len(params.mu_N)
         
-        self._num_tumour_genotypes = len(params._mu_T)
+        self._num_tumour_genotypes = len(params.mu_T)
            
         self._num_joint_genotypes = self._num_normal_genotypes * self._num_tumour_genotypes
 
@@ -421,45 +192,21 @@ cdef class _JointSnvMixDensity(object):
         self._mu_T = < double *> malloc(sizeof(double) * self._num_tumour_genotypes)
         
         self._log_mix_weights = < double *> malloc(sizeof(double) * self._num_joint_genotypes)    
-
-    cdef get_responsibilities(self, JointBinaryData data_point, double * resp):
-        '''
-        Computes the responsibilities of the given data-point. Results are stored in resp.
-        '''
-        cdef int i
-        
-        self._get_complete_log_likelihood(data_point, resp)
-       
-        # Normalise the class log likelihoods in place to get class posteriors
-        log_space_normalise(resp, self._num_joint_genotypes)
-        
-        for i in range(self._num_joint_genotypes):
-            resp[i] = exp(resp[i])
-        
-    cdef double get_log_likelihood(self, JointBinaryData data_point, double * ll):
-        '''
-        Computes the log_likelihood for a single point.
-        '''
-        self._get_complete_log_likelihood(data_point, ll)
-        
-        return log_sum_exp(ll, self._num_joint_genotypes)
     
-    cdef set_params(self, JointSnvMixParameters params):
+    cdef set_params(self, Parameters params):
         '''
         Copy Python level parameters into C arrays for fast access.
         '''
-        for i, mu_N in enumerate(params._mu_N):
+        for i, mu_N in enumerate(params.mu_N):
             self._mu_N[i] = mu_N
 
-        for i, mu_T in enumerate(params._mu_T):
+        for i, mu_T in enumerate(params.mu_T):
             self._mu_T[i] = mu_T
         
         # Store the log of the mix-weights to speed up computation.
-        for i, pi in enumerate(params._pi):
+        for i, pi in enumerate(params.pi):
             self._log_mix_weights[i] = log(pi)
-
-#---------------------------------------------------------------------------------------------------------------------- 
-cdef class _JointSnvMixOneDensity(_JointSnvMixDensity):    
+            
     cdef _get_complete_log_likelihood(self, JointBinaryData uncast_data_point, double * ll):        
         cdef int g_N, g_T, g_J, a, b
         cdef double mu_N, mu_T, log_mix_weight, normal_log_likelihood, tumour_log_likelihood
@@ -479,60 +226,9 @@ cdef class _JointSnvMixOneDensity(_JointSnvMixDensity):
                 normal_log_likelihood = binomial_log_likelihood(data_point._a_N, data_point._b_N, mu_N)
                 tumour_log_likelihood = binomial_log_likelihood(data_point._a_T, data_point._b_T, mu_T)
                 
-                # Combine the mix-weight, normal likelihood and tumour likelihood to obtain class likelihood
-                ll[g_J] = log_mix_weight + normal_log_likelihood + tumour_log_likelihood
-                
-#---------------------------------------------------------------------------------------------------------------------- 
-cdef class _JointSnvMixTwoDensity(_JointSnvMixDensity):
-    cdef _get_complete_log_likelihood(self, JointBinaryData uncast_data_point, double * ll):
-        cdef int g_N, g_T, g_J
-        cdef double mu_N, mu_T, log_mix_weight, normal_log_likelihood, tumour_log_likelihood
-    
-        cdef JointBinaryQualityData data_point = < JointBinaryQualityData > uncast_data_point
-    
-        for g_N in range(self._num_normal_genotypes):            
-            for g_T in range(self._num_tumour_genotypes):
-                # Index of joint genotype
-                g_J = (self._num_tumour_genotypes * g_N) + g_T
-                
-                mu_N = self._mu_N[g_N]
-                mu_T = self._mu_T[g_T]
-                
-                log_mix_weight = self._log_mix_weights[g_J]
-                                        
-                normal_log_likelihood = snv_mix_two_log_likelihood(data_point._q_N,
-                                                                   data_point._r_N,
-                                                                   data_point._d_N,
-                                                                   mu_N)
-                
-                tumour_log_likelihood = snv_mix_two_log_likelihood(data_point._q_T,
-                                                                   data_point._r_T,
-                                                                   data_point._d_T,
-                                                                   mu_T)
-                
-                # Combine the mix-weight, normal likelihood and tumour likelihood to obtain class likelihood
-                ll[g_J] = log_mix_weight + normal_log_likelihood + tumour_log_likelihood
+                ll[g_J] = log_mix_weight + normal_log_likelihood + tumour_log_likelihood            
 
-#=======================================================================================================================
-# Ess
-#=======================================================================================================================
-cdef class _JointSnvMixEss(object):
-    '''
-    Base class for storing and updating expected sufficient statistics (ESS) for JointSnvMix models using Bernoulli or
-    Binomial distributions.
-    '''
-    #===================================================================================================================
-    # Interface
-    #===================================================================================================================
-    cdef update(self, JointBinaryData data_point, double * resp):
-        '''
-        Update the ESS given the data-point and responsibilities.
-        '''
-        pass
-    
-    #===================================================================================================================
-    # Implementation
-    #===================================================================================================================
+cdef class BinomialEss(object):
     def __cinit__(self, int num_normal_genotypes, int num_tumour_genotypes):        
         self._num_normal_genotypes = num_normal_genotypes
         
@@ -550,14 +246,8 @@ cdef class _JointSnvMixEss(object):
         free(self._a_T)
         free(self._b_T)
         free(self._n)
-
-        free(self._mu_N)
-        free(self._mu_T)
     
     cdef _init_arrays(self):
-        '''
-        Allocate arrays for sufficient statistics and initialise to 0.        
-        '''
         self._a_N = < double *> malloc(sizeof(double) * self._num_normal_genotypes)
         self._b_N = < double *> malloc(sizeof(double) * self._num_normal_genotypes)
 
@@ -565,9 +255,6 @@ cdef class _JointSnvMixEss(object):
         self._b_T = < double *> malloc(sizeof(double) * self._num_tumour_genotypes)
        
         self._n = < double *> malloc(sizeof(double) * self._num_joint_genotypes)
-        
-        self._mu_N = < double *> malloc(sizeof(double) * self._num_normal_genotypes)
-        self._mu_T = < double *> malloc(sizeof(double) * self._num_tumour_genotypes)
         
     cdef reset(self):
         cdef int i
@@ -583,38 +270,9 @@ cdef class _JointSnvMixEss(object):
         for i in range(self._num_joint_genotypes):
             self._n[i] = 0
 
-    cdef set_params(self, JointSnvMixParameters params):
-        '''
-        Copy Python level parameters into C arrays for fast access.
-        '''
-        for i, mu_N in enumerate(params._mu_N):
-            self._mu_N[i] = mu_N
+    cdef set_params(self, Parameters params):
+        pass
 
-        for i, mu_T in enumerate(params._mu_T):
-            self._mu_T[i] = mu_T         
-    
-    property a_N:
-        def __get__(self):
-            return [x for x in self._a_N[:self._num_normal_genotypes]]
-
-    property b_N:
-        def __get__(self):
-            return [x for x in self._b_N[:self._num_normal_genotypes]]
-        
-    property a_T:
-        def __get__(self):
-            return [x for x in self._a_T[:self._num_tumour_genotypes]]
-        
-    property b_T:
-        def __get__(self):
-            return [x for x in self._b_T[:self._num_tumour_genotypes]]
-    
-    property n:
-        def __get__(self):
-            return [x for x in self._n[:self._num_joint_genotypes]]
-                    
-#---------------------------------------------------------------------------------------------------------------------- 
-cdef class _JointSnvMixOneEss(_JointSnvMixEss):
     cdef update(self, JointBinaryData data_point, double * resp):
         cdef int g_N, g_T, g_J
     
@@ -628,36 +286,5 @@ cdef class _JointSnvMixOneEss(_JointSnvMixEss):
                 self._a_T[g_T] += data_point._a_T * resp[g_J]
                 self._b_T[g_T] += data_point._b_T * resp[g_J]
             
-                self._n[g_J] += resp[g_J]      
-
-#---------------------------------------------------------------------------------------------------------------------- 
-cdef class _JointSnvMixTwoEss(_JointSnvMixEss):
-    cdef update(self, JointBinaryData uncast_data_point, double * resp):
-        cdef int g_N, g_T, g_J
-        cdef double mu_N, mu_T, a_N, a_T, b_N, b_T
-        
-        cdef JointBinaryQualityData data_point = < JointBinaryQualityData > uncast_data_point
-    
-        for g_N in range(self._num_normal_genotypes):            
-            for g_T in range(self._num_tumour_genotypes):
-                # Index of joint genotype
-                g_J = (self._num_tumour_genotypes * g_N) + g_T
-                
-                mu_N = self._mu_N[g_N]
-                mu_T = self._mu_T[g_T]
-            
-                for i in range(data_point._d_N):
-                    a_N = snv_mix_two_expected_a(data_point._q_N[i], data_point._r_N[i], mu_N)
-                    b_N = snv_mix_two_expected_b(data_point._q_N[i], data_point._r_N[i], mu_N)
+                self._n[g_J] += resp[g_J]
                     
-                    self._a_N[g_N] += a_N * resp[g_J]
-                    self._b_N[g_N] += b_N * resp[g_J]
-                    
-                for i in range(data_point._d_T):
-                    a_T = snv_mix_two_expected_a(data_point._q_T[i], data_point._r_T[i], mu_T)
-                    b_T = snv_mix_two_expected_b(data_point._q_T[i], data_point._r_T[i], mu_T)
-                    
-                    self._a_T[g_T] += a_T * resp[g_J]
-                    self._b_T[g_T] += b_T * resp[g_J]                    
-
-                self._n[g_J] += resp[g_J] 
