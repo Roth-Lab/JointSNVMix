@@ -23,14 +23,12 @@ cdef class BinomialParameters(Parameters):
     cdef tuple _mu_N
     cdef tuple _mu_T
     
+    cdef _get_updated_mu(self, a, b, prior)
+    
 cdef class BinomialModel(MixtureModel):
-    cdef _get_updated_mu(self, a, b, prior)            
+    pass
 
 cdef class BinomialDensity(Density):
-    cdef int _num_normal_genotypes
-    cdef int _num_tumour_genotypes
-    cdef int _num_joint_genotypes
-    
     cdef double * _mu_N
     cdef double * _mu_T
     cdef double * _log_mix_weights
@@ -38,14 +36,9 @@ cdef class BinomialDensity(Density):
     cdef _init_arrays(self)
 
 cdef class BinomialEss(Ess):
-    cdef int _num_normal_genotypes
-    cdef int _num_tumour_genotypes
-    cdef int _num_joint_genotypes
-    
     cdef double * _a_N
     cdef double * _b_N
     cdef double * _a_T
     cdef double * _b_T
-    cdef double * _n
 
     cdef _init_arrays(self)

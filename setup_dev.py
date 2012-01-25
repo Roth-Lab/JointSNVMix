@@ -99,7 +99,7 @@ ext_modules = [
                fasta,
                pileup,
                counter,
-#               run,
+               run,
                results
                ]
 

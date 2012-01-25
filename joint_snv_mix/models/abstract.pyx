@@ -18,7 +18,7 @@ cdef class Priors(object):
 
     def convert_parameter_to_string(self, name, value):
         s = "{0} : ".format(name)        
-        s += "\t".join(value)
+        s += "\t".join([str(x) for x in value])
         s += "\n"
         
         return s
@@ -44,7 +44,7 @@ cdef class Parameters(object):
 
     def convert_parameter_to_string(self, name, value):
         s = "{0} : ".format(name)        
-        s += "\t".join(value)
+        s += "\t".join([str(x) for x in value])
         s += "\n"
         
         return s
@@ -61,6 +61,22 @@ cdef class Parameters(object):
         '''
         pass
     
+    cdef update(self, Ess ess, Priors priors):
+        self._update_pi(ess.n, priors.pi)
+    
+    cdef _update_pi(self, n, prior):
+        '''
+        Compute the MAP update of the mix-weights in a mixture model with a Dirichlet prior.
+        '''        
+        pi = []
+        
+        for n_g, prior_g in zip(n, prior):
+            pi.append(n_g + prior_g - 1)
+        
+        pi = [x / sum(pi) for x in pi]
+
+        self._pi = tuple(pi)      
+    
     property pi:
         def __get__(self):
             return self._pi    
@@ -69,12 +85,6 @@ cdef class MixtureModel(object):
     #===================================================================================================================
     # Needs to be implemented.
     #===================================================================================================================
-    cdef _M_step(self):
-        '''
-        Update self._params.
-        '''
-        pass
-    
     cdef _get_prior_log_likelihood(self):
         '''
         Compute the prior portion of the log likelihood.
@@ -88,9 +98,9 @@ cdef class MixtureModel(object):
         self._priors = priors
         self._params = params
         
-        self._num_clusters = len(params.pi)
+        self._num_joint_genotypes = len(params.pi)
         
-        self._resp = < double *> malloc(sizeof(double) * self._num_clusters)
+        self._resp = < double *> malloc(sizeof(double) * self._num_joint_genotypes)
     
     def __dealloc__(self):
         free(self._resp)
@@ -98,7 +108,7 @@ cdef class MixtureModel(object):
     def predict(self, data_point):
         self._predict(data_point)
         
-        return [x for x in self._resp[:self._num_clusters]]
+        return [x for x in self._resp[:self._num_joint_genotypes]]
     
     def fit(self, data, max_iters=1000, tolerance=1e-6, verbose=False):
         '''
@@ -160,7 +170,13 @@ cdef class MixtureModel(object):
 
         for data_point in data:
             self._density.get_responsibilities(data_point, self._resp)
-            self._ess.update(data_point, self._resp)            
+            self._ess.update(data_point, self._resp)
+
+    cdef _M_step(self):
+        '''
+        Update self._params.
+        '''
+        self._params.update(self._ess, self._priors)             
     
     cdef _predict(self, JointBinaryData data_point):
         '''
@@ -181,19 +197,6 @@ cdef class MixtureModel(object):
             log_likelihood += self._density.get_log_likelihood(data_point, self._resp)
         
         return log_likelihood
-    
-    cdef _get_updated_pi(self, n, prior):
-        '''
-        Compute the MAP update of the mix-weights in a mixture model with a Dirichlet prior.
-        '''        
-        pi = []
-        
-        for n_g, prior_g in zip(n, prior):
-            pi.append(n_g + prior_g - 1)
-        
-        pi = [x / sum(pi) for x in pi]
-
-        return tuple(pi)    
     
     property params:
         def __get__(self):
@@ -251,7 +254,21 @@ cdef class Density(object):
 cdef class Ess(object):
     '''
     Base class for storing and updating expected sufficient statistics (ESS) for JointSnvMix models.
-    '''    
+    '''
+    def __cinit__(self, int num_normal_genotypes, int num_tumour_genotypes):        
+        self._num_normal_genotypes = num_normal_genotypes
+        
+        self._num_tumour_genotypes = num_tumour_genotypes
+        
+        self._num_joint_genotypes = num_normal_genotypes * num_tumour_genotypes        
+
+        self._n = < double *> malloc(sizeof(double) * self._num_joint_genotypes)
+        
+        self.reset()
+    
+    def __dealloc__(self):
+        free(self._n)
+    
     #===================================================================================================================
     # Interface
     #===================================================================================================================    
@@ -273,3 +290,7 @@ cdef class Ess(object):
         Copy parameters into object.
         '''
         pass
+    
+    property n:
+        def __get__(self):
+            return [x for x in self._n[:self._num_joint_genotypes]]
