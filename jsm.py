@@ -72,10 +72,10 @@ train_parser.add_argument('--max_tumour_depth', default=100, type=int,
 train_parser.add_argument('--max_iters', default=1000, type=int,
                           help='''Maximum number of iterations to used for training model. Default 1000''')
 
-train_parser.add_argument('--skip_size', default=100, type=int,
+train_parser.add_argument('--skip_size', default=1, type=int,
                           help='''When subsampling will skip over this number of position before adding a site to the
                           subsample. Larger values lead to smaller subsample data sets with faster training and less
-                          memory. Smaller values should lead to better parameter estimates. Default 100.''')
+                          memory. Smaller values should lead to better parameter estimates. Default 1.''')
 
 train_parser.add_argument('--convergence_threshold', default=1e-6, type=float,
                           help='''Convergence threshold for EM training. Once the change in objective function is below
@@ -91,7 +91,7 @@ classify_parser = subparsers.add_parser('classify', parents=[train_classify_pare
                                         of the several strategies.''')
 
 classify_parser.add_argument('--out_file',
-                             help='''If set results will be output here, otherwise they will go to STDOUT.Output file
+                             help='''If set results will be output here, otherwise they will go to STDOUT. Output file
                              will be tab separated file with position information and class labels.''')
 
 classify_parser.add_argument('--print_all_positions', action='store_true', default=False,
