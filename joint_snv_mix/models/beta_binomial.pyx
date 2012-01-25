@@ -20,7 +20,7 @@ cdef class BetaBinomialPriors(Priors):
         pi = []
         
         for g in constants.joint_genotypes:
-            pi_g = float(config.get('pi', g))
+            pi_g = config.getfloat('pi', g)
             
             pi.append(pi_g)
         
@@ -81,14 +81,14 @@ cdef class BetaBinomialParameters(Parameters):
         
         # Write parameters
         for i, g in enumerate(constants.genotypes):
-            config.set('alpha_N', g, str(self._alpha_N[i]))
-            config.set('alpha_T', g, str(self._alpha_T[i]))
+            config.set('alpha_N', g, str(self.alpha_N[i]))
+            config.set('alpha_T', g, str(self.alpha_T[i]))
             
-            config.set('beta_N', g, str(self._beta_N[i]))
-            config.set('beta_T', g, str(self._beta_T[i]))
+            config.set('beta_N', g, str(self.beta_N[i]))
+            config.set('beta_T', g, str(self.beta_T[i]))
                 
         for i, g in enumerate(constants.joint_genotypes):
-            config.set('pi', g, str(self._pi[i]))
+            config.set('pi', g, str(self.pi[i]))
         
         fh = open(file_name, 'w')
         config.write(fh)
