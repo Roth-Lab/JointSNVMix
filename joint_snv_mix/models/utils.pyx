@@ -9,6 +9,9 @@ Created on 2011-08-04
 cpdef double binomial_log_likelihood(int a, int b, double mu):
     return a * log(mu) + b * log(1 - mu)
 
+cpdef double beta_binomial_log_likelihood(int a, int b, double alpha, double beta):
+    return log_beta(a + alpha, b + beta) - log_beta(alpha, beta)
+
 cpdef double beta_log_likelihood(double mu, double a, double b):
     return (a - 1) * log(mu) + (b - 1) * log(1 - mu)
 
@@ -91,3 +94,10 @@ cdef double log_sum_exp(double * log_X, int size):
         total += exp(log_X[i] - max_exp)
     
     return log(total) + max_exp
+
+#=======================================================================================================================
+# Special functions
+#=======================================================================================================================
+cdef double log_beta(double a, double b):
+    return log_gamma(a) + log_gamma(b) - log_gamma(a + b)
+    
