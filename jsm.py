@@ -40,7 +40,7 @@ train_classify_parent.add_argument('--model', default='snvmix2', choices=['binom
 #=======================================================================================================================
 # Parent parser for train
 #=======================================================================================================================
-train_parser = subparsers.add_parser('train', add_help=False, parents=[train_classify_parent],
+train_parser = subparsers.add_parser('train', parents=[train_classify_parent],
                                     help='''Learn the parameters for a model from the SnvMix family. The output of this
                                     command can be passed as an option to some models under the classify command.''')
 
