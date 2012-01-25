@@ -10,7 +10,7 @@ from libc.stdlib cimport malloc, free
 
 from joint_snv_mix.counter cimport JointBinaryData, JointBinaryQualityData
 
-from joint_snv_mix.models.abstract cimport Density, Ess, MixtureModel
+from joint_snv_mix.models.abstract cimport Density, Ess, MixtureModel, Parameters
 from joint_snv_mix.models.binomial cimport BinomialParameters, BinomialPriors
 
 from joint_snv_mix.models.utils cimport beta_log_likelihood, dirichlet_log_likelihood, \
@@ -18,7 +18,7 @@ from joint_snv_mix.models.utils cimport beta_log_likelihood, dirichlet_log_likel
                                         log_space_normalise, log_sum_exp 
 
 cdef class SnvMixTwoModel(MixtureModel):
-    cdef _get_updated_mu(self, a, b, prior)            
+    cdef _get_updated_mu(self, a, b, prior)       
 
 cdef class SnvMixTwoDensity(Density):
     cdef int _num_normal_genotypes

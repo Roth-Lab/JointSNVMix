@@ -143,16 +143,16 @@ cdef class BetaBinomialDensity(Density):
     
         self._log_mix_weights = < double *> malloc(sizeof(double) * self._num_joint_genotypes)
     
-    cdef set_params(self, BetaBinomialParameters params):        
+    cdef set_params(self, Parameters params):        
         for i in range(self._num_normal_genotypes):
-            self._alpha_N[i] = params._alpha_N[i]
-            self._beta_N[i] = params._beta_N[i]
+            self._alpha_N[i] = params.alpha_N[i]
+            self._beta_N[i] = params.beta_N[i]
         
         for i in range(self._num_tumour_genotypes):
-            self._alpha_T[i] = params._alpha_T[i]
-            self._beta_T[i] = params._beta_T[i]
+            self._alpha_T[i] = params.alpha_T[i]
+            self._beta_T[i] = params.beta_T[i]
 
-        for i, pi in enumerate(params._pi):
+        for i, pi in enumerate(params.pi):
             self._log_mix_weights[i] = log(pi)
             
     cdef _get_complete_log_likelihood(self, JointBinaryData uncast_data_point, double * ll):
