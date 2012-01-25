@@ -51,9 +51,8 @@ cdef class BinomialPriors(Priors):
             
             self._mu_T[i]['alpha'] = config.getfloat('mu_T_alpha', g)
             self._mu_T[i]['beta'] = config.getfloat('mu_T_beta', g)
-        
-        for i, g in enumerate(constants.joint_genotypes):
-            self._pi[i] = config.getfloat('pi', g)
+                
+        self._pi = tuple([config.getfloat('pi', g) for g in constants.joint_genotypes])
         
     property mu_N:
         def __get__(self):
@@ -103,20 +102,22 @@ cdef class BinomialParameters(Parameters):
         config = ConfigParser.SafeConfigParser()
         config.read(file_name)
         
-        self._mu_N = (0,) * len(constants.genotypes)
-        self._mu_T = (0,) * len(constants.genotypes)
+        mu_N = [0, ] * len(constants.genotypes)
+        mu_T = [0, ] * len(constants.genotypes)
           
         for i, g in enumerate(constants.genotypes):
-            self._mu_N[i] = config.getfloat('mu_N', g)
-            self._mu_T[i] = config.getfloat('mu_T', g)
+            mu_N[i] = config.getfloat('mu_N', g)
+            mu_T[i] = config.getfloat('mu_T', g)
         
-        self._pi = (0,) * len(constants.joint_genotypes)
-        
-        for i, g in enumerate(constants.joint_genotypes):
-            self._pi[i] = config.getfloat('pi', g)
+        pi = [config.getfloat('pi', g) for g in constants.joint_genotypes]       
         
         # Normalise pi
-        self._pi = tuple([x / sum(self._pi) for x in self._pi])
+        pi = [x / sum(pi) for x in pi]
+
+        # Save as tuples.
+        self._pi = tuple(pi)
+        self._mu_N = tuple(mu_N)
+        self._mu_T = tuple(mu_T)
 
     cdef update(self, Ess ess, Priors priors):        
         self._mu_N = self._get_updated_mu(ess.a_N, ess.b_N, priors.mu_N)                
