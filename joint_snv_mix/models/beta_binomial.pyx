@@ -9,21 +9,9 @@ import ConfigParser
 
 import joint_snv_mix.constants as constants
 
-cdef class BetaBinomialPriors(object):
-    def __init__(self, pi=None):
-        default_pi = (2,) * 9
-
-        if pi is None:
-            self._pi = default_pi
-        else:
-            self._pi = tuple(pi)
-
+cdef class BetaBinomialPriors(Priors):
     def __str__(self):
-        s = "pi : "
-        s += "\t".join([str(x) for x in self.pi])
-        s += "\n"
-        
-        return s
+        return self.convert_parameter_to_string('pi', self.pi)
 
     def read_from_file(self, file_name):
         config = ConfigParser.SafeConfigParser()
@@ -37,61 +25,22 @@ cdef class BetaBinomialPriors(object):
             pi.append(pi_g)
         
         self._pi = tuple(pi)
-        
-    property pi:
-        def __get__(self):
-            return self._pi
 
 #---------------------------------------------------------------------------------------------------------------------- 
-cdef class BetaBinomialParameters(object):
+cdef class BetaBinomialParameters(Parameters):
     def __init__(self, **kwargs):
+        Parameters.__init__(self, **kwargs)
+        
         default_alpha = (100, 50, 1)        
         self._alpha_N = tuple(kwargs.get('alpha_N', default_alpha))
         self._alpha_T = tuple(kwargs.get('alpha_T', default_alpha))
         
         default_beta = (1, 50, 100)
         self._beta_N = tuple(kwargs.get('beta_N', default_beta))
-        self._beta_T = tuple(kwargs.get('beta_T', default_beta))
-        
-        default_pi = (1e6, 1e3, 1e3, 1e3, 1e4, 1e3, 1e1, 1e1, 1e4)
-        self._pi = tuple(kwargs.get('pi', default_pi))
-        
-        # Normalise pi
-        self._pi = tuple([x / sum(self._pi) for x in self._pi])         
+        self._beta_T = tuple(kwargs.get('beta_T', default_beta))        
         
     def __str__(self):
-        s = "pi : "
-        s += "\t".join([str(x) for x in self.pi])
-        s += "\n"
-        
-        return s
-    
-    def write_to_file(self, file_name):
-        config = ConfigParser.SafeConfigParser()
-        
-        # Add sections
-        config.add_section('pi')
-        
-        config.add_section('alpha_N')
-        config.add_section('alpha_T')
-        
-        config.add_section('beta_N')
-        config.add_section('beta_T')
-        
-        # Write parameters
-        for i, g in enumerate(constants.genotypes):
-            config.set('alpha_N', g, self._alpha_N[i])
-            config.set('alpha_T', g, self._alpha_T[i])
-            
-            config.set('beta_N', g, self._beta_N[i])
-            config.set('beta_T', g, self._beta_T[i])
-                
-        for i, g in enumerate(constants.joint_genotypes):
-            config.set('pi', g, self._pi[i])
-        
-        fh = open(file_name, 'w')
-        config.write(fh)
-        fh.close()
+        return self.convert_parameter_to_string('pi', self.pi)
         
     def read_from_file(self, file_name):
         config = ConfigParser.SafeConfigParser()
@@ -118,142 +67,53 @@ cdef class BetaBinomialParameters(object):
         # Normalise pi
         self._pi = tuple([x / sum(pi) for x in pi])
 
-    property pi:
-        def __get__(self):
-            return self._pi
+    def write_to_file(self, file_name):
+        config = ConfigParser.SafeConfigParser()
         
+        # Add sections
+        config.add_section('pi')
+        
+        config.add_section('alpha_N')
+        config.add_section('alpha_T')
+        
+        config.add_section('beta_N')
+        config.add_section('beta_T')
+        
+        # Write parameters
+        for i, g in enumerate(constants.genotypes):
+            config.set('alpha_N', g, self._alpha_N[i])
+            config.set('alpha_T', g, self._alpha_T[i])
+            
+            config.set('beta_N', g, self._beta_N[i])
+            config.set('beta_T', g, self._beta_T[i])
+                
+        for i, g in enumerate(constants.joint_genotypes):
+            config.set('pi', g, self._pi[i])
+        
+        fh = open(file_name, 'w')
+        config.write(fh)
+        fh.close()
+
 #=======================================================================================================================
 # Model
 #=======================================================================================================================
-cdef class BetaBinomialModel(object):
+cdef class BetaBinomialModel(MixtureModel):
     def __cinit__(self, BetaBinomialPriors priors, BetaBinomialParameters params):
-        self._priors = priors
-        self._params = params
+        self._density = BetaBinomialDensity(params)
         
-        self._num_normal_genotypes = len(params._alpha_N)
-        self._num_tumour_genotypes = len(params._alpha_T)
-        self._num_joint_genotypes = self._num_normal_genotypes * self._num_tumour_genotypes
-                
-        self._density = _Density(params)
-        self._ess = _Ess(self._num_normal_genotypes, self._num_tumour_genotypes)            
-
-        self._resp = < double *> malloc(sizeof(double) * self._num_joint_genotypes)
-    
-    def __dealloc__(self):
-        free(self._resp)
-
-    def predict(self, data_point):
-        self._predict(data_point)
-        
-        return [x for x in self._resp[:self._num_joint_genotypes]]
-    
-    cdef _predict(self, JointBinaryData data_point):
-        self._density.get_responsibilities(data_point, self._resp)
-    
-    def fit(self, data, max_iters=1000, tolerance=1e-6, verbose=False):
-        '''
-        Fit the model using the EM algorithm.
-        '''
-        if verbose:        
-            print "Fitting model to {0} data-points".format(len(data))
-            print
-            print "Priors : "
-            print self.priors
-            print "Initial parameters : "
-            print self.params
-        
-        iters = 0
-        ll = [float('-inf')]
-        converged = False
-        
-        while not converged:            
-            self._E_step(data)
-            
-            ll_iter = self._get_log_likelihood(data)
-            
-            self._M_step()
-            
-            ll.append(ll_iter)
-            
-            ll_diff = ll[-1] - ll[-2]
-            relative_ll_diff = (ll_diff) / abs(ll[-2]) 
-            
-            iters += 1
-            
-            if verbose:
-                print "#" * 80
-                print iters, ll[-1], ll_diff, relative_ll_diff
-                print self.params
-            
-            if relative_ll_diff < 0:
-                print self.params
-                print ll[-1], ll[-2], ll_diff, relative_ll_diff
-                raise Exception('Lower bound decreased.')
-            elif relative_ll_diff < tolerance:
-                print "Converged"
-                converged = True
-            elif iters >= max_iters:
-                print "Maximum number of iterations exceeded exiting."
-                converged = True
-            else:
-                converged = False
-    
-    cdef _E_step(self, data):
-        cdef JointBinaryData data_point
-        
-        self._ess.reset()
-        self._density.set_params(self._params)
-
-        for data_point in data:
-            self._density.get_responsibilities(data_point, self._resp)
-            self._ess.update(data_point, self._resp)
+        self._ess = BetaBinomialEss(len(params.alpha_N), len(params.alpha_T))            
 
     cdef _M_step(self):
         self._params._pi = self._get_updated_pi(self._ess.n, self._priors._pi)
-            
-    cdef _get_updated_pi(self, n, prior):
-        '''
-        Compute the MAP update of the mix-weights in a mixture model with a Dirichlet prior.
-        '''        
-        pi = []
-        
-        for n_g, prior_g in zip(n, prior):
-            pi.append(n_g + prior_g - 1)
-        
-        pi = [x / sum(pi) for x in pi]
-
-        return tuple(pi)
-    
-    cdef double _get_log_likelihood(self, data):
-        cdef double log_liklihood
-        cdef JointBinaryData data_point
-        
-        log_likelihood = self._get_prior_log_likelihood()
-        
-        for data_point in data:
-            log_likelihood += self._density.get_log_likelihood(data_point, self._resp)
-        
-        return log_likelihood
-    
+               
     cdef _get_prior_log_likelihood(self):
         ll = 0
 
         ll += dirichlet_log_likelihood(self.params.pi, self.priors.pi)
 
         return ll
-        
-    property params:
-        def __get__(self):
-            return self._params
-        
-    property priors:
-        def __get__(self):
-            return self._priors
 
-#=======================================================================================================================
-# Private helper classes
-#=======================================================================================================================
-cdef class _Density(object):
+cdef class BetaBinomialDensity(Density):
     def __cinit__(self, BetaBinomialParameters params):        
         self._num_normal_genotypes = len(params._alpha_N)
         
@@ -266,8 +126,14 @@ cdef class _Density(object):
         self.set_params(params)        
         
     def __dealloc__(self):
+        free(self._alpha_N)
+        free(self._alpha_T)
+        
+        free(self._beta_N)
+        free(self._beta_T)
+        
         free(self._log_mix_weights)
-    
+
     cdef _init_arrays(self):
         self._alpha_N = < double *> malloc(sizeof(double) * self._num_normal_genotypes)
         self._alpha_T = < double *> malloc(sizeof(double) * self._num_tumour_genotypes)
@@ -276,22 +142,6 @@ cdef class _Density(object):
         self._beta_T = < double *> malloc(sizeof(double) * self._num_tumour_genotypes)
     
         self._log_mix_weights = < double *> malloc(sizeof(double) * self._num_joint_genotypes)
-
-    cdef get_responsibilities(self, JointBinaryData data_point, double * resp):
-        cdef int i
-        
-        self._get_complete_log_likelihood(data_point, resp)
-       
-        # Normalise the class log likelihoods in place to get class posteriors
-        log_space_normalise(resp, self._num_joint_genotypes)
-        
-        for i in range(self._num_joint_genotypes):
-            resp[i] = exp(resp[i])
-        
-    cdef double get_log_likelihood(self, JointBinaryData data_point, double * ll):
-        self._get_complete_log_likelihood(data_point, ll)
-        
-        return log_sum_exp(ll, self._num_joint_genotypes)
     
     cdef set_params(self, BetaBinomialParameters params):        
         for i in range(self._num_normal_genotypes):
@@ -329,7 +179,7 @@ cdef class _Density(object):
                 # Combine the mix-weight, normal likelihood and tumour likelihood to obtain class likelihood
                 ll[g_J] = log_mix_weight + normal_log_likelihood + tumour_log_likelihood
 
-cdef class _Ess(object):
+cdef class BetaBinomialEss(Ess):
     def __cinit__(self, int num_normal_genotypes, int num_tumour_genotypes):        
         self._num_normal_genotypes = num_normal_genotypes
         
@@ -349,6 +199,9 @@ cdef class _Ess(object):
 
         for i in range(self._num_joint_genotypes):
             self._n[i] = 0
+    
+    cdef set_params(self, Parameters params):
+        pass    
     
     cdef update(self, JointBinaryData data_point, double * resp):
         cdef int g_N, g_T, g_J

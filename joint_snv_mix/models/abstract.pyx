@@ -16,7 +16,7 @@ cdef class Priors(object):
         
         self._pi = tuple(kwargs.get('pi', default_pi))
 
-    def convert_paramter_to_string(self, name, value):
+    def convert_parameter_to_string(self, name, value):
         s = "{0} : ".format(name)        
         s += "\t".join(value)
         s += "\n"
@@ -42,7 +42,7 @@ cdef class Parameters(object):
         # Normalise pi
         self._pi = tuple([x / sum(self._pi) for x in self._pi])  
 
-    def convert_paramter_to_string(self, name, value):
+    def convert_parameter_to_string(self, name, value):
         s = "{0} : ".format(name)        
         s += "\t".join(value)
         s += "\n"
@@ -163,9 +163,15 @@ cdef class Model(object):
             self._ess.update(data_point, self._resp)            
     
     cdef _predict(self, JointBinaryData data_point):
+        '''
+        C level predict method. After call results are stored in self._resp.
+        '''
         self._density.get_responsibilities(data_point, self._resp)
     
     cdef double _get_log_likelihood(self, data):
+        '''
+        Get log likelihood of data-set.
+        '''
         cdef double log_liklihood
         cdef JointBinaryData data_point
         
@@ -175,6 +181,19 @@ cdef class Model(object):
             log_likelihood += self._density.get_log_likelihood(data_point, self._resp)
         
         return log_likelihood
+    
+    cdef _get_updated_pi(self, n, prior):
+        '''
+        Compute the MAP update of the mix-weights in a mixture model with a Dirichlet prior.
+        '''        
+        pi = []
+        
+        for n_g, prior_g in zip(n, prior):
+            pi.append(n_g + prior_g - 1)
+        
+        pi = [x / sum(pi) for x in pi]
+
+        return tuple(pi)    
     
     property params:
         def __get__(self):
@@ -191,19 +210,7 @@ cdef class Density(object):
     '''
     Base class for density objects. Sub-classing objects need to implement one method, get_responsibilities. This method
     computes the responsibilities for a data-point.
-    '''
-    cdef get_responsibilities(self, JointBinaryData data_point, double * resp):
-        '''
-        Computes the responsibilities of the given data-point. Results are stored in resp.
-        '''
-        pass
-        
-    cdef double get_log_likelihood(self, JointBinaryData data_point, double * ll):
-        '''
-        Computes the log_likelihood for a single point.
-        '''
-        pass
-    
+    '''   
     cdef set_params(self, JointSnvMixParameters params):
         '''
         Copy Python level parameters into C arrays for fast access.
@@ -215,6 +222,31 @@ cdef class Density(object):
         Get the log_likelihood the data point belongs to each class in the model. This will be stored in ll.
         '''
         pass
+    
+    #===================================================================================================================
+    # Implemented
+    #===================================================================================================================
+    cdef get_responsibilities(self, JointBinaryData data_point, double * resp):
+        '''
+        Computes the responsibilities of the given data-point. Results are stored in resp.
+        '''
+        cdef int i
+        
+        self._get_complete_log_likelihood(data_point, resp)
+       
+        # Normalise the class log likelihoods in place to get class posteriors
+        log_space_normalise(resp, self._num_joint_genotypes)
+        
+        for i in range(self._num_joint_genotypes):
+            resp[i] = exp(resp[i])
+        
+    cdef double get_log_likelihood(self, JointBinaryData data_point, double * ll):
+        '''
+        Computes the log_likelihood for a single point.
+        '''
+        self._get_complete_log_likelihood(data_point, ll)
+        
+        return log_sum_exp(ll, self._num_joint_genotypes)    
 
 cdef class Ess(object):
     '''
