@@ -53,7 +53,7 @@ cdef class BinomialPriors(Priors):
             self._mu_T[i]['beta'] = config.getfloat('mu_T_beta', g)
         
         for i, g in enumerate(constants.joint_genotypes):
-            self._pi[i] = config.get_float('pi', g)
+            self._pi[i] = config.getfloat('pi', g)
         
     property mu_N:
         def __get__(self):
