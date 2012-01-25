@@ -66,13 +66,9 @@ cdef class JointBinaryCounterIterator(object):
       
         self._qualities = qualities        
         self._ref = ref
-        
-        if qualities:
-            self._min_base_qual = 0
-            self._min_map_qual = 0
-        else:
-            self._min_base_qual = min_base_qual
-            self._min_map_qual = min_map_qual
+
+        self._min_base_qual = min_base_qual
+        self._min_map_qual = min_map_qual
 
         self._normal_iter = normal_iter
         self._tumour_iter = tumour_iter
@@ -212,8 +208,11 @@ cdef class JointBinaryCounterIterator(object):
         data._r_T = < double *> malloc(sizeof(double) * data._d_T)
         
         # Load aligment probabilities.
-        get_aligment_probabilities(ref_base, var_base, data._q_N, data._r_N, normal_column)
-        get_aligment_probabilities(ref_base, var_base, data._q_T, data._r_T, tumour_column)
+        get_aligment_probabilities(ref_base, var_base, data._q_N, data._r_N, normal_column, 
+                                   self.min_base_qual, self.min_map_qual)
+        
+        get_aligment_probabilities(ref_base, var_base, data._q_T, data._r_T, tumour_column,
+                                   self.min_base_qual, self.min_map_qual)
 
         return data      
     
@@ -415,7 +414,8 @@ cdef char * get_var_base(char * ref_base,
     else:
         return 'N'   
 
-cdef get_aligment_probabilities(char * ref_base, char * var_base, double * q, double * r, PileupColumn column):
+cdef get_aligment_probabilities(char * ref_base, char * var_base, double * q, double * r, PileupColumn column, 
+                                int min_base_qual, int min_map_qual):
     '''
     Extract mapping and base qualities for reference position from pileup column.
     
@@ -441,7 +441,14 @@ cdef get_aligment_probabilities(char * ref_base, char * var_base, double * q, do
     
     for read_index in range(column._depth):
         bq = column._base_quals[read_index]
+                
+        if bq < min_base_qual:
+            continue
+        
         mq = column._map_quals[read_index]
+        
+        if mq < min_map_qual:
+            continue
         
         base_char = column._bases[read_index]
 

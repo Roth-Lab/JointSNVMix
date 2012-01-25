@@ -17,11 +17,10 @@ from joint_snv_mix.results cimport CResultsWriter
 # Functions for running classification.
 #=======================================================================================================================
 def classify(args):
-    counter_factory = CounterFactory()
-    model_factory = ModelFactory()
+    factory = ModelFactory()
 
-    counter = counter_factory.get_counter(args)
-    model = model_factory.get_model(args) 
+    counter = factory.get_counter(args)
+    model = factory.get_model(args) 
     
     classify_data_set(counter, model, args)
 
