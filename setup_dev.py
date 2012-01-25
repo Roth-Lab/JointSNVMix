@@ -88,6 +88,12 @@ models = Extension(
                     include_dirs=models_include
                     )
 
+beta_binomial = Extension(
+                          "joint_snv_mix.models.beta_binomial",
+                          ["joint_snv_mix/models/beta_binomial.pyx"],
+                          include_dirs=models_include
+                          )
+
 utils = Extension(
                   "joint_snv_mix.models.utils",
                   ["joint_snv_mix/models/utils.pyx"],
@@ -101,6 +107,7 @@ ext_modules = [
                pileup,
                counter,
                models,
+               beta_binomial,
                utils,
                run,
                results
