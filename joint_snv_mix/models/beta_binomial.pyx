@@ -81,18 +81,34 @@ cdef class BetaBinomialParameters(Parameters):
         
         # Write parameters
         for i, g in enumerate(constants.genotypes):
-            config.set('alpha_N', g, self._alpha_N[i])
-            config.set('alpha_T', g, self._alpha_T[i])
+            config.set('alpha_N', g, str(self._alpha_N[i]))
+            config.set('alpha_T', g, str(self._alpha_T[i]))
             
-            config.set('beta_N', g, self._beta_N[i])
-            config.set('beta_T', g, self._beta_T[i])
+            config.set('beta_N', g, str(self._beta_N[i]))
+            config.set('beta_T', g, str(self._beta_T[i]))
                 
         for i, g in enumerate(constants.joint_genotypes):
-            config.set('pi', g, self._pi[i])
+            config.set('pi', g, str(self._pi[i]))
         
         fh = open(file_name, 'w')
         config.write(fh)
         fh.close()
+
+    property alpha_N:
+        def __get__(self):
+            return self._alpha_N
+    
+    property alpha_T:
+        def __get__(self):
+            return self._alpha_T
+        
+    property beta_N:
+        def __get__(self):
+            return self._beta_N
+    
+    property beta_T:
+        def __get__(self):
+            return self._beta_T        
 
 #=======================================================================================================================
 # Model
@@ -102,10 +118,7 @@ cdef class BetaBinomialModel(MixtureModel):
         self._density = BetaBinomialDensity(params)
         
         self._ess = BetaBinomialEss(len(params.alpha_N), len(params.alpha_T))            
-
-    cdef _M_step(self):
-        self._params._pi = self._get_updated_pi(self._ess.n, self._priors._pi)
-               
+    
     cdef _get_prior_log_likelihood(self):
         ll = 0
 
@@ -147,7 +160,7 @@ cdef class BetaBinomialDensity(Density):
         for i in range(self._num_normal_genotypes):
             self._alpha_N[i] = params.alpha_N[i]
             self._beta_N[i] = params.beta_N[i]
-        
+
         for i in range(self._num_tumour_genotypes):
             self._alpha_T[i] = params.alpha_T[i]
             self._beta_T[i] = params.beta_T[i]
@@ -180,20 +193,6 @@ cdef class BetaBinomialDensity(Density):
                 ll[g_J] = log_mix_weight + normal_log_likelihood + tumour_log_likelihood
 
 cdef class BetaBinomialEss(Ess):
-    def __cinit__(self, int num_normal_genotypes, int num_tumour_genotypes):        
-        self._num_normal_genotypes = num_normal_genotypes
-        
-        self._num_tumour_genotypes = num_tumour_genotypes
-        
-        self._num_joint_genotypes = num_normal_genotypes * num_tumour_genotypes        
-
-        self._n = < double *> malloc(sizeof(double) * self._num_joint_genotypes)
-        
-        self.reset()    
-    
-    def __dealloc__(self):
-        free(self._n)
-                
     cdef reset(self):
         cdef int i
 

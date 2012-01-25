@@ -89,11 +89,11 @@ cdef class BinomialParameters(Parameters):
         config.add_section('mu_T')
         
         for i, g in enumerate(constants.genotypes):
-            config.set('mu_N', g, self.mu_N)
-            config.set('mu_T', g, self.mu_T)
+            config.set('mu_N', g, str(self.mu_N[i]))
+            config.set('mu_T', g, str(self.mu_T[i]))
             
         for i, g in enumerate(constants.joint_genotypes):
-            config.set('pi', g, self.pi)
+            config.set('pi', g, str(self.pi[i]))
         
         fh = open(file_name, 'w')
         config.write(fh)
@@ -118,27 +118,11 @@ cdef class BinomialParameters(Parameters):
         # Normalise pi
         self._pi = tuple([x / sum(self._pi) for x in self._pi])
 
-    property mu_N:
-        def __get__(self):
-            return self._mu_N
-    
-    property mu_T:
-        def __get__(self):
-            return self._mu_T
+    cdef update(self, Ess ess, Priors priors):        
+        self._mu_N = self._get_updated_mu(ess.a_N, ess.b_N, priors.mu_N)                
+        self._mu_T = self._get_updated_mu(ess.a_T, ess.b_T, priors.mu_T)
         
-#=======================================================================================================================
-# Model
-#=======================================================================================================================
-cdef class BinomialModel(MixtureModel):
-    def __cinit__(self, BinomialPriors priors, BinomialParameters params):
-        self._density = BinomialDensity(params)
-        self._ess = BinomialEss(len(params.mu_N), len(params.mu_T))            
-
-    cdef _M_step(self):
-        self._params._mu_N = self._get_updated_mu(self._ess.a_N, self._ess.b_N, self._priors._mu_N)
-        self._params._mu_T = self._get_updated_mu(self._ess.a_T, self._ess.b_T, self._priors._mu_T)
-        
-        self._params._pi = self._get_updated_pi(self._ess.n, self._priors._pi)
+        self._update_pi(ess.n, priors.pi)
 
     cdef _get_updated_mu(self, a, b, prior):
         '''
@@ -155,7 +139,23 @@ cdef class BinomialModel(MixtureModel):
             mu.append(alpha / denom)
         
         return tuple(mu)
+
+    property mu_N:
+        def __get__(self):
+            return self._mu_N
     
+    property mu_T:
+        def __get__(self):
+            return self._mu_T
+        
+#=======================================================================================================================
+# Model
+#=======================================================================================================================
+cdef class BinomialModel(MixtureModel):
+    def __cinit__(self, BinomialPriors priors, BinomialParameters params):
+        self._density = BinomialDensity(params)
+        self._ess = BinomialEss(len(params.mu_N), len(params.mu_T))            
+
     cdef _get_prior_log_likelihood(self):
         '''
         Compute the prior portion of the log likelihood.
@@ -172,7 +172,7 @@ cdef class BinomialModel(MixtureModel):
 
         return ll
 
-cdef class BinomialDensity(object):
+cdef class BinomialDensity(Density):
     def __cinit__(self, Parameters params):        
         self._num_normal_genotypes = len(params.mu_N)
         
@@ -230,24 +230,15 @@ cdef class BinomialDensity(object):
                 
                 ll[g_J] = log_mix_weight + normal_log_likelihood + tumour_log_likelihood            
 
-cdef class BinomialEss(object):
+cdef class BinomialEss(Ess):
     def __cinit__(self, int num_normal_genotypes, int num_tumour_genotypes):        
-        self._num_normal_genotypes = num_normal_genotypes
-        
-        self._num_tumour_genotypes = num_tumour_genotypes
-        
-        self._num_joint_genotypes = num_normal_genotypes * num_tumour_genotypes        
-
         self._init_arrays()
-        
-        self.reset()    
     
     def __dealloc__(self):
         free(self._a_N)
         free(self._b_N)
         free(self._a_T)
         free(self._b_T)
-        free(self._n)
     
     cdef _init_arrays(self):
         self._a_N = < double *> malloc(sizeof(double) * self._num_normal_genotypes)
@@ -289,4 +280,19 @@ cdef class BinomialEss(object):
                 self._b_T[g_T] += data_point._b_T * resp[g_J]
             
                 self._n[g_J] += resp[g_J]
-                    
+
+    property a_N:
+        def __get__(self):
+            return [x for x in self._a_N[:self._num_normal_genotypes]]
+        
+    property a_T:
+        def __get__(self):
+            return [x for x in self._a_T[:self._num_tumour_genotypes]]
+        
+    property b_N:
+        def __get__(self):
+            return [x for x in self._b_N[:self._num_normal_genotypes]]
+        
+    property b_T:
+        def __get__(self):
+            return [x for x in self._b_T[:self._num_tumour_genotypes]]                        

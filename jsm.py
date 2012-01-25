@@ -81,7 +81,7 @@ train_parser.add_argument('--convergence_threshold', default=1e-6, type=float,
                           help='''Convergence threshold for EM training. Once the change in objective function is below
                           this value training will end. Default 1e-6''')
 
-train_parser.set_defaults(func=train)
+train_parser.set_defaults(func=train, mode='train')
 
 #=======================================================================================================================
 # Parent parser for classify command.
@@ -101,7 +101,7 @@ classify_parser.add_argument('--print_all_positions', action='store_true', defau
 classify_parser.add_argument('--parameters_file',
                              help='Path to a file with custom parameters values for the model.')
 
-classify_parser.set_defaults(func=classify)
+classify_parser.set_defaults(func=classify, mode='classify')
 
 #=======================================================================================================================
 # Parse arguments.

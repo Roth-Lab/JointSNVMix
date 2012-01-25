@@ -40,8 +40,4 @@ cdef class BetaBinomialDensity(Density):
     cdef _init_arrays(self)
 
 cdef class BetaBinomialEss(Ess):
-    cdef int _num_normal_genotypes
-    cdef int _num_tumour_genotypes
-    cdef int _num_joint_genotypes    
-    
-    cdef double * _n
+    pass

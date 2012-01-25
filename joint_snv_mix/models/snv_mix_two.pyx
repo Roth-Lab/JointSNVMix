@@ -12,29 +12,7 @@ cdef class SnvMixTwoModel(MixtureModel):
         self._density = SnvMixTwoDensity(params)
         
         self._ess = SnvMixTwoEss(len(params.mu_N), len(params.mu_T))
-    
-    cdef _M_step(self):
-        self._params._mu_N = self._get_updated_mu(self._ess.a_N, self._ess.b_N, self._priors._mu_N)
-        self._params._mu_T = self._get_updated_mu(self._ess.a_T, self._ess.b_T, self._priors._mu_T)
-        
-        self._params._pi = self._get_updated_pi(self._ess.n, self._priors._pi)
 
-    cdef _get_updated_mu(self, a, b, prior):
-        '''
-        Compute MAP update to binomial parameter mu with a beta prior.
-        '''
-        mu = []
-        
-        for a_g, b_g, prior_g in zip(a, b, prior):
-            alpha = a_g + prior_g['alpha'] - 1
-            beta = b_g + prior_g['beta'] - 1
-            
-            denom = alpha + beta
-
-            mu.append(alpha / denom)
-        
-        return tuple(mu)
-        
     cdef _get_prior_log_likelihood(self):
         '''
         Compute the prior portion of the log likelihood.
@@ -115,22 +93,13 @@ cdef class SnvMixTwoDensity(Density):
 
 cdef class SnvMixTwoEss(Ess):    
     def __cinit__(self, int num_normal_genotypes, int num_tumour_genotypes):        
-        self._num_normal_genotypes = num_normal_genotypes
-        
-        self._num_tumour_genotypes = num_tumour_genotypes
-        
-        self._num_joint_genotypes = num_normal_genotypes * num_tumour_genotypes        
-
         self._init_arrays()
-        
-        self.reset()    
     
     def __dealloc__(self):
         free(self._a_N)
         free(self._b_N)
         free(self._a_T)
         free(self._b_T)
-        free(self._n)
 
         free(self._mu_N)
         free(self._mu_T)
@@ -165,10 +134,10 @@ cdef class SnvMixTwoEss(Ess):
         '''
         Copy Python level parameters into C arrays for fast access.
         '''
-        for i, mu_N in enumerate(params._mu_N):
+        for i, mu_N in enumerate(params.mu_N):
             self._mu_N[i] = mu_N
 
-        for i, mu_T in enumerate(params._mu_T):
+        for i, mu_T in enumerate(params.mu_T):
             self._mu_T[i] = mu_T
 
     cdef update(self, JointBinaryData uncast_data_point, double * resp):
@@ -201,3 +170,18 @@ cdef class SnvMixTwoEss(Ess):
 
                 self._n[g_J] += resp[g_J]
 
+    property a_N:
+        def __get__(self):
+            return [x for x in self._a_N[:self._num_normal_genotypes]]
+        
+    property a_T:
+        def __get__(self):
+            return [x for x in self._a_T[:self._num_tumour_genotypes]]
+        
+    property b_N:
+        def __get__(self):
+            return [x for x in self._b_N[:self._num_normal_genotypes]]
+        
+    property b_T:
+        def __get__(self):
+            return [x for x in self._b_T[:self._num_tumour_genotypes]]  

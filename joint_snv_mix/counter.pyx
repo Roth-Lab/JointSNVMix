@@ -209,10 +209,10 @@ cdef class JointBinaryCounterIterator(object):
         
         # Load aligment probabilities.
         get_aligment_probabilities(ref_base, var_base, data._q_N, data._r_N, normal_column, 
-                                   self.min_base_qual, self.min_map_qual)
+                                   self._min_base_qual, self._min_map_qual)
         
         get_aligment_probabilities(ref_base, var_base, data._q_T, data._r_T, tumour_column,
-                                   self.min_base_qual, self.min_map_qual)
+                                   self._min_base_qual, self._min_map_qual)
 
         return data      
     

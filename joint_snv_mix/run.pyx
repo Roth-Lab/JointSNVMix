@@ -5,12 +5,17 @@ Created on 2011-08-11
 '''
 import sys
 
+# Python imports
 from joint_snv_mix.counter import JointBinaryCounter
-from joint_snv_mix.models.joint_snv_mix import JointSnvMixModel, JointSnvMixPriors, JointSnvMixParameters
 from joint_snv_mix.samtools import BamFile, FastaFile
 
+from joint_snv_mix.models.binomial import BinomialParameters, BinomialPriors, BinomialModel
+from joint_snv_mix.models.beta_binomial import BetaBinomialParameters, BetaBinomialPriors, BetaBinomialModel
+from joint_snv_mix.models.snv_mix_two import SnvMixTwoModel
+
+# Cython imports
 from joint_snv_mix.counter cimport JointBinaryCounterRow, JointBinaryData
-from joint_snv_mix.models.joint_snv_mix cimport JointSnvMixModel
+from joint_snv_mix.models.abstract cimport MixtureModel
 from joint_snv_mix.results cimport CResultsWriter
 
 #=======================================================================================================================
@@ -24,7 +29,7 @@ def classify(args):
     
     classify_data_set(counter, model, args)
 
-def classify_data_set(counter, JointSnvMixModel model, args):
+def classify_data_set(counter, MixtureModel model, args):
     cdef int tumour_var_counts
     cdef bint print_all
     
@@ -62,11 +67,10 @@ def classify_data_set(counter, JointSnvMixModel model, args):
 # Functions for training a model.
 #=======================================================================================================================
 def train(args):
-    counter_factory = CounterFactory()
-    model_factory = ModelFactory()
-    
-    counter = counter_factory.get_counter(args)
-    model = model_factory.get_model(args)
+    factory = ModelFactory()
+
+    counter = factory.get_counter(args)
+    model = factory.get_model(args)     
     
     data_set = create_training_data_set(counter, args)
     
@@ -117,17 +121,15 @@ def create_training_data_set(counter, args):
 #=======================================================================================================================
 # Helper factory classes for setting up parsers and classifiers.
 #=======================================================================================================================
-class CounterFactory(object):
+class ModelFactory(object):
     def get_counter(self, args):
-        if args.model == 'jsm1':
-            qualities = 0
-            min_base_qual = args.min_base_qual
-            min_map_qual = args.min_map_qual
-            
-        elif args.model == 'jsm2':
+        min_base_qual = args.min_base_qual
+        min_map_qual = args.min_map_qual
+        
+        if args.model in ['binomial', 'beta_binomial']:
+            qualities = 0            
+        elif args.model in ['snvmix2', ]:
             qualities = 1
-            min_base_qual = 0
-            min_map_qual = 0
         
         normal_bam = BamFile(args.normal_file)
         tumour_bam = BamFile(args.tumour_file)
@@ -143,15 +145,22 @@ class CounterFactory(object):
         
         return counter
 
-class ModelFactory(object):
     def get_model(self, args):
         priors = self._get_joint_snv_mix_priors(args)
         params = self._get_joint_snv_mix_params(args)
-
-        return JointSnvMixModel(priors, params, model=args.model)
+        
+        if args.model == 'binomial':
+            return BinomialModel(priors, params)
+        elif args.model == 'beta_binomial':
+            return BetaBinomialModel(priors, params)
+        elif args.model == 'snvmix2':
+            return SnvMixTwoModel(priors, params)
     
     def _get_joint_snv_mix_priors(self, args):
-        priors = JointSnvMixPriors()
+        if args.model in ['binomial', 'snvmix2']:
+            priors = BinomialPriors()
+        elif args.model in ['beta_binomial', ]:
+            priors = BetaBinomialPriors()
         
         if args.mode == 'train' and args.priors_file is not None:
             priors.read_from_file(args.priors_file)
@@ -161,7 +170,10 @@ class ModelFactory(object):
         return priors
     
     def _get_joint_snv_mix_params(self, args):
-        params = JointSnvMixParameters()        
+        if args.model in ['binomial', 'snvmix2']:
+            params = BinomialParameters()
+        elif args.model in ['beta_binomial', ]:
+            params = BetaBinomialParameters()    
         
         if args.mode == 'train' and args.initial_parameters_file is not None:            
             params.read_from_file(args.initial_parameters_file)
