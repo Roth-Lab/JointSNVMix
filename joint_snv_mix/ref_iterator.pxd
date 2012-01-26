@@ -6,6 +6,9 @@ Created on 2012-01-25
 from joint_snv_mix.counter cimport JointBinaryCounterRow
 
 cdef class RefIterator(object):
+    cdef int _pos
+    cdef char * _ref
+
     cdef JointBinaryCounterRow _current_row
 
     cdef cnext(self)

@@ -58,7 +58,7 @@ for file_name in glob.glob("joint_snv_mix/samtools/*.pyx"):
     
     module = "joint_snv_mix.samtools.{0}".format(root)
     
-    ext = Extension(module, [file_name, ], include_dirs=samtools_includes, libraries=[ "z", ])
+    ext = Extension(module, [file_name, ] + samtools_files, include_dirs=samtools_includes, libraries=[ "z", ])
         
     samtools.append(ext)
 
