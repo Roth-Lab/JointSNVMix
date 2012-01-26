@@ -3,7 +3,7 @@ Created on 2012-01-25
 
 @author: Andrew Roth
 '''
-from joint_snv_mix.counter cimport JointBinaryCounterRow
+from joint_snv_mix.counter_row cimport JointBinaryCounterRow
 
 cdef class RefIterator(object):
     cdef int _pos

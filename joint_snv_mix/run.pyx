@@ -14,7 +14,7 @@ from joint_snv_mix.models.beta_binomial import BetaBinomialParameters, BetaBinom
 from joint_snv_mix.models.snv_mix_two import SnvMixTwoModel
 
 # Cython imports
-from joint_snv_mix.counter cimport JointBinaryCounterRow, JointBinaryData
+from joint_snv_mix.counter_row cimport JointBinaryCounterRow, JointBinaryData
 from joint_snv_mix.models.abstract cimport MixtureModel
 from joint_snv_mix.results cimport CResultsWriter
 from joint_snv_mix.positions_counter cimport PositionsCounter
