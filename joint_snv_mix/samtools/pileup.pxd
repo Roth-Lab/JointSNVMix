@@ -40,7 +40,11 @@ cdef class PileupIterator:
     cdef advance_position(self)
     cdef parse_current_position(self)
     
+    cpdef jump_to_position(self, int position)
+    
     cdef _setup_iterator_data(self, int tid, int start, int end)
+    
+    cdef _destroy_iterator_data(self)
         
 cdef class PileupColumn:
     cdef int _tid

@@ -31,3 +31,5 @@ cdef class JointBinaryCounterIterator(RefIterator):
     cdef PileupIterator _tumour_iter
     
     cdef RowFactory _row_factory
+    
+    cdef jump_to_position(self, int position)
