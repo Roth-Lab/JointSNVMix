@@ -37,6 +37,11 @@ train_classify_parent.add_argument('--min_map_qual', default=0, type=int,
 train_classify_parent.add_argument('--model', default='snvmix2', choices=['binomial', 'beta_binomial', 'snvmix2'],
                                    help='''Density to be used in mixture model. Default is snvmix2.''')
 
+train_classify_parent.add_argument('--positions_file', default=None,
+                                   help='''Path to a file containing a list of positions to create use for analysis.
+                                   Should be space separated chrom pos. Additionally for each chromosome the positions
+                                   should be sorted. The same format as samtools.''')
+
 #=======================================================================================================================
 # Parent parser for train
 #=======================================================================================================================
