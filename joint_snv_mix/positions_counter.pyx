@@ -93,6 +93,7 @@ cdef class PositionsCounterRefIterator(RefIterator):
                 
                 break
             elif pos_1 < pos_2:
+                # This could cause problems it the length of reads exceed 100000.
                 if pos_2 - pos_1 > 100000:
                     self._ref_iter.jump_to_position(pos_2)
                 else:                
