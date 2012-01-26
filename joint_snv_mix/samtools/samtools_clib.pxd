@@ -104,7 +104,8 @@ cdef extern from "bam.h":
     
     int bam_iter_read(bamFile fp, bam_iter_t iter, bam1_t * b)    
     
-    bam_iter_t bam_iter_query(bam_index_t * idx, int tid, int beg, int end)    
+    bam_iter_t bam_iter_query(bam_index_t * idx, int tid, int beg, int end)
+    void bam_iter_destroy(bam_iter_t iter)
 
 cdef extern from "faidx.h":
     ctypedef struct faidx_t:

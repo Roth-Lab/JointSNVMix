@@ -68,7 +68,8 @@ cdef class PileupIterator:
         destroying and constructing underlying c data structues.
         '''        
         self._destroy_iterator_data()
-        self._setup_iterator_data(self._tid, position, max_pos)
+        self._setup_iterator_data(self._tid, position-1, max_pos)
+        self.advance_position()
         
     cdef _setup_iterator_data(self, int tid, int start, int stop):
         '''
@@ -99,7 +100,11 @@ cdef class PileupIterator:
     
         if self._iter_data.seq != NULL: 
             free(self._iter_data.seq)            
-            self._iter_data.seq = NULL    
+            self._iter_data.seq = NULL 
+        
+        if self._iter_data.iter != < bam_iter_t > NULL:
+            bam_iter_destroy(self._iter_data.iter)
+            self._iter_data.iter = < bam_iter_t > NULL
 
 cdef class PileupColumn:
     def __dealloc__(self):
