@@ -5,27 +5,21 @@ import glob
 import os
 
 #=======================================================================================================================
-# Counter
+# Core
 #=======================================================================================================================
-counter_includes = ['joint_snv_mix', 'joint_snv_mix/samtools', 'include/samtools']
+core_includes = ['joint_snv_mix', 'joint_snv_mix/samtools', 'include/samtools']
 
-counter = Extension(
-                    "joint_snv_mix.counter",
-                    ["joint_snv_mix/counter.c"],
-                    include_dirs=counter_includes
-                    )
+core = []
 
-results = Extension(
-                    "joint_snv_mix.results",
-                    ["joint_snv_mix/results.c"],
-                    include_dirs=counter_includes
-                    )
-
-run = Extension(
-                "joint_snv_mix.run",
-                ["joint_snv_mix/run.c"],
-                include_dirs=counter_includes
-                )
+for file_name in glob.glob("joint_snv_mix/*.c"):
+    base_name = os.path.basename(file_name)
+    root, ext = os.path.splitext(base_name)
+    
+    module = "joint_snv_mix.{0}".format(root)
+    
+    ext = Extension(module, [file_name, ], include_dirs=core_includes)
+        
+    core.append(ext)
 
 #=======================================================================================================================
 # Samtools
@@ -52,26 +46,17 @@ for file_name in all_samtools_files:
 
 samtools_includes = ['joint_snv_mix/samtools', 'include/samtools']
 
-bam = Extension(
-                 "joint_snv_mix.samtools.bam",
-                 ['joint_snv_mix/samtools/bam.c', ] + samtools_files,
-                 include_dirs=samtools_includes,
-                 libraries=[ "z", ]
-                 )
+samtools = []
 
-fasta = Extension(
-                 "joint_snv_mix.samtools.fasta",
-                 ['joint_snv_mix/samtools/fasta.c', ] + samtools_files,
-                 include_dirs=samtools_includes,
-                 libraries=[ "z", ]
-                 )
-
-pileup = Extension(
-                   "joint_snv_mix.samtools.pileup",
-                   ['joint_snv_mix/samtools/pileup.c', ] + samtools_files,
-                   include_dirs=samtools_includes,
-                   libraries=[ "z", ]
-                   )
+for file_name in glob.glob("joint_snv_mix/samtools/*.c"):
+    base_name = os.path.basename(file_name)
+    root, ext = os.path.splitext(base_name)
+    
+    module = "joint_snv_mix.samtools.{0}".format(root)
+    
+    ext = Extension(module, [file_name, ] + samtools_files, include_dirs=samtools_includes, libraries=[ "z", ])
+        
+    samtools.append(ext)
 
 #=======================================================================================================================
 # Models
@@ -90,17 +75,10 @@ for file_name in glob.glob('joint_snv_mix/models/*.c'):
     
     models.append(ext)
 
-
-ext_modules = [
-               bam,
-               fasta,
-               pileup,
-               counter,
-               run,
-               results               
-               ]
-
+ext_modules = []
+ext_modules.extend(core)
 ext_modules.extend(models)
+ext_modules.extend(samtools)
 
 setup(
       name='JointSNVMix',
