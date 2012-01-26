@@ -93,7 +93,10 @@ cdef class PositionsCounterRefIterator(RefIterator):
                 
                 break
             elif pos_1 < pos_2:
-                self._ref_iter.advance_position()                        
+                if pos_1 - pos_2 > 100000:
+                    self._ref_iter.jump_to_position(pos_2)
+                else:                
+                    self._ref_iter.advance_position()                        
             elif pos_1 > pos_2:
                 self._pos_iter.cnext()                
             else:

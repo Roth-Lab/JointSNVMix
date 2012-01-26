@@ -104,3 +104,18 @@ cdef class JointBinaryCounterIterator(RefIterator):
         tumour_column = self._tumour_iter._column
                 
         self._current_row = self._row_factory.get_row(self._ref, self._pos, normal_column, tumour_column)
+    
+    cdef jump_to_position(self, int position):
+        cdef int normal_pos
+        cdef int tumour_pos
+    
+        self._normal_iter.jump_to_position(position)
+        self._tumour_iter.jump_to_position(position)
+        
+        normal_pos = self._normal_iter._pos
+        tumour_pos = self._tumour_iter._pos
+        
+        if normal_pos != tumour_pos:
+            raise Exception('Jump did not work.')
+        else:
+            self._pos = normal_pos

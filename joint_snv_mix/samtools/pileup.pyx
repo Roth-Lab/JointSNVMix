@@ -21,18 +21,7 @@ cdef class PileupIterator:
         self._setup_iterator_data(self._tid, start, stop)
 
     def __dealloc__(self):
-        # reset in order to avoid memory leak messages for iterators that have
-        # not been fully consumed
-        if self._pileup_iter != < bam_plp_t > NULL:
-            bam_plp_reset(self._pileup_iter)
-            
-            bam_plp_destroy(self._pileup_iter)
-            
-            self._pileup_iter = < bam_plp_t > NULL
-    
-        if self._iter_data.seq != NULL: 
-            free(self._iter_data.seq)            
-            self._iter_data.seq = NULL
+        self._destroy_iterator_data()
         
     def __iter__(self):
         return self
@@ -72,6 +61,14 @@ cdef class PileupIterator:
                                         self._tid,
                                         self._pos,
                                         self._n_plp)
+    
+    cpdef jump_to_position(self, int position):
+        '''
+        Move iterator to position. Should probably only be used for big jumps since there is some overhead from
+        destroying and constructing underlying c data structues.
+        '''        
+        self._destroy_iterator_data()
+        self._setup_iterator_data(self._tid, position, max_pos)
         
     cdef _setup_iterator_data(self, int tid, int start, int stop):
         '''
@@ -89,6 +86,20 @@ cdef class PileupIterator:
         self._pileup_iter = bam_plp_init(& advance_all, & self._iter_data)
     
         bam_plp_set_mask(self._pileup_iter, self._mask)
+    
+    cdef _destroy_iterator_data(self):
+        # reset in order to avoid memory leak messages for iterators that have
+        # not been fully consumed
+        if self._pileup_iter != < bam_plp_t > NULL:
+            bam_plp_reset(self._pileup_iter)
+            
+            bam_plp_destroy(self._pileup_iter)
+            
+            self._pileup_iter = < bam_plp_t > NULL
+    
+        if self._iter_data.seq != NULL: 
+            free(self._iter_data.seq)            
+            self._iter_data.seq = NULL    
 
 cdef class PileupColumn:
     def __dealloc__(self):

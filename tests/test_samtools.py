@@ -38,7 +38,7 @@ class Test(unittest.TestCase):
         pileup_column = pileup_iter.next()
         self.assertEqual(pileup_column.position, 35)      
         self.assertListEqual(pileup_column.base_quals, [0, 30, 93])
-        self.assertListEqual(pileup_column.map_quals, [10, 20, 100])
+        self.assertListEqual(pileup_column.map_quals, [10, 20, 100]) 
     
     def test_fasta(self):
         fasta = FastaFile('data/paired/reference.fasta')
