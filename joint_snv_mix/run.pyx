@@ -33,6 +33,7 @@ def classify(args):
 def classify_data_set(counter, MixtureModel model, args):
     cdef int tumour_var_counts
     cdef bint print_all
+    cdef double somatic_threshold, p_somatic
     
     cdef JointBinaryCounterRow row
     cdef JointBinaryData data
@@ -40,6 +41,7 @@ def classify_data_set(counter, MixtureModel model, args):
     cdef CResultsWriter writer
     
     print_all = args.print_all_positions
+    somatic_threshold = args.somatic_threshold
     
     if args.positions_file is not None:
         positions_counter = PositionsCounter(args.positions_file, counter)
@@ -68,6 +70,11 @@ def classify_data_set(counter, MixtureModel model, args):
                 continue
             
             model._predict(data)
+            
+            p_somatic = model._resp[1] + model._resp[2]
+            
+            if p_somatic < somatic_threshold:
+                continue
             
             writer.write_position(row, model._resp)
     
