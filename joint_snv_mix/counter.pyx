@@ -112,6 +112,9 @@ cdef class JointBinaryCounterIterator(RefIterator):
         self._normal_iter.jump_to_position(position)
         self._tumour_iter.jump_to_position(position)
         
+        
+        self.advance_position()
+
         normal_pos = self._normal_iter._pos
         tumour_pos = self._tumour_iter._pos
         

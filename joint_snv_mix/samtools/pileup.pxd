@@ -10,7 +10,7 @@ from libc.string cimport strcmp, strdup
 from joint_snv_mix.samtools.samtools_clib cimport bam_destroy1, bam_iter_read, bam_plp_reset, bam_plp_init, \
                                                  bam_plp_destroy, bam_plp_auto, bam_plp_set_mask, BAM_DEF_MASK, \
                                                  bam_dup1, bam_iter_t, bam1_t, samfile_t, const_bam_pileup1_t_ptr, \
-                                                 bam_plp_t, bam_pileup1_t, bam_iter_query, bam1_seq, bam1_qual
+                                                 bam_plp_t, bam_pileup1_t, bam_iter_query, bam1_seq, bam1_qual, bam_iter_destroy 
 
 from joint_snv_mix.samtools.bam cimport BamFile
                                                  
