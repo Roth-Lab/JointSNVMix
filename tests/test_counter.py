@@ -193,8 +193,10 @@ class TestQualitiesCounter(CounterTester, unittest.TestCase):
         self.assertSequenceEqual(row.data.normal_base_qualities, expected_base_probs)
         
         expected_base_probs = [self.convert_phred_to_probabilities(x) for x in [27, 27, 27]]
-        expected_base_probs[2] = (1 - expected_base_probs[2]) / 3        
-        self.assertSequenceEqual(row.data.tumour_base_qualities, expected_base_probs)
+        expected_base_probs[2] = (1 - expected_base_probs[2]) / 3
+        
+        for p, expected_p in zip(row.data.tumour_base_qualities, expected_base_probs):    
+            self.assertAlmostEqual(p, expected_p, 5)
                                                             
     def convert_phred_to_probabilities(self, phred_qual):
         return 1 - 10 ** (-phred_qual / 10)
