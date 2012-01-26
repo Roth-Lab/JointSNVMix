@@ -107,8 +107,8 @@ classify_parser.add_argument('--parameters_file',
                              help='Path to a file with custom parameters values for the model.')
 
 classify_parser.add_argument('--somatic_threshold', default=0.0, type=float,
-                             help='''If set only sites with P(Somatic) = p_AA_AB + p_AA_BB greater than equal this value
-                             will be printed.''' )
+                             help='''Only sites with P(Somatic) = p_AA_AB + p_AA_BB greater than equal this value
+                             will be printed. Default is 0.''' )
 
 classify_parser.set_defaults(func=classify, mode='classify')
 
