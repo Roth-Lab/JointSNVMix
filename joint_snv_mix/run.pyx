@@ -17,6 +17,7 @@ from joint_snv_mix.models.snv_mix_two import SnvMixTwoModel
 from joint_snv_mix.counter cimport JointBinaryCounterRow, JointBinaryData
 from joint_snv_mix.models.abstract cimport MixtureModel
 from joint_snv_mix.results cimport CResultsWriter
+from joint_snv_mix.positions_counter cimport PositionsCounter
 
 #=======================================================================================================================
 # Functions for running classification.
@@ -40,15 +41,24 @@ def classify_data_set(counter, MixtureModel model, args):
     
     print_all = args.print_all_positions
     
+    if args.positions_file is not None:
+        positions_counter = PositionsCounter(args.positions_file, counter)
+    
     writer = CResultsWriter(file_name=args.out_file)
     
     if args.chromosome is None:
-        refs = counter.refs
+        if args.positions_file is None:
+            refs = counter.refs
+        else:
+            refs = positions_counter.refs
     else:
         refs = [args.chromosome, ]
         
     for ref in sorted(refs):
         positions_iter = counter.get_ref_iterator(ref)
+        
+        if args.positions_file is not None:
+            positions_iter = positions_counter.get_ref_iterator(positions_iter)
         
         for row in positions_iter:
             data = row._data
@@ -96,13 +106,22 @@ def create_training_data_set(counter, args):
     
     skip_size = args.skip_size
     
+    if args.positions_file is not None:
+        positions_counter = PositionsCounter(args.positions_file, counter)    
+    
     if args.chromosome is None:
-        refs = counter.refs
+        if args.positions_file is None:
+            refs = counter.refs
+        else:
+            refs = positions_counter.refs
     else:
         refs = [args.chromosome, ]
-    
+        
     for ref in sorted(refs):
         positions_iter = counter.get_ref_iterator(ref)
+        
+        if args.positions_file is not None:
+            positions_iter = positions_counter.get_ref_iterator(positions_iter)
         
         for row in positions_iter:
             data = row._data

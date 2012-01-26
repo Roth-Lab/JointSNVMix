@@ -17,7 +17,7 @@ cdef class PositionsCounter(object):
         # Restrict to refs present if both positions file and counter
         self._refs = tuple(set(self.refs) & set(counter.refs))
     
-    def get_reference_iterator(self, counter_iter):
+    def get_ref_iterator(self, counter_iter):
         ref = counter_iter.ref
         
         if ref not in self.refs:
