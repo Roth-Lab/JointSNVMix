@@ -1,0 +1,3 @@
+recursive-include config *.cfg
+recursive-include include *.h
+recursive-include include *.pxd
