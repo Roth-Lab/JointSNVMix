@@ -21,3 +21,17 @@ cdef class RefIterator(object):
     
     cdef parse_current_position(self):
         pass
+    
+    property ref:
+        '''
+        Read only access to reference which the iterator runs over.
+        '''
+        def __get__(self):
+            return self._ref
+    
+    property position:
+        '''
+        Read only access to 1-based current position of iterator.
+        '''
+        def __get__(self):
+            return self._pos + 1     
