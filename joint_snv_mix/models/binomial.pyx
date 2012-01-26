@@ -17,9 +17,9 @@ cdef class BinomialPriors(Priors):
         Priors.__init__(self, **kwargs)
         
         default_mu = (
-                      {'alpha' : 100, 'beta' : 2},
-                      {'alpha' : 50, 'beta' : 50},
-                      {'alpha' : 2, 'beta' : 100}
+                      {'alpha' : 1000, 'beta' : 2},
+                      {'alpha' : 500, 'beta' : 500},
+                      {'alpha' : 2, 'beta' : 1000}
                       )
         
         self._mu_N = tuple(kwargs.get('mu_N', default_mu))

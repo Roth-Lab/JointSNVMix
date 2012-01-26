@@ -24,11 +24,11 @@ cdef class BetaBinomialParameters(Parameters):
     def __init__(self, **kwargs):
         Parameters.__init__(self, **kwargs)
         
-        default_alpha = (100, 50, 1)        
+        default_alpha = (1000, 500, 1)        
         self._alpha_N = tuple(kwargs.get('alpha_N', default_alpha))
         self._alpha_T = tuple(kwargs.get('alpha_T', default_alpha))
         
-        default_beta = (1, 50, 100)
+        default_beta = (1, 500, 1000)
         self._beta_N = tuple(kwargs.get('beta_N', default_beta))
         self._beta_T = tuple(kwargs.get('beta_T', default_beta))        
         
