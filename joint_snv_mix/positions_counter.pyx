@@ -7,12 +7,12 @@ cdef class PositionsCounter(object):
     '''
     Class for iterating only positions specified in file.
     '''
-    def __init__(self, char * pos_file_name):
+    def __init__(self, char * pos_file_name, counter):
         self._pos_file_name = pos_file_name
         
         self._load_index()
         
-        self._refs = tuple(self._intervals.keys())
+        self._refs = tuple(self.index.keys())
         
         # Restrict to refs present if both positions file and counter
         self._refs = tuple(set(self.refs) & set(counter.refs))
@@ -46,7 +46,7 @@ cdef class PositionsCounter(object):
         file_p = fopen(self._pos_file_name, "r")
         
         if file_p == NULL:
-            raise Exception("Couldn't open the positions file {0}".format(pos_file_name))
+            raise Exception("Couldn't open the positions file {0}".format(self._pos_file_name))
         
         file_pos = 0
         ref_start = file_pos

@@ -53,7 +53,7 @@ cdef class JointBinaryCounter(object):
                                           self._min_map_qual,
                                           self._qualities)
         
-cdef class JointBinaryCounterIterator(object):
+cdef class JointBinaryCounterIterator(RefIterator):
     def __init__(self,
                  char * ref,
                  PileupIterator normal_iter,
@@ -75,39 +75,7 @@ cdef class JointBinaryCounterIterator(object):
         self._ref_genome = ref_genome
         
         self._pos = -1
-        
-    def __iter__(self):
-        return self
-    
-    def __next__(self):
-        '''
-        Python level next() method.
-        '''
-        self.cnext()
-        
-        return self._current_row
-
-    property ref:
-        '''
-        Read only access to reference which the iterator runs over.
-        '''
-        def __get__(self):
-            return self._ref
-    
-    property position:
-        '''
-        Read only access to 1-based current position of iterator.
-        '''
-        def __get__(self):
-            return self._pos + 1    
-
-    cdef cnext(self):
-        '''
-        C-level iterator function. Moves current_column to next position.
-        '''
-        self.advance_position()
-        self.parse_current_position()
-        
+            
     cdef advance_position(self):        
         cdef int normal_pos
         cdef int tumour_pos
@@ -214,6 +182,20 @@ cdef class JointBinaryCounterIterator(object):
                                    self._min_base_qual, self._min_map_qual)
 
         return data      
+
+    property ref:
+        '''
+        Read only access to reference which the iterator runs over.
+        '''
+        def __get__(self):
+            return self._ref
+    
+    property position:
+        '''
+        Read only access to 1-based current position of iterator.
+        '''
+        def __get__(self):
+            return self._pos + 1  
     
 #=======================================================================================================================
 # Row objects

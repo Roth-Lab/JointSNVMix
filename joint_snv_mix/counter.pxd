@@ -11,6 +11,7 @@ from libc.string cimport strcmp, strdup
 from joint_snv_mix.samtools.bam cimport BamFile
 from joint_snv_mix.samtools.fasta cimport FastaFile
 from joint_snv_mix.samtools.pileup cimport PileupColumn, PileupIterator
+from joint_snv_mix.ref_iterator cimport RefIterator
 
 cdef extern from * :
     ctypedef char const_char "const char"
@@ -36,7 +37,7 @@ cdef class JointBinaryCounter(object):
     
     cdef tuple _refs 
         
-cdef class JointBinaryCounterIterator(object):
+cdef class JointBinaryCounterIterator(RefIterator):
     cdef bint _qualities
     cdef char * _ref
 
@@ -49,8 +50,6 @@ cdef class JointBinaryCounterIterator(object):
     cdef FastaFile _ref_genome
     
     cdef int _pos
-    
-    cdef JointBinaryCounterRow _current_row
     
     cdef cnext(self)
     cdef advance_position(self)
