@@ -48,3 +48,5 @@ syntax: regexp
 ^tests/data/nan_error$
 syntax: regexp
 ^test\.tsv$
+syntax: regexp
+^test\.cfg$
