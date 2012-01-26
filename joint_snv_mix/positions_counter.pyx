@@ -12,7 +12,7 @@ cdef class PositionsCounter(object):
         
         self._load_index()
         
-        self._refs = tuple(self.index.keys())
+        self._refs = tuple(self._index.keys())
         
         # Restrict to refs present if both positions file and counter
         self._refs = tuple(set(self.refs) & set(counter.refs))
@@ -26,8 +26,6 @@ cdef class PositionsCounter(object):
         start, stop = self._index[ref]
         
         pos_iter = PositionsIterator(self._pos_file_name, start, stop)
-        
-        counter_iter = counter_iter.get_reference_iterator(ref)
         
         return PositionsCounterRefIterator(ref, counter_iter, pos_iter)
     
@@ -55,16 +53,16 @@ cdef class PositionsCounter(object):
             if fscanf(file_p, "%s" , ref) == EOF:
                 break
             
-            fscanf(file_p, "%d", & coord)                     
+            fscanf(file_p, "%d", & coord)                    
             
             if strcmp(prev_ref, ref) != 0:
-                if pos > 0:
+                if file_pos > 0:
                     self._index[prev_ref] = (ref_start, file_pos)
                     ref_start = file_pos
                                               
                 strcpy(prev_ref, ref)
             
-            pos = ftell(file_p)
+            file_pos = ftell(file_p)
         
         self._index[ref] = (ref_start, file_pos)
         
@@ -87,11 +85,11 @@ cdef class PositionsCounterRefIterator(RefIterator):
         self._pos_iter.cnext()
         
         while True:
-            pos_1 = self._ref_iter._position
-            pos_2 = self._pos_iter._position
+            pos_1 = self._ref_iter._pos
+            pos_2 = self._pos_iter._pos
 
             if pos_1 == pos_2:
-                self._position = pos_1
+                self._pos = pos_1
                 
                 break
             elif pos_1 < pos_2:
@@ -132,4 +130,4 @@ cdef class PositionsIterator(object):
         coord_result = fscanf(self._file_p, "%d", & coord)
         
         # Convert to 0-based
-        self._position = coord - 1
+        self._pos = coord - 1

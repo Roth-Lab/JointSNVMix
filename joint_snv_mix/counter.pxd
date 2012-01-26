@@ -39,7 +39,6 @@ cdef class JointBinaryCounter(object):
         
 cdef class JointBinaryCounterIterator(RefIterator):
     cdef bint _qualities
-    cdef char * _ref
 
     cdef int _min_base_qual
     cdef int _min_map_qual
@@ -48,12 +47,6 @@ cdef class JointBinaryCounterIterator(RefIterator):
     cdef PileupIterator _tumour_iter
     
     cdef FastaFile _ref_genome
-    
-    cdef int _pos
-    
-    cdef cnext(self)
-    cdef advance_position(self)
-    cdef parse_current_position(self)
     
     cdef JointBinaryCounterRow _make_counter_row(self, PileupColumn normal_column, PileupColumn tumour_column)
     
