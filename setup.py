@@ -1,183 +1,88 @@
 from distutils.core import setup
 from distutils.extension import Extension
 
-counter_includes = ['joint_snv_mix/counters', 'include/pysam', 'include/samtools']
+import glob
+import os
 
-ref_iterator = Extension(
-                         "joint_snv_mix.counters.ref_iterator",
-                         ["joint_snv_mix/counters/ref_iterator.c"],
-                         include_dirs=counter_includes
-                         )
-counter_row = Extension(
-                        "joint_snv_mix.counters.counter_row",
-                        ["joint_snv_mix/counters/counter_row.c"],
-                        include_dirs=counter_includes
-                        )
+#=======================================================================================================================
+# Core
+#=======================================================================================================================
+core_includes = ['joint_snv_mix', 'joint_snv_mix/samtools', 'include/samtools']
 
-counter = Extension(
-                    "joint_snv_mix.counters.counter",
-                    ["joint_snv_mix/counters/counter.c"],
-                    include_dirs=counter_includes
-                    )
+core = []
 
-base_counter = Extension(
-                        "joint_snv_mix.counters.base_counter",
-                        ["joint_snv_mix/counters/base_counter.c"],
-                        include_dirs=counter_includes
-                        )
+for file_name in glob.glob("joint_snv_mix/*.c"):
+    base_name = os.path.basename(file_name)
+    root, ext = os.path.splitext(base_name)
+    
+    module = "joint_snv_mix.{0}".format(root)
+    
+    ext = Extension(module, [file_name, ], include_dirs=core_includes)
+        
+    core.append(ext)
 
-quality_counter = Extension(
-                            "joint_snv_mix.counters.quality_counter",
-                            ["joint_snv_mix/counters/quality_counter.c"],
-                            include_dirs=counter_includes
-                            )
+#=======================================================================================================================
+# Samtools
+#=======================================================================================================================
+samtools_exclude = ("bamtk.c",
+                    "razip.c",
+                    "bgzip.c",
+                    "main.c",
+                    "calDepth.c",
+                    "bam2bed.c",
+                    "wgsim.c",
+                    "md5fa.c",
+                    "maq2sam.c")
 
-joint_bin_counter = Extension(
-                            "joint_snv_mix.counters.joint_binary_counter",
-                            ["joint_snv_mix/counters/joint_binary_counter.c"],
-                            include_dirs=counter_includes
-                            )
+all_samtools_files = glob.glob('include/samtools/*.c')
+all_samtools_files.extend(glob.glob(os.path.join('include/samtools/', '*', '*.c')))
 
-joint_quality_counter = Extension(
-                                  "joint_snv_mix.counters.joint_binary_quality_counter",
-                                  ["joint_snv_mix/counters/joint_binary_quality_counter.c"],
-                                  include_dirs=counter_includes
-                                  )
+samtools_files = []
 
-positions_counter = Extension(
-                              "joint_snv_mix.counters.positions_counter",
-                              ["joint_snv_mix/counters/positions_counter.c"],
-                              include_dirs=counter_includes
-                              )
+for file_name in all_samtools_files:
+    if os.path.basename(file_name) in samtools_exclude:
+        continue
+    samtools_files.append(file_name)
 
-classifier_includes = [
-                       'joint_snv_mix/counters',
-                       'joint_snv_mix/utils',
-                       'joint_snv_mix/classifiers'
-                       ]
-classifier_includes.extend(counter_includes)
+samtools_includes = ['joint_snv_mix/samtools', 'include/samtools']
 
-classifier = Extension(
-                        "joint_snv_mix.classifiers.classifier",
-                        ["joint_snv_mix/classifiers/classifier.c"],
-                        include_dirs=classifier_includes
-                        )
+samtools = []
 
-indep_fisher_classifier = Extension(
-                                    "joint_snv_mix.classifiers.independent_fisher",
-                                    ["joint_snv_mix/classifiers/independent_fisher.c"],
-                                    include_dirs=classifier_includes
-                                    )
+for file_name in glob.glob("joint_snv_mix/samtools/*.c"):
+    base_name = os.path.basename(file_name)
+    root, ext = os.path.splitext(base_name)
+    
+    module = "joint_snv_mix.samtools.{0}".format(root)
+    
+    ext = Extension(module, [file_name, ] + samtools_files, include_dirs=samtools_includes, libraries=[ "z", ])
+        
+    samtools.append(ext)
 
-joint_fisher_classifier = Extension(
-                                    "joint_snv_mix.classifiers.joint_fisher",
-                                    ["joint_snv_mix/classifiers/joint_fisher.c"],
-                                    include_dirs=classifier_includes
-                                    )
+#=======================================================================================================================
+# Models
+#=======================================================================================================================
+models_include = ['joint_snv_mix', 'joint_snv_mix/models', 'include/samtools']
 
-threshold_classifier = Extension(
-                                 "joint_snv_mix.classifiers.threshold",
-                                 ["joint_snv_mix/classifiers/threshold.c"],
-                                 include_dirs=classifier_includes
-                                 )
+models = []
 
-snv_mix_classifier = Extension(
-                                 "joint_snv_mix.classifiers.snv_mix",
-                                 ["joint_snv_mix/classifiers/snv_mix.c"],
-                                 include_dirs=classifier_includes
-                                 )
+for file_name in glob.glob('joint_snv_mix/models/*.c'):
+    base_name = os.path.basename(file_name)
+    root, ext = os.path.splitext(base_name)
+    
+    module = "joint_snv_mix.models.{0}".format(root)
+    
+    ext = Extension(module, [file_name, ], include_dirs=models_include)
+    
+    models.append(ext)
 
-snv_mix_qualities_classifier = Extension(
-                                         "joint_snv_mix.classifiers.snv_mix_qualities",
-                                         ["joint_snv_mix/classifiers/snv_mix_qualities.c"],
-                                         include_dirs=classifier_includes
-                                         )
-
-joint_snv_mix_classifier = Extension(
-                                     "joint_snv_mix.classifiers.joint_snv_mix",
-                                     ["joint_snv_mix/classifiers/joint_snv_mix.c"],
-                                     include_dirs=classifier_includes
-                                     )
-
-joint_snv_mix_qualities_classifier = Extension(
-                                               "joint_snv_mix.classifiers.joint_snv_mix_qualities",
-                                               ["joint_snv_mix/classifiers/joint_snv_mix_qualities.c"],
-                                               include_dirs=classifier_includes
-                                               )
-
-
-classifiers_shared = Extension(
-                              "joint_snv_mix.classifiers.shared",
-                              ["joint_snv_mix/classifiers/shared.c"],
-                              include_dirs=classifier_includes
-                              )
-
-utils_includes = [
-                  'joint_snv_mix/utils'
-                  ]
-
-fisher_exact_test = Extension(
-                                "joint_snv_mix.utils.fisher_exact_test",
-                                ["joint_snv_mix/utils/fisher_exact_test.c"],
-                                include_dirs=utils_includes
-                                )
-
-special_functions = Extension(
-                              "joint_snv_mix.utils.special_functions",
-                              ["joint_snv_mix/utils/special_functions.c"],
-                              include_dirs=utils_includes
-                              )
-
-log_pdf = Extension(
-                    "joint_snv_mix.utils.log_pdf",
-                    ["joint_snv_mix/utils/log_pdf.c"],
-                    include_dirs=utils_includes
-                    )
-
-trainers_include = [
-                    'joint_snv_mix/trainers',
-                    ]
-trainers_include.extend(counter_includes)
-
-snv_mix_trainer = Extension(
-                            "joint_snv_mix.trainers.snv_mix",
-                            ["joint_snv_mix/trainers/snv_mix.c"],
-                            include_dirs=trainers_include
-                            )
-
-joint_snv_mix_trainer = Extension(
-                                  "joint_snv_mix.trainers.joint_snv_mix",
-                                  ["joint_snv_mix/trainers/joint_snv_mix.c"],
-                                  include_dirs=trainers_include
-                                  )
-ext_modules = [
-               counter,
-               ref_iterator,
-               counter_row,
-               base_counter,
-               quality_counter,
-               joint_bin_counter,
-               joint_quality_counter,
-               classifiers_shared,
-               classifier,
-               indep_fisher_classifier,
-               joint_fisher_classifier,
-               threshold_classifier,
-               snv_mix_classifier,
-               snv_mix_qualities_classifier,
-               joint_snv_mix_classifier,
-               joint_snv_mix_qualities_classifier,
-               log_pdf,
-               snv_mix_trainer,
-               joint_snv_mix_trainer,
-               positions_counter,
-               fisher_exact_test,
-               special_functions
-               ]
+ext_modules = []
+ext_modules.extend(core)
+ext_modules.extend(models)
+ext_modules.extend(samtools)
 
 setup(
       name='JointSNVMix',
-      version='0.7.3',
+      version='0.8',
       description='A collection of tools for calling somatic mutations in paired tumour normal data.',
       author='Andrew Roth',
       author_email='andrewjlroth@gmail.com',
@@ -185,11 +90,8 @@ setup(
       
       packages=[ 
                 'joint_snv_mix',
-                'joint_snv_mix.classifiers',
-                'joint_snv_mix.counters',
-                'joint_snv_mix.runners',
-                'joint_snv_mix.trainers',
-                'joint_snv_mix.utils'
+                'joint_snv_mix.samtools',
+                'joint_snv_mix.models'
                 ],
       ext_modules=ext_modules,
       scripts=['jsm.py']
