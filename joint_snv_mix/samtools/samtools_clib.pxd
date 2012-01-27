@@ -13,6 +13,7 @@ cdef extern from * :
 
 cdef extern from "bam.h":
     int BAM_DEF_MASK
+    int BAM_FREVERSE
     
     ctypedef struct tamFile:
         pass
