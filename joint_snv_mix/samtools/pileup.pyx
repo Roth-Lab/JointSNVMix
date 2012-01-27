@@ -68,9 +68,15 @@ cdef class PileupIterator:
         destroying and constructing underlying c data structues.
         '''        
         self._destroy_iterator_data()
-        self._setup_iterator_data(self._tid, position-1, max_pos)
+        self._setup_iterator_data(self._tid, position - 1, max_pos)
         self.advance_position()
-        
+    
+    cdef ExtendedPileupColumn get_extended_pileup_column(self):
+        return makeExtendedPileupColumn(< bam_pileup1_t *> self._plp,
+                                        self._tid,
+                                        self._pos,
+                                        self._n_plp)
+    
     cdef _setup_iterator_data(self, int tid, int start, int stop):
         '''
         Setup the iterator structure.
@@ -152,6 +158,11 @@ cdef class PileupColumn:
                 count += 1
         
         return count
+
+cdef class ExtendedPileupColumn(PileupColumn):
+    def __dealloc__(self):
+        free(self._tail_distance)
+        free(self._is_forward_strand)
     
 #=======================================================================================================================
 # Factory methods
@@ -190,6 +201,53 @@ cdef makePileupColumn(bam_pileup1_t * plp, int tid, int pos, int n_plp):
         column._base_quals[index] = get_qual(alignment, qpos)
         
         column._map_quals[index] = alignment.core.qual
+        
+        bam_destroy1(alignment)
+        
+        index += 1
+    
+    return column
+
+cdef makeExtendedPileupColumn(bam_pileup1_t * plp, int tid, int pos, int n_plp):
+    cdef int i, depth, index, qpos
+    cdef bam1_t * alignment
+    cdef bam_pileup1_t * pileup
+
+    cdef ExtendedPileupColumn column = ExtendedPileupColumn.__new__(ExtendedPileupColumn)
+                    
+    column._tid = tid
+    
+    column._pos = pos
+    
+    column._depth = get_covered_depth(plp, n_plp)
+     
+    column._bases = < char *> malloc(sizeof(char) * column._depth)
+    column._base_quals = < int *> malloc(sizeof(int) * column._depth)
+    column._map_quals = < int *> malloc(sizeof(int) * column._depth)
+    column._tail_distance = < int *> malloc(sizeof(int) * column._depth)
+    column._is_forward_strand = < bint *> malloc(sizeof(int) * column._depth)
+        
+    index = 0
+
+    for i in range(n_plp):
+        pileup = & plp[i]
+        
+        if pileup.is_del:
+            continue
+        
+        qpos = pileup.qpos
+        
+        alignment = bam_dup1(pileup.b)
+        
+        column._bases[index] = get_base(alignment, qpos)            
+
+        column._base_quals[index] = get_qual(alignment, qpos)
+        
+        column._map_quals[index] = alignment.core.qual
+        
+        column._tail_distance[index] = alignment.core.l_qseq - qpos
+        
+        column._is_forward_strand[index] = ((alignment.core.flag & BAM_FREVERSE) == 0)
         
         bam_destroy1(alignment)
         
