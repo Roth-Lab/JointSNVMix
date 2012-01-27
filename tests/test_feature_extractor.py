@@ -31,10 +31,13 @@ class Test(unittest.TestCase):
         counter = self.get_counter(0, 0)
         
         iter = counter.get_ref_iterator('1')
-        row = iter.next()
         
         extractor = FeatureExtractor(self._normal_bam, self._tumour_bam)
         
+        row = iter.next()
+        print extractor.get_features(row)
+        
+        row = iter.next()
         print extractor.get_features(row)
 
 if __name__ == "__main__":
