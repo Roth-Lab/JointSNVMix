@@ -38,3 +38,15 @@ syntax: regexp
 ^debug\.txt$
 syntax: regexp
 ^\.hgignore$
+syntax: regexp
+^test\.jsm1\.cfg$
+syntax: regexp
+^test\.jsm2\.cfg$
+syntax: regexp
+^test\.jsm2\.tsv$
+syntax: regexp
+^tests/data/nan_error$
+syntax: regexp
+^test\.tsv$
+syntax: regexp
+^test\.cfg$
