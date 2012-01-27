@@ -107,7 +107,8 @@ setup(
       packages=[ 
                 'joint_snv_mix',
                 'joint_snv_mix.samtools',
-                'joint_snv_mix.models'
+                'joint_snv_mix.models',
+                'joint_snv_mix.post_processing'
                 ],
       
       cmdclass={'build_ext': build_ext},
