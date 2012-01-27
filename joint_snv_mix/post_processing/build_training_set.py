@@ -7,7 +7,7 @@ from collections import defaultdict
 
 from joint_snv_mix.counter import JointBinaryCounter
 from joint_snv_mix.positions_counter import PositionsCounter
-from joint_snv_mix.post_processing import FeatureExtractor
+from joint_snv_mix.post_processing.feature_extractor import FeatureExtractor
 from joint_snv_mix.samtools import BamFile, FastaFile
 
 import csv
@@ -19,26 +19,32 @@ def main(ref_genome_file, case_list_file, ground_truth_file, out_file_name):
     
     training_files = get_training_files(case_list_file)
     
-    features = {}
+    features = defaultdict(dict)
     labels = {}
     
     for case in training_files:
-        labels[case] = get_labels(training_files[case])
+        print case
+        labels[case] = get_labels(case, ground_truth_file)
         
         training_files[case]['positions_file'] = get_positions_file(case, ground_truth_file) 
         
         features[case] = extract_features(ref_genome, training_files[case])
         
-        os.uname(training_files[case]['positions_file'])
+        os.unlink(training_files[case]['positions_file'])
     
     write_features(features, labels, out_file_name)
 
-def get_labels(case_info):
+def get_labels(case, ground_truth_file):
     labels = {}
     
-    reader = csv.DictReader(open(case_info['ground_truth_file']), delimiter='\t')
+    print ground_truth_file
+    
+    reader = csv.DictReader(open(ground_truth_file), delimiter='\t')
     
     for row in reader:
+        if row['case'] != case:
+            continue
+    
         pos = (row['chrom'], int(row['coord']))
         
         labels[pos] = int(row['label'])
@@ -61,8 +67,12 @@ def get_training_files(case_list_file):
 def get_positions_file(case, ground_truth_file):
     temp_file, file_name = tempfile.mkstemp()
     
+    print temp_file, file_name
+    
+    os.close(temp_file)
+        
     reader = csv.DictReader(open(ground_truth_file), delimiter='\t')
-    writer = csv.writer(temp_file, delimiter='\t')
+    writer = csv.writer(open(file_name,'w'), delimiter=' ')
     
     positions = []
     
@@ -79,8 +89,6 @@ def get_positions_file(case, ground_truth_file):
     
     writer.writerows(sorted(positions))
     
-    temp_file.close()
-    
     return file_name
 
 def extract_features(ref_genome, case_info):
@@ -91,11 +99,12 @@ def extract_features(ref_genome, case_info):
     
     extractor = FeatureExtractor(normal_bam, tumour_bam)
     
-    counter = JointBinaryCounter(ref_genome, normal_bam, tumour_bam)
+    counter = JointBinaryCounter(normal_bam, tumour_bam, ref_genome, qualities=1)
     
     positions_counter = PositionsCounter(case_info['positions_file'], counter)    
     
-    for ref in positions_counter.refs:        
+    for ref in positions_counter.refs:
+        print ref
         ref_iter = positions_counter.get_ref_iterator(counter.get_ref_iterator(ref))
         
         for row in ref_iter:
@@ -109,7 +118,7 @@ def write_features(features, labels, out_file_name):
     
     for case in features:
         for pos in features[case]:
-            pos_id = "_".join(case, pos[0], pos[1])
+            pos_id = "_".join((case, pos[0], str(pos[1])))
             
             out_row = [pos_id, ]
             
@@ -119,4 +128,7 @@ def write_features(features, labels, out_file_name):
             
             writer.writerow(out_row) 
             
-            
+if __name__ == "__main__":
+    import sys
+
+    main(sys.argv[1], sys.argv[2], sys.argv[3], sys.argv[4])
