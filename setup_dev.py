@@ -71,11 +71,30 @@ for file_name in glob.glob('joint_snv_mix/models/*.pyx'):
     ext = Extension(module, [file_name, ], include_dirs=models_include)
     
     models.append(ext)
+    
+#=======================================================================================================================
+# Post Processing
+#=======================================================================================================================
+post_processing_include = ['joint_snv_mix', 'joint_snv_mix/post_processing', 'include/samtools']
+
+post_processing = []
+
+for file_name in glob.glob('joint_snv_mix/post_processing/*.pyx'):
+    base_name = os.path.basename(file_name)
+    root, ext = os.path.splitext(base_name)
+    
+    module = "joint_snv_mix.post_processing.{0}".format(root)
+    
+    ext = Extension(module, [file_name, ], include_dirs=models_include)
+    
+    post_processing.append(ext)
+
 
 ext_modules = []
 ext_modules.extend(core)
 ext_modules.extend(models)
 ext_modules.extend(samtools)
+ext_modules.extend(post_processing)
 
 setup(
       name='JointSNVMix',

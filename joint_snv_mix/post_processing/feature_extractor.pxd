@@ -6,13 +6,17 @@ Created on 2012-01-26
 from libc.math cimport pow
 
 from joint_snv_mix.samtools.bam cimport BamFile
-from joint_snv_mix.samtools.pileup cimport ExtendedPileupColumn
+from joint_snv_mix.models.binomial cimport BinomialPriors, BinomialParameters
+from joint_snv_mix.models.snv_mix_two cimport SnvMixTwoModel
+from joint_snv_mix.samtools.pileup cimport ExtendedPileupColumn, PileupIterator
 
 from joint_snv_mix.counter_row cimport JointBinaryCounterRow
 
 cdef class FeatureExtractor(object):
     cdef BamFile _normal_bam
     cdef BamFile _tumour_bam
+    
+    cdef SnvMixTwoModel _model
    
     cdef list _get_genome_features(self, JointBinaryCounterRow row, BamFile bam_file)
     
