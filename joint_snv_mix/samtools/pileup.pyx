@@ -163,6 +163,8 @@ cdef class ExtendedPileupColumn(PileupColumn):
     def __dealloc__(self):
         free(self._tail_distance)
         free(self._is_forward_strand)
+        free(self._base_matches_before)
+        free(self._base_matches_after)
     
 #=======================================================================================================================
 # Factory methods
@@ -209,7 +211,7 @@ cdef makePileupColumn(bam_pileup1_t * plp, int tid, int pos, int n_plp):
     return column
 
 cdef makeExtendedPileupColumn(bam_pileup1_t * plp, int tid, int pos, int n_plp):
-    cdef int i, depth, index, qpos
+    cdef int i, read_pos, depth, index, qpos
     cdef bam1_t * alignment
     cdef bam_pileup1_t * pileup
 
@@ -224,9 +226,13 @@ cdef makeExtendedPileupColumn(bam_pileup1_t * plp, int tid, int pos, int n_plp):
     column._bases = < char *> malloc(sizeof(char) * column._depth)
     column._base_quals = < int *> malloc(sizeof(int) * column._depth)
     column._map_quals = < int *> malloc(sizeof(int) * column._depth)
+    
     column._tail_distance = < int *> malloc(sizeof(int) * column._depth)
     column._is_forward_strand = < bint *> malloc(sizeof(int) * column._depth)
-        
+    
+    column._base_matches_before = < int *> malloc(sizeof(int) * column._depth)
+    column._base_matches_after = < int *> malloc(sizeof(int) * column._depth)    
+      
     index = 0
 
     for i in range(n_plp):
@@ -248,6 +254,30 @@ cdef makeExtendedPileupColumn(bam_pileup1_t * plp, int tid, int pos, int n_plp):
         column._tail_distance[index] = alignment.core.l_qseq - qpos
         
         column._is_forward_strand[index] = ((alignment.core.flag & BAM_FREVERSE) == 0)
+        
+        # Get hompolymer run length before qpos is this read
+        column._base_matches_before[index] = 0                
+        read_pos = qpos - 1
+        
+        while read_pos >= 0:
+            if column._bases[index] != get_base(alignment, read_pos):
+                break
+            
+            column._base_matches_before[index] += 1
+            
+            read_pos -= 1
+        
+        # Get hompolymer run length after qpos is this read
+        column._base_matches_after[index] = 0                
+        read_pos = qpos + 1
+        
+        while read_pos <= alignment.core.l_qseq:
+            if column._bases[index] != get_base(alignment, read_pos):
+                break
+            
+            column._base_matches_after[index] += 1
+            
+            read_pos += 1           
         
         bam_destroy1(alignment)
         
