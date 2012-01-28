@@ -66,3 +66,6 @@ cdef class PileupColumn:
 cdef class ExtendedPileupColumn(PileupColumn):
     cdef int * _tail_distance
     cdef bint * _is_forward_strand
+    
+    cdef int * _base_matches_before
+    cdef int * _base_matches_after       
