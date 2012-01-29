@@ -12,6 +12,9 @@ from joint_snv_mix.samtools.pileup cimport ExtendedPileupColumn, PileupIterator
 
 from joint_snv_mix.counter_row cimport JointBinaryCounterRow
 
+cdef extern from "math.h":
+    double INFINITY
+
 cdef class FeatureExtractor(object):
     cdef BamFile _normal_bam
     cdef BamFile _tumour_bam
@@ -39,6 +42,12 @@ cdef class FeatureExtractor(object):
     cdef double _get_base_matches_after_sum(self, char * base, ExtendedPileupColumn pileup_column, double exponent)
     cdef double _get_base_matches_spanning_sum(self, char * base, ExtendedPileupColumn pileup_column, double exponent)  
     
-            
+    cdef tuple _get_ratio_features(self, features)
+    cdef double _get_normalised_ratio(self,
+                                      int normal_depth,
+                                      int tumour_depth,
+                                      double normal_feature,
+                                      double tumour_feature)
+    
         
     

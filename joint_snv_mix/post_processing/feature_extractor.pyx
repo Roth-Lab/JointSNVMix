@@ -22,9 +22,11 @@ cdef class FeatureExtractor(object):
         normal_features = tuple([('normal_' + x[0], x[1]) for x in normal_features])
         tumour_features = tuple([('tumour_' + x[0], x[1]) for x in tumour_features])
         
+        ratio_features = self._get_ratio_features(OrderedDict(normal_features + tumour_features))
+        
         jsm_features = self._get_joint_snv_mix_features(row)
         
-        return OrderedDict(normal_features + tumour_features + jsm_features)
+        return OrderedDict(normal_features + tumour_features + ratio_features + jsm_features)
     
     cdef tuple _get_genome_features(self, JointBinaryCounterRow row, BamFile bam_file):
         cdef PileupIterator pileup_iter
@@ -53,7 +55,7 @@ cdef class FeatureExtractor(object):
         var_base_features = self._get_base_features(var_base, pileup_column)        
         
         ref_base_features = tuple([('ref_' + x[0], x[1]) for x in ref_base_features])
-        var_base_features = tuple([('var_' + x[0], x[1]) for x in ref_base_features])
+        var_base_features = tuple([('var_' + x[0], x[1]) for x in var_base_features])
         
         return site_features + ref_base_features + var_base_features
     
@@ -270,7 +272,7 @@ cdef class FeatureExtractor(object):
         return run_length
 
     cdef double _get_base_matches_after_sum(self, char * base, ExtendedPileupColumn pileup_column, double exponent):
-        cdef int i
+        cdef int ifeatures
         cdef double run_length
 
         run_length = 0
@@ -292,5 +294,165 @@ cdef class FeatureExtractor(object):
                 run_length += pow(pileup_column._base_matches_before[i] + pileup_column._base_matches_after[i] + 1,
                                   exponent)
         
-        return run_length           
+        return run_length
     
+    #===================================================================================================================
+    # Ratio Features
+    #===================================================================================================================
+    cdef tuple _get_ratio_features(self, features):
+        cdef int normal_depth, tumour_depth
+        
+        normal_depth = features['normal_depth']
+        tumour_depth = features['tumour_depth']
+        
+        # Forward strand ratios    
+        ref_forward_strand_ratio = self._get_normalised_ratio(normal_depth,
+                                                              tumour_depth,
+                                                              features['normal_ref_forward_strand_count'],
+                                                              features['tumour_ref_forward_strand_count'])
+        
+        var_forward_strand_ratio = self._get_normalised_ratio(normal_depth,
+                                                              tumour_depth,
+                                                              features['normal_var_forward_strand_count'],
+                                                              features['tumour_var_forward_strand_count']) 
+
+        # Reverse strand ratios
+        ref_reverse_strand_ratio = self._get_normalised_ratio(normal_depth,
+                                                              tumour_depth,
+                                                              features['normal_ref_reverse_strand_count'],
+                                                              features['tumour_ref_reverse_strand_count']) 
+
+        var_reverse_strand_ratio = self._get_normalised_ratio(normal_depth,
+                                                              tumour_depth,
+                                                              features['normal_var_reverse_strand_count'],
+                                                              features['tumour_var_reverse_strand_count']) 
+        
+        # Base qualities ratios
+        ref_base_qualities_ratio = self._get_normalised_ratio(normal_depth,
+                                                              tumour_depth,
+                                                              features['normal_ref_base_quals_sum'],
+                                                              features['tumour_ref_base_quals_sum'])      
+
+        var_base_qualities_ratio = self._get_normalised_ratio(normal_depth,
+                                                              tumour_depth,
+                                                              features['normal_var_base_quals_sum'],
+                                                              features['tumour_var_base_quals_sum'])          
+        
+        # Mapping qualities ratios
+        ref_map_qualities_ratio = self._get_normalised_ratio(normal_depth,
+                                                             tumour_depth,
+                                                             features['normal_ref_map_quals_sum'],
+                                                             features['tumour_ref_map_quals_sum'])      
+
+        var_map_qualities_ratio = self._get_normalised_ratio(normal_depth,
+                                                             tumour_depth,
+                                                             features['normal_var_map_quals_sum'],
+                                                             features['tumour_var_map_quals_sum'])
+
+        # Tail_distance ratios
+        ref_tail_distance_ratio = self._get_normalised_ratio(normal_depth,
+                                                             tumour_depth,
+                                                             features['normal_ref_tail_distance_sum'],
+                                                             features['tumour_ref_tail_distance_sum'])      
+
+        var_tail_distance_ratio = self._get_normalised_ratio(normal_depth,
+                                                             tumour_depth,
+                                                             features['normal_var_tail_distance_sum'],
+                                                             features['tumour_var_tail_distance_sum'])
+        
+        # Tail_distance squared ratios
+        ref_tail_distance_squared_ratio = self._get_normalised_ratio(normal_depth,
+                                                             tumour_depth,
+                                                             features['normal_ref_tail_distance_square_sum'],
+                                                             features['tumour_ref_tail_distance_square_sum'])      
+
+        var_tail_distance_squared_ratio = self._get_normalised_ratio(normal_depth,
+                                                             tumour_depth,
+                                                             features['normal_var_tail_distance_square_sum'],
+                                                             features['tumour_var_tail_distance_square_sum'])
+        
+        # Base count low qual ratios
+        ref_base_count_low_quality_ratio = self._get_normalised_ratio(normal_depth,
+                                                                      tumour_depth,
+                                                                      features['normal_ref_base_count_low_quality'],
+                                                                      features['tumour_ref_base_count_low_quality'])      
+
+        var_base_count_low_quality_ratio = self._get_normalised_ratio(normal_depth,
+                                                                      tumour_depth,
+                                                                      features['normal_var_base_count_low_quality'],
+                                                                      features['tumour_var_base_count_low_quality'])
+
+        # Base count high qual ratios
+        ref_base_count_high_quality_ratio = self._get_normalised_ratio(normal_depth,
+                                                                       tumour_depth,
+                                                                       features['normal_ref_base_count_high_quality'],
+                                                                       features['tumour_ref_base_count_high_quality'])      
+
+        var_base_count_high_quality_ratio = self._get_normalised_ratio(normal_depth,
+                                                                       tumour_depth,
+                                                                       features['normal_var_base_count_high_quality'],
+                                                                       features['tumour_var_base_count_high_quality'])
+        
+        # Low vs high qual ratios
+        ref_normal_base_count_high_low_ratio = self._get_normalised_ratio(normal_depth,
+                                                                          normal_depth,
+                                                                          features['normal_ref_base_count_low_quality'],
+                                                                          features['normal_ref_base_count_high_quality'])
+        
+        var_normal_base_count_high_low_ratio = self._get_normalised_ratio(normal_depth,
+                                                                          normal_depth,
+                                                                          features['normal_var_base_count_low_quality'],
+                                                                          features['normal_var_base_count_high_quality'])
+
+        ref_tumour_base_count_high_low_ratio = self._get_normalised_ratio(tumour_depth,
+                                                                          tumour_depth,
+                                                                          features['tumour_ref_base_count_low_quality'],
+                                                                          features['tumour_ref_base_count_high_quality'])
+        
+        var_tumour_base_count_high_low_ratio = self._get_normalised_ratio(normal_depth,
+                                                                          normal_depth,
+                                                                          features['tumour_var_base_count_low_quality'],
+                                                                          features['tumour_var_base_count_high_quality'])
+        
+        return (
+                ('ref_forward_strand_ratio', ref_forward_strand_ratio),
+                ('var_forward_strand_ratio', var_forward_strand_ratio),
+                ('ref_reverse_strand_ratio', ref_reverse_strand_ratio),
+                ('var_reverse_strand_ratio', var_reverse_strand_ratio),
+                ('ref_base_qualities_ratio', ref_base_qualities_ratio),
+                ('var_base_qualities_ratio', var_base_qualities_ratio),
+                ('ref_map_qualities_ratio', ref_map_qualities_ratio),
+                ('var_map_qualities_ratio', var_map_qualities_ratio),
+                ('ref_tail_distance_ratio', ref_tail_distance_ratio),
+                ('var_tail_distance_ratio', var_tail_distance_ratio),
+                ('ref_tail_distance_squared_ratio', ref_tail_distance_squared_ratio),
+                ('var_tail_distance_squared_ratio', var_tail_distance_squared_ratio),
+                ('ref_base_count_low_quality_ratio', ref_base_count_low_quality_ratio),
+                ('var_base_count_low_quality_ratio', var_base_count_low_quality_ratio),
+                ('ref_base_count_high_quality_ratio', ref_base_count_high_quality_ratio),
+                ('var_base_count_high_quality_ratio', var_base_count_high_quality_ratio),
+                ('ref_normal_base_count_high_low_ratio', ref_normal_base_count_high_low_ratio),
+                ('var_normal_base_count_high_low_ratio', var_normal_base_count_high_low_ratio),
+                ('ref_tumour_base_count_high_low_ratio', ref_tumour_base_count_high_low_ratio),
+                ('var_tumour_base_count_high_low_ratio', var_tumour_base_count_high_low_ratio)
+                )
+      
+    
+    cdef double _get_normalised_ratio(self,
+                                      int normal_depth,
+                                      int tumour_depth,
+                                      double normal_feature,
+                                      double tumour_feature):
+        cdef double normal_normalised_feature, tumour_normalised_feature
+        
+        normal_normalised_feature = normal_feature / normal_depth
+        tumour_normalised_feature = tumour_feature / tumour_depth
+        
+        if normal_normalised_feature == 0:
+            if tumour_normalised_feature == 0:
+                return 0
+            else:
+                return INFINITY
+        else:        
+            return tumour_normalised_feature / normal_normalised_feature 
+        
