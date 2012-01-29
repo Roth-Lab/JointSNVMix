@@ -13,6 +13,8 @@ from joint_snv_mix.models.binomial import BinomialParameters, BinomialPriors, Bi
 from joint_snv_mix.models.beta_binomial import BetaBinomialParameters, BetaBinomialPriors, BetaBinomialModel
 from joint_snv_mix.models.snv_mix_two import SnvMixTwoModel
 
+from joint_snv_mix.post_processing.post_processor import PostProcessor
+
 # Cython imports
 from joint_snv_mix.counter_row cimport JointBinaryCounterRow, JointBinaryData
 from joint_snv_mix.models.abstract cimport MixtureModel
@@ -32,7 +34,7 @@ def classify(args):
 
 def classify_data_set(counter, MixtureModel model, args):
     cdef int tumour_var_counts
-    cdef bint print_all
+    cdef bint print_all, post_process
     cdef double somatic_threshold, p_somatic
     
     cdef JointBinaryCounterRow row
@@ -43,10 +45,17 @@ def classify_data_set(counter, MixtureModel model, args):
     print_all = args.print_all_positions
     somatic_threshold = args.somatic_threshold
     
+    post_process = args.post_process 
+    
+    if post_process:
+        post_processor = PostProcessor(BamFile(args.normal_file),
+                                       BamFile(args.tumour_file),
+                                       'post_processing/random_forest.pickle')
+    
     if args.positions_file is not None:
         positions_counter = PositionsCounter(args.positions_file, counter)
     
-    writer = CResultsWriter(file_name=args.out_file)
+    writer = CResultsWriter(file_name=args.out_file, post_processing=args.post_processing)
     
     if args.chromosome is None:
         if args.positions_file is None:
@@ -76,7 +85,11 @@ def classify_data_set(counter, MixtureModel model, args):
             if p_somatic < somatic_threshold:
                 continue
             
-            writer.write_position(row, model._resp)
+            if post_process:
+                pp_prob = post_processor.get_somatic_prob(row)
+                writer.write_post_processed_output(row, model._resp, pp_prob)
+            else:
+                writer.write_standard_output(row, model._resp)
     
     writer.close()
          

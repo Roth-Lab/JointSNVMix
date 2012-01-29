@@ -23,22 +23,24 @@ class Test(unittest.TestCase):
         self._tumour_bam = BamFile(tumour_file_name)
 
     def get_counter(self, min_base_qual=10, min_map_qual=10):
-        counter = JointBinaryCounter(self._normal_bam, self._tumour_bam, self._ref_genome, min_base_qual, min_map_qual)
+        counter = JointBinaryCounter(self._normal_bam, self._tumour_bam, self._ref_genome, min_base_qual, min_map_qual, 
+                                     qualities=1)
 
         return counter
     
     def test_feature_extractor(self):
         counter = self.get_counter(0, 0)
         
-        iter = counter.get_ref_iterator('1')
+        iter = counter.get_ref_iterator('1')        
         
         extractor = FeatureExtractor(self._normal_bam, self._tumour_bam)
         
-        row = iter.next()
-        print extractor.get_features(row)
-        
-        row = iter.next()
-        print extractor.get_features(row)
+        for row in iter:
+#            print row
+            print extractor.get_features(row)['normal_ref_length_homopolymer_run_before_sum']
+            print extractor.get_features(row)['normal_ref_length_homopolymer_run_after_sum']
+            print extractor.get_features(row)['normal_ref_length_homopolymer_run_spanning_sum']
+            print
 
 if __name__ == "__main__":
     #import sys;sys.argv = ['', 'Test.testName']

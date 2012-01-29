@@ -110,6 +110,14 @@ classify_parser.add_argument('--somatic_threshold', default=0.0, type=float,
                              help='''Only sites with P(Somatic) = p_AA_AB + p_AA_BB greater than equal this value
                              will be printed. Default is 0.''' )
 
+classify_parser.add_argument('--post_process', action='store_true', default=False,
+                             help='''If set post_processing will be applied to compute an additional column
+                             post_process_p_somatic in the output file. This value will be base on a discriminative
+                             classification method which makes use of an extended set of features beyond count data.
+                             This value should be more accurate than the standard probabilities but the computation is
+                             extremely slow. By default this off. If you choose to use, it is suggested the
+                             somatic_threshold threhsold flag be set to reduce the number of sites post-processed.''')
+
 classify_parser.set_defaults(func=classify, mode='classify')
 
 #=======================================================================================================================
