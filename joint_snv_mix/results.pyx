@@ -23,7 +23,7 @@ results_header = ['chrom',
                   'p_BB_BB']
 
 cdef class CResultsWriter(object):
-    def __init__(self, file_name=None):
+    def __init__(self, file_name=None, post_processing=False):
         if file_name is None:
             self._file_ptr = stdout
         else:
@@ -32,7 +32,10 @@ cdef class CResultsWriter(object):
             if self._file_ptr == NULL:
                 raise Exception("Couldn't open results file at {0}".format(file_name))
         
-        self._init_format_string()
+        self._init_format_string(post_processing)
+        
+        if post_processing:
+            result_header.append('post_processing_p_somatic')
         
         header = "\t".join(results_header)
         header += "\n"
@@ -47,7 +50,7 @@ cdef class CResultsWriter(object):
             free(self._format_string)
             self._format_string = NULL
     
-    cdef _init_format_string(self):
+    cdef _init_format_string(self, post_processing):
         format_string = ['%s', # chrom
                          '%d', # position
                          '%s', # ref_base
@@ -67,6 +70,9 @@ cdef class CResultsWriter(object):
                          '%.4f', # p_BB_BB
                          ]
         
+        if post_processing:
+            format_string.append('%.4f') # post_processing_p_somatic
+        
         format_string = "\t".join(format_string) + "\n"
         
         self._format_string = strdup(< char *> format_string)
@@ -75,7 +81,7 @@ cdef class CResultsWriter(object):
         fclose(self._file_ptr)
         self._file_ptr = NULL
 
-    cdef write_position(self, JointBinaryCounterRow row, double * probs):
+    cdef write_standard_output(self, JointBinaryCounterRow row, double * probs):
         cdef JointBinaryData data
         
         data = row._data
@@ -96,5 +102,29 @@ cdef class CResultsWriter(object):
                                                      probs[5],
                                                      probs[6],
                                                      probs[7],
-                                                     probs[8])        
+                                                     probs[8])
+        
+    cdef write_post_processed_output(self, JointBinaryCounterRow row, double * probs, double pp_prob):
+        cdef JointBinaryData data
+        
+        data = row._data
+        
+        fprintf(self._file_ptr, self._format_string, row._ref,
+                                                     row._pos + 1,
+                                                     row._ref_base,
+                                                     row._var_base,
+                                                     data._a_N,
+                                                     data._b_N,
+                                                     data._a_T,
+                                                     data._b_T,
+                                                     probs[0],
+                                                     probs[1],
+                                                     probs[2],
+                                                     probs[3],
+                                                     probs[4],
+                                                     probs[5],
+                                                     probs[6],
+                                                     probs[7],
+                                                     probs[8],
+                                                     pp_prob)    
 
