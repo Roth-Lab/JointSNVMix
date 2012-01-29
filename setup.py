@@ -83,7 +83,7 @@ ext_modules.extend(samtools)
 setup(
       name='JointSNVMix',
       version='0.8',
-      description='A collection of tools for calling somatic mutations in paired tumour normal data.',
+      description='A collection of tools for calling somatic mutations in paired normal/tumour data.',
       author='Andrew Roth',
       author_email='andrewjlroth@gmail.com',
       url='http://compbio.bccrc.ca',
