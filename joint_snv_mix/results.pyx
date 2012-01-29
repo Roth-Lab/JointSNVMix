@@ -35,7 +35,7 @@ cdef class CResultsWriter(object):
         self._init_format_string(post_processing)
         
         if post_processing:
-            result_header.append('post_processing_p_somatic')
+            results_header.append('post_processing_p_somatic')
         
         header = "\t".join(results_header)
         header += "\n"
