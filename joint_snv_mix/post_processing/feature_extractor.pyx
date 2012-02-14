@@ -272,7 +272,7 @@ cdef class FeatureExtractor(object):
         return run_length
 
     cdef double _get_base_matches_after_sum(self, char * base, ExtendedPileupColumn pileup_column, double exponent):
-        cdef int ifeatures
+        cdef int i
         cdef double run_length
 
         run_length = 0
