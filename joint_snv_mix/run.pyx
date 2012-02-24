@@ -50,12 +50,12 @@ def classify_data_set(counter, MixtureModel model, args):
     if post_process:
         post_processor = PostProcessor(BamFile(args.normal_file),
                                        BamFile(args.tumour_file),
-                                       'post_processing/random_forest.pickle')
+                                       'joint_snv_mix/post_processing/tn_excap.rf')
     
     if args.positions_file is not None:
         positions_counter = PositionsCounter(args.positions_file, counter)
     
-    writer = CResultsWriter(file_name=args.out_file, post_processing=args.post_processing)
+    writer = CResultsWriter(file_name=args.out_file, post_process=args.post_process)
     
     if args.chromosome is None:
         if args.positions_file is None:

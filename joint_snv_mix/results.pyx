@@ -23,7 +23,7 @@ results_header = ['chrom',
                   'p_BB_BB']
 
 cdef class CResultsWriter(object):
-    def __init__(self, file_name=None, post_processing=False):
+    def __init__(self, file_name=None, post_process=False):
         if file_name is None:
             self._file_ptr = stdout
         else:
@@ -32,10 +32,10 @@ cdef class CResultsWriter(object):
             if self._file_ptr == NULL:
                 raise Exception("Couldn't open results file at {0}".format(file_name))
         
-        self._init_format_string(post_processing)
+        self._init_format_string(post_process)
         
-        if post_processing:
-            results_header.append('post_processing_p_somatic')
+        if post_process:
+            results_header.append('post_processed_p_somatic')
         
         header = "\t".join(results_header)
         header += "\n"
