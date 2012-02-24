@@ -14,8 +14,6 @@ from joint_snv_mix.samtools.pileup cimport PileupColumn, PileupIterator
 
 
 cdef class JointBinaryCounter(object):
-    cdef bint _qualities
-    
     cdef int _min_base_qual
     cdef int _min_map_qual
     

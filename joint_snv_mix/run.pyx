@@ -3,6 +3,7 @@ Created on 2011-08-11
 
 @author: Andrew Roth
 '''
+import os
 import sys
 
 # Python imports
@@ -47,10 +48,12 @@ def classify_data_set(counter, MixtureModel model, args):
     
     post_process = args.post_process 
     
+    rf_file = os.path.join(os.path.dirname(__file__), 'post_processing/tn_excap.rf.bz2')
+    
     if post_process:
         post_processor = PostProcessor(BamFile(args.normal_file),
                                        BamFile(args.tumour_file),
-                                       'joint_snv_mix/post_processing/tn_excap.rf')
+                                       rf_file)
     
     if args.positions_file is not None:
         positions_counter = PositionsCounter(args.positions_file, counter)
@@ -165,10 +168,11 @@ class ModelFactory(object):
         min_base_qual = args.min_base_qual
         min_map_qual = args.min_map_qual
         
-        if args.model in ['binomial', 'beta_binomial']:
-            qualities = 0            
-        elif args.model in ['snvmix2', ]:
-            qualities = 1
+        qualities = 1
+#        if args.model in ['binomial', 'beta_binomial']:
+#            qualities = 0            
+#        elif args.model in ['snvmix2', ]:
+#            qualities = 1
         
         normal_bam = BamFile(args.normal_file)
         tumour_bam = BamFile(args.tumour_file)
@@ -179,8 +183,7 @@ class ModelFactory(object):
                                      tumour_bam,
                                      ref_genome,
                                      min_base_qual,
-                                     min_map_qual,
-                                     qualities)
+                                     min_map_qual)
         
         return counter
 

@@ -158,10 +158,9 @@ cdef class BetaBinomialDensity(Density):
         for i, pi in enumerate(params.pi):
             self._log_mix_weights[i] = log(pi)
             
-    cdef _get_complete_log_likelihood(self, JointBinaryData uncast_data_point, double * ll):
+    cdef _get_complete_log_likelihood(self, JointBinaryData data_point, double * ll):
         cdef int g_N, g_T, g_J        
         cdef double alpha_N, alpha_T, beta_N, beta_T, log_mix_weight, normal_log_likelihood, tumour_log_likelihood             
-        cdef JointBinaryCountData data_point = < JointBinaryCountData > uncast_data_point
     
         for g_N in range(self._num_normal_genotypes):            
             for g_T in range(self._num_tumour_genotypes):

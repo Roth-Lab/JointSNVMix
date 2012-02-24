@@ -62,11 +62,9 @@ cdef class SnvMixTwoDensity(Density):
         for i, pi in enumerate(params.pi):
             self._log_mix_weights[i] = log(pi)
 
-    cdef _get_complete_log_likelihood(self, JointBinaryData uncast_data_point, double * ll):
+    cdef _get_complete_log_likelihood(self, JointBinaryData data_point, double * ll):
         cdef int g_N, g_T, g_J
         cdef double mu_N, mu_T, log_mix_weight, normal_log_likelihood, tumour_log_likelihood
-    
-        cdef JointBinaryQualityData data_point = < JointBinaryQualityData > uncast_data_point
     
         for g_N in range(self._num_normal_genotypes):            
             for g_T in range(self._num_tumour_genotypes):
@@ -140,11 +138,9 @@ cdef class SnvMixTwoEss(Ess):
         for i, mu_T in enumerate(params.mu_T):
             self._mu_T[i] = mu_T
 
-    cdef update(self, JointBinaryData uncast_data_point, double * resp):
+    cdef update(self, JointBinaryData data_point, double * resp):
         cdef int g_N, g_T, g_J
         cdef double mu_N, mu_T, a_N, a_T, b_N, b_T
-        
-        cdef JointBinaryQualityData data_point = < JointBinaryQualityData > uncast_data_point
     
         for g_N in range(self._num_normal_genotypes):            
             for g_T in range(self._num_tumour_genotypes):
