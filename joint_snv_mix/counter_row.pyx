@@ -7,17 +7,14 @@ Created on 2012-01-26
 # Row Factories
 #=======================================================================================================================
 cdef class RowFactory(object):
-    def __init__(self, FastaFile ref_genome, int min_base_qual, int min_map_qual, bint qualities):
+    def __init__(self, FastaFile ref_genome, int min_base_qual, int min_map_qual):
         self._min_base_qual = min_base_qual
         self._min_map_qual = min_map_qual
         
-        self._ref_genome = ref_genome        
+        self._ref_genome = ref_genome
         
-        if qualities:
-            self._data_factory = QualityDataFactory(min_base_qual, min_map_qual)
-        else:
-            self._data_factory = CountDataFactory(min_base_qual, min_map_qual)
-
+        self._data_factory = DataFactory(min_base_qual, min_map_qual)
+    
     cdef JointBinaryCounterRow get_row(self, char * ref, int pos,
                                        PileupColumn normal_column, PileupColumn tumour_column):
                                        
@@ -81,33 +78,12 @@ cdef class DataFactory(object):
         self._min_base_qual = min_base_qual
         self._min_map_qual = min_map_qual
 
-    cdef JointBinaryData get_data(self, char * ref_base, char * var_base,
-                                  PileupColumn normal_column, PileupColumn tumour_column):
-        pass       
 
-cdef class CountDataFactory(DataFactory):
-    cdef JointBinaryData get_data(self, char * ref_base, char * var_base,
-                                  PileupColumn normal_column, PileupColumn tumour_column):
-        cdef JointBinaryCountData data = JointBinaryCountData.__new__(JointBinaryCountData)
-
-        data._a_N = normal_column.get_nucleotide_count(ref_base, self._min_base_qual, self._min_map_qual)
-        data._a_T = tumour_column.get_nucleotide_count(ref_base, self._min_base_qual, self._min_map_qual)
-        
-        if strcmp(var_base, 'N') == 0:
-            data._b_N = 0
-            data._b_T = 0
-        else: 
-            data._b_N = normal_column.get_nucleotide_count(var_base, self._min_base_qual, self._min_map_qual)
-            data._b_T = tumour_column.get_nucleotide_count(var_base, self._min_base_qual, self._min_map_qual)
-
-        return data
-
-cdef class QualityDataFactory(DataFactory):
     cdef JointBinaryData get_data(self, char * ref_base, char * var_base,
                                   PileupColumn normal_column, PileupColumn tumour_column):
         cdef int d_N, d_T
         
-        cdef JointBinaryQualityData data = JointBinaryQualityData.__new__(JointBinaryQualityData)
+        cdef JointBinaryData data = JointBinaryData.__new__(JointBinaryData)
 
         # Get the number of ref and non-ref bases in tumour.        
         data._a_N = normal_column.get_nucleotide_count(ref_base, self._min_base_qual, self._min_map_qual)
@@ -268,6 +244,12 @@ cdef class JointBinaryCounterRow(object):
 # Data object 
 #=======================================================================================================================
 cdef class JointBinaryData(object):
+    def __dealloc__(self):
+        free(self._q_N)
+        free(self._r_N)
+        free(self._q_T)
+        free(self._r_T)
+
     property normal_depth:
         def __get__(self):
             return self._a_N + self._b_N
@@ -292,20 +274,6 @@ cdef class JointBinaryData(object):
         def __get__(self):
             return self._b_T
 
-cdef class JointBinaryCountData(JointBinaryData):
-    def __init__(self, a_N, b_N, a_T, b_T):
-        self._a_N = a_N
-        self._b_N = b_N
-        self._a_T = a_T
-        self._b_T = b_T          
-
-cdef class JointBinaryQualityData(JointBinaryData):
-    def __dealloc__(self):
-        free(self._q_N)
-        free(self._r_N)
-        free(self._q_T)
-        free(self._r_T)
-    
     property normal_base_qualities:
         def __get__(self):
             return [x for x in self._q_N[:self._d_N]]

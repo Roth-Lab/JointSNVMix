@@ -19,10 +19,7 @@ cdef class JointBinaryCounter(object):
                  BamFile tumour_bam,
                  FastaFile ref_genome,
                  int min_base_qual=0,
-                 int min_map_qual=0,
-                 bint qualities=0):
-        
-        self._qualities = qualities
+                 int min_map_qual=0):
         
         self._min_base_qual = min_base_qual
         self._min_map_qual = min_map_qual
@@ -43,8 +40,7 @@ cdef class JointBinaryCounter(object):
                                           self._tumour_bam.get_pileup_iterator(ref),
                                           self._ref_genome,
                                           self._min_base_qual,
-                                          self._min_map_qual,
-                                          self._qualities)
+                                          self._min_map_qual)
 
     property refs:
         '''
@@ -60,8 +56,7 @@ cdef class JointBinaryCounterIterator(RefIterator):
                  PileupIterator tumour_iter,
                  FastaFile ref_genome,
                  int min_base_qual,
-                 int min_map_qual,
-                 bint qualities):
+                 int min_map_qual):
               
         self._ref = ref
         self._pos = -1
@@ -69,7 +64,7 @@ cdef class JointBinaryCounterIterator(RefIterator):
         self._normal_iter = normal_iter
         self._tumour_iter = tumour_iter
 
-        self._row_factory = RowFactory(ref_genome, min_base_qual, min_map_qual, qualities)
+        self._row_factory = RowFactory(ref_genome, min_base_qual, min_map_qual)
 
     cdef advance_position(self):        
         cdef int normal_pos

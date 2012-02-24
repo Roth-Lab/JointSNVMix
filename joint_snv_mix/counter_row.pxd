@@ -47,10 +47,6 @@ cdef class DataFactory(object):
     cdef JointBinaryData get_data(self, char * ref_base, char * var_base,
                                   PileupColumn normal_column, PileupColumn tumour_column)
     
-cdef class CountDataFactory(DataFactory):
-    pass
-
-cdef class QualityDataFactory(DataFactory):
     cdef _get_aligment_probabilities(self,
                                      char * ref_base,
                                      char * var_base,
@@ -70,19 +66,12 @@ cdef class JointBinaryCounterRow(object):
 cdef class JointBinaryData(object):
     cdef int _a_N
     cdef int _b_N
-    
-    cdef int _a_T
-    cdef int _b_T
-
-cdef class JointBinaryCountData(JointBinaryData):
-    pass
-
-cdef class JointBinaryQualityData(JointBinaryData):
     cdef int _d_N
-    cdef int _d_T
-
     cdef double * _q_N
     cdef double * _r_N
     
+    cdef int _a_T
+    cdef int _b_T
+    cdef int _d_T
     cdef double * _q_T
     cdef double * _r_T

@@ -8,7 +8,7 @@ from __future__ import division
 from libc.math cimport exp, log
 from libc.stdlib cimport malloc, free
 
-from joint_snv_mix.counter_row cimport JointBinaryData, JointBinaryCountData
+from joint_snv_mix.counter_row cimport JointBinaryData
 
 from joint_snv_mix.models.abstract cimport Density, Ess, MixtureModel, Parameters, Priors
 
