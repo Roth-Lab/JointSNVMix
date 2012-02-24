@@ -110,7 +110,7 @@ setup(
                 'joint_snv_mix.models',
                 'joint_snv_mix.post_processing'
                 ],
-      
+      package_data={'joint_snv_mix.post_processing': ['joint_snv_mix/post_processing/tn_excap.rf']},
       cmdclass={'build_ext': build_ext},
       ext_modules=ext_modules
      )
