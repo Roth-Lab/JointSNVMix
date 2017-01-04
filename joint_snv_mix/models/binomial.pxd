@@ -13,18 +13,18 @@ from joint_snv_mix.counter_row cimport JointBinaryData, JointBinaryCountData
 from joint_snv_mix.models.abstract cimport Density, Ess, MixtureModel, Parameters, Priors
 
 from joint_snv_mix.models.utils cimport binomial_log_likelihood, beta_log_likelihood, dirichlet_log_likelihood, \
-                                        log_space_normalise, log_sum_exp 
+    log_space_normalise, log_sum_exp
 
 cdef class BinomialPriors(Priors):
     cdef tuple _mu_N
     cdef tuple _mu_T
-     
+
 cdef class BinomialParameters(Parameters):
     cdef tuple _mu_N
     cdef tuple _mu_T
-    
+
     cdef _get_updated_mu(self, a, b, prior)
-    
+
 cdef class BinomialModel(MixtureModel):
     pass
 

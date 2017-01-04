@@ -14,11 +14,11 @@ from joint_snv_mix.models.abstract cimport Density, Ess, MixtureModel, Parameter
 from joint_snv_mix.models.binomial cimport BinomialParameters, BinomialPriors
 
 from joint_snv_mix.models.utils cimport beta_log_likelihood, dirichlet_log_likelihood, \
-                                        snv_mix_two_log_likelihood, snv_mix_two_expected_a, snv_mix_two_expected_b, \
-                                        log_space_normalise, log_sum_exp 
+    snv_mix_two_log_likelihood, snv_mix_two_expected_a, snv_mix_two_expected_b, \
+    log_space_normalise, log_sum_exp
 
 cdef class SnvMixTwoModel(MixtureModel):
-    pass 
+    pass
 
 cdef class SnvMixTwoDensity(Density):
     cdef double * _mu_N
@@ -32,7 +32,7 @@ cdef class SnvMixTwoEss(Ess):
     cdef double * _b_N
     cdef double * _a_T
     cdef double * _b_T
-    
+
     cdef double * _mu_N
     cdef double * _mu_T
 
