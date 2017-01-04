@@ -1,2 +1,8 @@
 /.project
 /.pydevproject
+/build/
+/joint_snv_mix/*.c
+/joint_snv_mix/models/*.c
+/joint_snv_mix/samtools/*.c
+*.so
+*.html
