@@ -21,8 +21,9 @@ results_header = [
     'p_AB_BB',
     'p_BB_AA',
     'p_BB_AB',
-    'p_BB_BB'
+    'p_BB_BB',
 ]
+
 
 cdef class CResultsWriter(object):
     def __init__(self, file_name=None):
@@ -30,21 +31,16 @@ cdef class CResultsWriter(object):
             self._file_ptr = stdout
         else:
             self._file_ptr = fopen( < char * > file_name, "w")
-
             if self._file_ptr == NULL:
                 raise Exception("Couldn't open results file at {0}".format(file_name))
-
         self._init_format_string()
-
         header = "\t".join(results_header)
         header += "\n"
-
         fputs( < char * > header, self._file_ptr)
 
     def __dealloc__(self):
         if self._file_ptr != NULL:
             self.close()
-
         if self._format_string != NULL:
             free(self._format_string)
             self._format_string = NULL
@@ -69,9 +65,7 @@ cdef class CResultsWriter(object):
             '%.4f',  # p_BB_AB
             '%.4f',  # p_BB_BB
         ]
-
         format_string = "\t".join(format_string) + "\n"
-
         self._format_string = strdup( < char * > format_string)
 
     cdef close(self):
@@ -80,9 +74,7 @@ cdef class CResultsWriter(object):
 
     cdef write_position(self, JointBinaryCounterRow row, double * probs):
         cdef JointBinaryData data
-
         data = row._data
-
         fprintf(
             self._file_ptr,
             self._format_string,

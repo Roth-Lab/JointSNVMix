@@ -3,6 +3,8 @@ Created on 2012-01-25
 
 @author: Andrew Roth
 '''
+
+
 cdef class RefIterator(object):
     def __iter__(self):
         return self
