@@ -141,11 +141,9 @@ cdef class MixtureModel(object):
         Update self._ess using data.
         '''
         cdef JointBinaryData data_point
-
         self._ess.reset()
         self._ess.set_params(self._params)
         self._density.set_params(self._params)
-
         for data_point in data:
             self._density.get_responsibilities(data_point, self._resp)
             self._ess.update(data_point, self._resp)
@@ -168,7 +166,6 @@ cdef class MixtureModel(object):
         '''
         cdef double log_likelihood
         cdef JointBinaryData data_point
-
         log_likelihood = self._get_prior_log_likelihood()
         for data_point in data:
             log_likelihood += self._density.get_log_likelihood(data_point, self._resp)
@@ -188,7 +185,7 @@ cdef class Density(object):
     Base class for density objects. Sub-classing objects need to implement one method, get_responsibilities. This
     method computes the responsibilities for a data-point.
     '''
-    
+
     cdef set_params(self, Parameters params):
         '''
         Copy Python level parameters into C arrays for fast access.
@@ -206,7 +203,6 @@ cdef class Density(object):
         Computes the responsibilities of the given data-point. Results are stored in resp.
         '''
         cdef int i
-
         self._get_complete_log_likelihood(data_point, resp)
         log_space_normalise(resp, self._num_joint_genotypes)
         for i in range(self._num_joint_genotypes):
@@ -225,12 +221,14 @@ cdef class Ess(object):
     Base class for storing and updating expected sufficient statistics (ESS) for JointSnvMix models.
     '''
 
+    def __init__(self, int num_normal_genotypes, int num_tumour_genotypes):
+        self.reset()
+
     def __cinit__(self, int num_normal_genotypes, int num_tumour_genotypes):
         self._num_normal_genotypes = num_normal_genotypes
         self._num_tumour_genotypes = num_tumour_genotypes
         self._num_joint_genotypes = num_normal_genotypes * num_tumour_genotypes
         self._n = < double * > malloc(sizeof(double) * self._num_joint_genotypes)
-        self.reset()
 
     def __dealloc__(self):
         free(self._n)
